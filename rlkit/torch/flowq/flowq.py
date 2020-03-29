@@ -92,7 +92,6 @@ class FlowQTrainer(TorchTrainer):
         actions = batch['actions']
         raw_actions = batch['raw_actions']
         next_obs = batch['next_observations']
-
         """
         Alpha Loss
         """

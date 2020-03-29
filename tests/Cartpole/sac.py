@@ -135,6 +135,8 @@ if __name__ == "__main__":
         f.write(cmd_input)
     setup_logger(args.exp_name+'/'+main_dir, variant=variant,
                 log_dir=log_dir)
+    import numpy as np
+    import torch
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     # ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
