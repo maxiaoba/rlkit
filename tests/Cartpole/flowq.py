@@ -88,6 +88,7 @@ if __name__ == "__main__":
     parser.add_argument('--sr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--tui', type=int, default=None) # target update interval
+    parser.add_argument('--ae', type=int, default=None) # auto entropy, 0=False
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--snapshot_mode', type=str, default="gap")
@@ -99,7 +100,8 @@ if __name__ == "__main__":
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('sr'+str(args.sr)) if args.sr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')\
-                +(('tui'+str(args.tui)) if args.tui else '')
+                +(('tui'+str(args.tui)) if args.tui else '')\
+                +(('ae'+str(args.ae)) if args.ae==0 else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
@@ -123,7 +125,7 @@ if __name__ == "__main__":
             policy_lr=(args.lr if args.lr else 3E-4),
             vf_lr=(args.lr if args.lr else 3E-4),
             reward_scale=(args.sr if args.sr else 1),
-            use_automatic_entropy_tuning=True,
+            use_automatic_entropy_tuning=(False if args.ae==0 else True),
         ),
     )
     import os

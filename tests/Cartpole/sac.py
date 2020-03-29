@@ -96,7 +96,8 @@ if __name__ == "__main__":
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('sr'+str(args.sr)) if args.sr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')\
-                +(('tui'+str(args.tui)) if args.tui else '')
+                +(('tui'+str(args.tui)) if args.tui else '')\
+                +(('ae'+str(args.ae)) if args.ae==0 else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
@@ -120,7 +121,7 @@ if __name__ == "__main__":
             policy_lr=(args.lr if args.lr else 3E-4),
             qf_lr=(args.lr if args.lr else 3E-4),
             reward_scale=(args.sr if args.sr else 1),
-            use_automatic_entropy_tuning=True,
+            use_automatic_entropy_tuning=(False if args.ae==0 else True),
         ),
     )
     import os
