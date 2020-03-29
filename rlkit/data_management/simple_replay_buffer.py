@@ -13,6 +13,7 @@ class SimpleReplayBuffer(ReplayBuffer):
         observation_dim,
         action_dim,
         env_info_sizes,
+        store_raw_action=False,
     ):
         self._observation_dim = observation_dim
         self._action_dim = action_dim
@@ -23,6 +24,10 @@ class SimpleReplayBuffer(ReplayBuffer):
         # worry about termination conditions.
         self._next_obs = np.zeros((max_replay_buffer_size, observation_dim))
         self._actions = np.zeros((max_replay_buffer_size, action_dim))
+        # Xiaobai: store raw action if set
+        self._store_raw_action = store_raw_action
+        if store_raw_action:
+            self._raw_actions = np.zeros((max_replay_buffer_size, action_dim))
         # Make everything a 2D np array to make it easier for other code to
         # reason about the shape of the data
         self._rewards = np.zeros((max_replay_buffer_size, 1))
@@ -45,6 +50,9 @@ class SimpleReplayBuffer(ReplayBuffer):
         self._rewards[self._top] = reward
         self._terminals[self._top] = terminal
         self._next_obs[self._top] = next_observation
+        if (self._store_raw_action) and ('agent_info' in kwargs):
+            if 'raw_action' in kwargs['agent_info']:
+                self._raw_actions[self._top] = kwargs['agent_info']['raw_action']
 
         for key in self._env_info_keys:
             self._env_infos[key][self._top] = env_info[key]
@@ -67,6 +75,8 @@ class SimpleReplayBuffer(ReplayBuffer):
             terminals=self._terminals[indices],
             next_observations=self._next_obs[indices],
         )
+        if self._store_raw_action:
+            batch['raw_actions']=self._raw_actions[indices]
         for key in self._env_info_keys:
             assert key not in batch.keys()
             batch[key] = self._env_infos[key][indices]

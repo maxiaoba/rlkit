@@ -1,39 +1,40 @@
+from cartpole import CartPoleEnv
+
 import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
 from rlkit.envs.wrappers import NormalizedBoxEnv
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.samplers.data_collector import MdpPathCollector
 from rlkit.torch.sac.policies import TanhGaussianPolicy, MakeDeterministic
-from rlkit.torch.sac.sac import SACTrainer
+from rlkit.torch.flowq.flowq import FlowQTrainer
 from rlkit.torch.networks import FlattenMlp
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 
 
 def experiment(variant):
-    import gym
-    expl_env = NormalizedBoxEnv(gym.make(args.env+'-v1'))
-    eval_env = NormalizedBoxEnv(gym.make(args.env+'-v1'))
+    expl_env = NormalizedBoxEnv(CartPoleEnv())
+    eval_env = NormalizedBoxEnv(CartPoleEnv())
     obs_dim = expl_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
     M = variant['layer_size']
-    qf1 = FlattenMlp(
-        input_size=obs_dim + action_dim,
+    vf1 = FlattenMlp(
+        input_size=obs_dim,
         output_size=1,
         hidden_sizes=[M, M],
     )
-    qf2 = FlattenMlp(
-        input_size=obs_dim + action_dim,
+    vf2 = FlattenMlp(
+        input_size=obs_dim,
         output_size=1,
         hidden_sizes=[M, M],
     )
-    target_qf1 = FlattenMlp(
-        input_size=obs_dim + action_dim,
+    target_vf1 = FlattenMlp(
+        input_size=obs_dim,
         output_size=1,
         hidden_sizes=[M, M],
     )
-    target_qf2 = FlattenMlp(
-        input_size=obs_dim + action_dim,
+    target_vf2 = FlattenMlp(
+        input_size=obs_dim,
         output_size=1,
         hidden_sizes=[M, M],
     )
@@ -41,6 +42,7 @@ def experiment(variant):
         obs_dim=obs_dim,
         action_dim=action_dim,
         hidden_sizes=[M, M],
+        return_raw_action=True,
     )
     eval_policy = MakeDeterministic(policy)
     eval_path_collector = MdpPathCollector(
@@ -54,14 +56,15 @@ def experiment(variant):
     replay_buffer = EnvReplayBuffer(
         variant['replay_buffer_size'],
         expl_env,
+        store_raw_action=True,
     )
-    trainer = SACTrainer(
+    trainer = FlowQTrainer(
         env=eval_env,
         policy=policy,
-        qf1=qf1,
-        qf2=qf2,
-        target_qf1=target_qf1,
-        target_qf2=target_qf2,
+        vf1=vf1,
+        vf2=vf2,
+        target_vf1=target_vf1,
+        target_vf2=target_vf2,
         **variant['trainer_kwargs']
     )
     algorithm = TorchBatchRLAlgorithm(
@@ -79,8 +82,8 @@ def experiment(variant):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp_name', type=str, default='Hopper')
-    parser.add_argument('--log_dir', type=str, default='SAC')
+    parser.add_argument('--exp_name', type=str, default='Cartpole')
+    parser.add_argument('--log_dir', type=str, default='FlowQ')
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--sr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
@@ -100,17 +103,17 @@ if __name__ == "__main__":
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
-        algorithm="SAC",
+        algorithm="FlowQ",
         version="normal",
         layer_size=256,
         replay_buffer_size=int(1E6),
         algorithm_kwargs=dict(
-            num_epochs=(args.epoch if args.epoch else 3000),
-            num_eval_steps_per_epoch=5000,
-            num_trains_per_train_loop=1000,
-            num_expl_steps_per_train_loop=1000,
-            min_num_steps_before_training=1000,
-            max_path_length=1000,
+            num_epochs=(args.epoch if args.epoch else 100),
+            num_eval_steps_per_epoch=500,
+            num_trains_per_train_loop=100,
+            num_expl_steps_per_train_loop=100,
+            min_num_steps_before_training=100,
+            max_path_length=100,
             batch_size=(args.bs if args.bs else 256),
         ),
         trainer_kwargs=dict(
@@ -118,7 +121,7 @@ if __name__ == "__main__":
             soft_target_tau=5e-3,
             target_update_period=(args.tui if args.tui else 1),
             policy_lr=(args.lr if args.lr else 3E-4),
-            qf_lr=(args.lr if args.lr else 3E-4),
+            vf_lr=(args.lr if args.lr else 3E-4),
             reward_scale=(args.sr if args.sr else 1),
             use_automatic_entropy_tuning=True,
         ),

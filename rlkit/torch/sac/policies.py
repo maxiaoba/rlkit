@@ -37,6 +37,7 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
             action_dim,
             std=None,
             init_w=1e-3,
+            return_raw_action=False,
             **kwargs
     ):
         super().__init__(
@@ -48,6 +49,7 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
         )
         self.log_std = None
         self.std = std
+        self.return_raw_action = return_raw_action
         if std is None:
             last_hidden_size = obs_dim
             if len(hidden_sizes) > 0:
@@ -60,11 +62,19 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
             assert LOG_SIG_MIN <= self.log_std <= LOG_SIG_MAX
 
     def get_action(self, obs_np, deterministic=False):
-        actions = self.get_actions(obs_np[None], deterministic=deterministic)
-        return actions[0, :], {}
+        if self.return_raw_action:
+            actions, raw_actions = self.get_actions(obs_np[None], deterministic=deterministic)
+            return actions[0, :], {'raw_action':raw_actions[0,:]}
+        else:
+            actions = self.get_actions(obs_np[None], deterministic=deterministic)
+            return actions[0, :], {}
 
     def get_actions(self, obs_np, deterministic=False):
-        return eval_np(self, obs_np, deterministic=deterministic)[0]
+        if self.return_raw_action:
+            outputs = eval_np(self, obs_np, deterministic=deterministic)
+            return outputs[0], outputs[-1]
+        else:
+            return eval_np(self, obs_np, deterministic=deterministic)[0]
 
     def forward(
             self,
@@ -95,34 +105,68 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
         mean_action_log_prob = None
         pre_tanh_value = None
         if deterministic:
+            pre_tanh_value = mean
             action = torch.tanh(mean)
         else:
             tanh_normal = TanhNormal(mean, std)
+            # if return_log_prob:
+            if reparameterize is True:
+                action, pre_tanh_value = tanh_normal.rsample(
+                    return_pretanh_value=True
+                )
+            else:
+                action, pre_tanh_value = tanh_normal.sample(
+                    return_pretanh_value=True
+                )
             if return_log_prob:
-                if reparameterize is True:
-                    action, pre_tanh_value = tanh_normal.rsample(
-                        return_pretanh_value=True
-                    )
-                else:
-                    action, pre_tanh_value = tanh_normal.sample(
-                        return_pretanh_value=True
-                    )
                 log_prob = tanh_normal.log_prob(
                     action,
                     pre_tanh_value=pre_tanh_value
                 )
                 log_prob = log_prob.sum(dim=1, keepdim=True)
-            else:
-                if reparameterize is True:
-                    action = tanh_normal.rsample()
-                else:
-                    action = tanh_normal.sample()
+            # else:
+            #     if reparameterize is True:
+            #         action = tanh_normal.rsample()
+            #     else:
+            #         action = tanh_normal.sample()
 
         return (
             action, mean, log_std, log_prob, entropy, std,
             mean_action_log_prob, pre_tanh_value,
         )
 
+    def log_prob(
+            self,
+            obs,
+            action,
+            raw_action=None
+    ):
+        """
+        :param obs: Observation
+        :param action: Action
+        """
+        h = obs
+        for i, fc in enumerate(self.fcs):
+            h = self.hidden_activation(fc(h))
+        mean = self.last_fc(h)
+        if self.std is None:
+            log_std = self.last_fc_log_std(h)
+            log_std = torch.clamp(log_std, LOG_SIG_MIN, LOG_SIG_MAX)
+            std = torch.exp(log_std)
+        else:
+            std = self.std
+            log_std = self.log_std
+
+        pre_tanh_value = raw_action
+
+        tanh_normal = TanhNormal(mean, std)
+        log_prob = tanh_normal.log_prob(
+            action,
+            pre_tanh_value=pre_tanh_value
+        )
+        log_prob = log_prob.sum(dim=1, keepdim=True)
+
+        return log_prob
 
 class MakeDeterministic(nn.Module, Policy):
     def __init__(self, stochastic_policy):

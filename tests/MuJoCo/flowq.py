@@ -4,7 +4,7 @@ from rlkit.envs.wrappers import NormalizedBoxEnv
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.samplers.data_collector import MdpPathCollector
 from rlkit.torch.sac.policies import TanhGaussianPolicy, MakeDeterministic
-from rlkit.torch.sac.sac import SACTrainer
+from rlkit.torch.flowq.flowq import FlowQTrainer
 from rlkit.torch.networks import FlattenMlp
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 
@@ -17,23 +17,23 @@ def experiment(variant):
     action_dim = eval_env.action_space.low.size
 
     M = variant['layer_size']
-    qf1 = FlattenMlp(
-        input_size=obs_dim + action_dim,
+    qv1 = FlattenMlp(
+        input_size=obs_dim,
         output_size=1,
         hidden_sizes=[M, M],
     )
-    qf2 = FlattenMlp(
-        input_size=obs_dim + action_dim,
+    vf2 = FlattenMlp(
+        input_size=obs_dim,
         output_size=1,
         hidden_sizes=[M, M],
     )
-    target_qf1 = FlattenMlp(
-        input_size=obs_dim + action_dim,
+    target_vf1 = FlattenMlp(
+        input_size=obs_dim,
         output_size=1,
         hidden_sizes=[M, M],
     )
-    target_qf2 = FlattenMlp(
-        input_size=obs_dim + action_dim,
+    target_vf2 = FlattenMlp(
+        input_size=obs_dim,
         output_size=1,
         hidden_sizes=[M, M],
     )
@@ -55,13 +55,13 @@ def experiment(variant):
         variant['replay_buffer_size'],
         expl_env,
     )
-    trainer = SACTrainer(
+    trainer = FlowQTrainer(
         env=eval_env,
         policy=policy,
-        qf1=qf1,
-        qf2=qf2,
-        target_qf1=target_qf1,
-        target_qf2=target_qf2,
+        vf1=vf1,
+        vf2=vf2,
+        target_qf1=target_vf1,
+        target_qf2=target_vf2,
         **variant['trainer_kwargs']
     )
     algorithm = TorchBatchRLAlgorithm(
@@ -118,7 +118,7 @@ if __name__ == "__main__":
             soft_target_tau=5e-3,
             target_update_period=(args.tui if args.tui else 1),
             policy_lr=(args.lr if args.lr else 3E-4),
-            qf_lr=(args.lr if args.lr else 3E-4),
+            vf_lr=(args.lr if args.lr else 3E-4),
             reward_scale=(args.sr if args.sr else 1),
             use_automatic_entropy_tuning=True,
         ),
