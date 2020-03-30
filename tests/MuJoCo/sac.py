@@ -11,8 +11,8 @@ from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 
 def experiment(variant):
     import gym
-    expl_env = NormalizedBoxEnv(gym.make(args.env+'-v1'))
-    eval_env = NormalizedBoxEnv(gym.make(args.env+'-v1'))
+    expl_env = NormalizedBoxEnv(gym.make(args.exp_name+'-v2'))
+    eval_env = NormalizedBoxEnv(gym.make(args.exp_name+'-v2'))
     obs_dim = expl_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
@@ -85,6 +85,7 @@ if __name__ == "__main__":
     parser.add_argument('--sr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--tui', type=int, default=None) # target update interval
+    parser.add_argument('--ae', type=int, default=None) # auto entropy, 0=False
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--snapshot_mode', type=str, default="gap")

@@ -11,13 +11,13 @@ from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 
 def experiment(variant):
     import gym
-    expl_env = NormalizedBoxEnv(gym.make(args.env+'-v1'))
-    eval_env = NormalizedBoxEnv(gym.make(args.env+'-v1'))
+    expl_env = NormalizedBoxEnv(gym.make(args.exp_name+'-v2'))
+    eval_env = NormalizedBoxEnv(gym.make(args.exp_name+'-v2'))
     obs_dim = expl_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
     M = variant['layer_size']
-    qv1 = FlattenMlp(
+    vf1 = FlattenMlp(
         input_size=obs_dim,
         output_size=1,
         hidden_sizes=[M, M],
@@ -41,6 +41,7 @@ def experiment(variant):
         obs_dim=obs_dim,
         action_dim=action_dim,
         hidden_sizes=[M, M],
+        return_raw_action=True,
     )
     eval_policy = MakeDeterministic(policy)
     eval_path_collector = MdpPathCollector(
@@ -61,8 +62,8 @@ def experiment(variant):
         policy=policy,
         vf1=vf1,
         vf2=vf2,
-        target_qf1=target_vf1,
-        target_qf2=target_vf2,
+        target_vf1=target_vf1,
+        target_vf2=target_vf2,
         **variant['trainer_kwargs']
     )
     algorithm = TorchBatchRLAlgorithm(
@@ -81,11 +82,12 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='Hopper')
-    parser.add_argument('--log_dir', type=str, default='SAC')
+    parser.add_argument('--log_dir', type=str, default='FlowQ')
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--sr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--tui', type=int, default=None) # target update interval
+    parser.add_argument('--ae', type=int, default=None) # auto entropy, 0=False
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--snapshot_mode', type=str, default="gap")
@@ -102,7 +104,7 @@ if __name__ == "__main__":
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
-        algorithm="SAC",
+        algorithm="FlowQ",
         version="normal",
         layer_size=256,
         replay_buffer_size=int(1E6),

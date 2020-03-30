@@ -85,6 +85,7 @@ if __name__ == "__main__":
     parser.add_argument('--sr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--tui', type=int, default=None) # target update interval
+    parser.add_argument('--ae', type=int, default=None) # auto entropy, 0=False
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--snapshot_mode', type=str, default="gap")
