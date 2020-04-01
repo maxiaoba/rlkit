@@ -14,16 +14,16 @@ fields = [
 itr_name = 'epoch'
 min_loss = [-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]
 max_loss = [np.inf,np.inf,np.inf,np.inf,np.inf]
-exp_name = ["Hopper","Ant","Walker2d","HalfCheetah","Humanoid"][1]
+exp_name = ["Hopper","Ant","Walker2d","HalfCheetah","Humanoid"][2]
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
             'SAC',
-            'SACae0',
+            # 'SACae0',
             'FlowQ',
-            'FlowQae0'
+            # 'FlowQae0'
         ]
 policy_names = policies
 colors = []
@@ -47,7 +47,7 @@ for fid,field in enumerate(fields):
         Itrs = []
         Losses = []
         min_itr = np.inf
-        for trial in range(10):
+        for trial in range(3):
             file_path = prepath+'/'+policy_path+'/'+'seed'+str(trial)+'/progress.csv'
             print(file_path)
             if os.path.exists(file_path):
