@@ -118,7 +118,6 @@ if __name__ == "__main__":
             min_num_steps_before_training=1000,
             max_path_length=1000,
             batch_size=(args.bs if args.bs else 256),
-            clip_gradient=args.cg,
         ),
         trainer_kwargs=dict(
             discount=0.99,
@@ -128,6 +127,7 @@ if __name__ == "__main__":
             vf_lr=(args.lr if args.lr else 3E-4),
             reward_scale=(args.sr if args.sr else 1),
             use_automatic_entropy_tuning=(False if args.ae==0 else True),
+            clip_gradient=args.cg,
         ),
     )
     import os
