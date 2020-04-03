@@ -84,8 +84,9 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='Hopper')
     parser.add_argument('--log_dir', type=str, default='FlowQ')
     parser.add_argument('--lr', type=float, default=None)
-    parser.add_argument('--sr', type=float, default=None)
-    parser.add_argument('--bs', type=int, default=None)
+    parser.add_argument('--cg', type=float, default=None) # clip gradient
+    parser.add_argument('--sr', type=float, default=None) # reward scale
+    parser.add_argument('--bs', type=int, default=None) # batch size
     parser.add_argument('--tui', type=int, default=None) # target update interval
     parser.add_argument('--ae', type=int, default=None) # auto entropy, 0=False
     parser.add_argument('--epoch', type=int, default=None)
@@ -97,6 +98,7 @@ if __name__ == "__main__":
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
                 +(('lr'+str(args.lr)) if args.lr else '')\
+                +(('cg'+str(args.cg)) if args.cg else '')\
                 +(('sr'+str(args.sr)) if args.sr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')\
                 +(('tui'+str(args.tui)) if args.tui else '')\
@@ -116,6 +118,7 @@ if __name__ == "__main__":
             min_num_steps_before_training=1000,
             max_path_length=1000,
             batch_size=(args.bs if args.bs else 256),
+            clip_gradient=args.cg,
         ),
         trainer_kwargs=dict(
             discount=0.99,

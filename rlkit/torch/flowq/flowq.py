@@ -131,8 +131,22 @@ class FlowQTrainer(TorchTrainer):
         """
         self.vf1_optimizer.zero_grad()
         vf1_loss.backward()
+
+        total_norm  = torch.tensor(0)
+        for p in self.vf1.parameters():
+            param_norm = p.grad.data.norm(2)
+            total_norm += param_norm.item() ** 2
+        print('vf1 norm_before: ', total_norm ** (1. / 2))
+
         if self.clip_gradient:
             nn.utils.clip_grad_norm_(self.vf1.parameters(), self.clip_gradient)
+
+        total_norm  = torch.tensor(0)
+        for p in self.vf1.parameters():
+            param_norm = p.grad.data.norm(2)
+            total_norm += param_norm.item() ** 2
+        print('vf1 norm_after: ', total_norm ** (1. / 2))
+
         self.vf1_optimizer.step()
 
         self.vf2_optimizer.zero_grad()

@@ -14,16 +14,16 @@ fields = [
 itr_name = 'epoch'
 min_loss = [-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]
 max_loss = [np.inf,np.inf,np.inf,np.inf,np.inf]
-exp_name = ["Hopper","Ant","Walker2d","HalfCheetah","Humanoid"][2]
+exp_name = ["Hopper","Ant","Walker2d","HalfCheetah","Humanoid"][1]
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
             'SAC',
-            # 'SACae0',
+            'SACae0',
             'FlowQ',
-            # 'FlowQae0'
+            'FlowQae0'
         ]
 policy_names = policies
 colors = []
