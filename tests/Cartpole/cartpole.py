@@ -56,7 +56,7 @@ class CartPoleEnv:
         'video.frames_per_second' : 50
     }
 
-    def __init__(self):
+    def __init__(self, mode=0):
         self.gravity = 9.8
         self.masscart = 1.0
         self.masspole = 0.1
@@ -76,6 +76,8 @@ class CartPoleEnv:
         self.state = None
 
         self.steps_beyond_done = None
+
+        self.mode = mode
         # Serializable.quick_init(self, locals())
 
     @property
@@ -90,7 +92,12 @@ class CartPoleEnv:
 
     @property
     def action_space(self):
-        return Box(low=-np.ones(2), high=np.ones(2), dtype=np.float32)
+        if self.mode == 0:
+            return Box(low=-np.ones(1), high=np.ones(1), dtype=np.float32)
+        elif self.mode == 1:
+            return Box(low=-np.ones(2), high=np.ones(2), dtype=np.float32)
+        elif self.mode == 2:
+            return Box(low=np.zeros(3), high=np.ones(3), dtype=np.float32)
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -98,7 +105,10 @@ class CartPoleEnv:
 
     def step(self, action):
         # assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
-        action = np.mean(action)
+        if (self.mode == 0) or (self.mode == 1):
+            action = np.mean(action)
+        elif self.mode == 2:
+            action = np.random.choice([-1.,0.,1.],p=action)
         state = self.state
         x, x_dot, theta, theta_dot = state
         # force = self.force_mag if action==1 else -self.force_mag

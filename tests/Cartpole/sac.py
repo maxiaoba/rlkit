@@ -11,8 +11,8 @@ from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 
 def experiment(variant):
     from cartpole import CartPoleEnv
-    expl_env = NormalizedBoxEnv(CartPoleEnv())
-    eval_env = NormalizedBoxEnv(CartPoleEnv())
+    expl_env = NormalizedBoxEnv(CartPoleEnv(mode=1))
+    eval_env = NormalizedBoxEnv(CartPoleEnv(mode=1))
     obs_dim = expl_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 

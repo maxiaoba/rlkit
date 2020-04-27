@@ -121,12 +121,14 @@ class NormalizedBoxEnv(ProxyEnv):
     def __init__(
             self,
             env,
+            scale_action=True,
             reward_scale=1.,
             obs_mean=None,
             obs_std=None,
     ):
         ProxyEnv.__init__(self, env)
         self._should_normalize = not (obs_mean is None and obs_std is None)
+        self.scale_action = scale_action
         if self._should_normalize:
             if obs_mean is None:
                 obs_mean = np.zeros_like(env.observation_space.low)
@@ -153,10 +155,13 @@ class NormalizedBoxEnv(ProxyEnv):
         return (obs - self._obs_mean) / (self._obs_std + 1e-8)
 
     def step(self, action):
-        lb = self._wrapped_env.action_space.low
-        ub = self._wrapped_env.action_space.high
-        scaled_action = lb + (action + 1.) * 0.5 * (ub - lb)
-        scaled_action = np.clip(scaled_action, lb, ub)
+        if self.scale_action:
+            lb = self._wrapped_env.action_space.low
+            ub = self._wrapped_env.action_space.high
+            scaled_action = lb + (action + 1.) * 0.5 * (ub - lb)
+            scaled_action = np.clip(scaled_action, lb, ub)
+        else:
+            scaled_action = action
 
         wrapped_step = self._wrapped_env.step(scaled_action)
         next_obs, reward, done, info = wrapped_step

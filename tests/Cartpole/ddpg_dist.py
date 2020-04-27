@@ -1,70 +1,52 @@
-from cartpole import CartPoleEnv
+import copy
 
-import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
 from rlkit.envs.wrappers import NormalizedBoxEnv
+from rlkit.exploration_strategies.base import (
+    PolicyWrappedWithExplorationStrategy
+)
+from rlkit.exploration_strategies.ou_strategy import OUStrategy
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.samplers.data_collector import MdpPathCollector
-from rlkit.torch.sac.policies import TanhGaussianPolicy, MakeDeterministic
-from rlkit.torch.flowq.flowq import FlowQTrainer
-from rlkit.torch.networks import FlattenMlp
+from rlkit.torch.networks import FlattenMlp, SoftmaxMlpPolicy
+from rlkit.torch.ddpg.ddpg import DDPGTrainer
+import rlkit.torch.pytorch_util as ptu
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 
 
 def experiment(variant):
-    expl_env = NormalizedBoxEnv(CartPoleEnv(mode=1))
-    eval_env = NormalizedBoxEnv(CartPoleEnv(mode=1))
-    obs_dim = expl_env.observation_space.low.size
+    from cartpole import CartPoleEnv
+    expl_env = NormalizedBoxEnv(CartPoleEnv(mode=2),scale_action=False)
+    eval_env = NormalizedBoxEnv(CartPoleEnv(mode=2),scale_action=False)
+    obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
-    M = variant['layer_size']
-    vf1 = FlattenMlp(
-        input_size=obs_dim,
+    qf = FlattenMlp(
+        input_size=obs_dim + action_dim,
         output_size=1,
-        hidden_sizes=[M, M],
+        **variant['qf_kwargs']
     )
-    vf2 = FlattenMlp(
+    policy = SoftmaxMlpPolicy(
         input_size=obs_dim,
-        output_size=1,
-        hidden_sizes=[M, M],
+        output_size=action_dim,
+        **variant['policy_kwargs']
     )
-    target_vf1 = FlattenMlp(
-        input_size=obs_dim,
-        output_size=1,
-        hidden_sizes=[M, M],
-    )
-    target_vf2 = FlattenMlp(
-        input_size=obs_dim,
-        output_size=1,
-        hidden_sizes=[M, M],
-    )
-    policy = TanhGaussianPolicy(
-        obs_dim=obs_dim,
-        action_dim=action_dim,
-        hidden_sizes=[M, M],
-        return_raw_action=True,
-    )
-    eval_policy = MakeDeterministic(policy)
-    eval_path_collector = MdpPathCollector(
-        eval_env,
-        eval_policy,
-    )
-    expl_path_collector = MdpPathCollector(
-        expl_env,
-        policy,
-    )
-    replay_buffer = EnvReplayBuffer(
-        variant['replay_buffer_size'],
-        expl_env,
-        store_raw_action=True,
-    )
-    trainer = FlowQTrainer(
-        env=eval_env,
+    target_qf = copy.deepcopy(qf)
+    target_policy = copy.deepcopy(policy)
+    eval_path_collector = MdpPathCollector(eval_env, policy)
+    # remove this since need action to be a prob
+    # exploration_policy = PolicyWrappedWithExplorationStrategy(
+    #     exploration_strategy=OUStrategy(action_space=expl_env.action_space),
+    #     policy=policy,
+    # )
+    exploration_policy = policy
+    expl_path_collector = MdpPathCollector(expl_env, exploration_policy)
+    replay_buffer = EnvReplayBuffer(variant['replay_buffer_size'], expl_env)
+    trainer = DDPGTrainer(
+        qf=qf,
+        target_qf=target_qf,
         policy=policy,
-        vf1=vf1,
-        vf2=vf2,
-        target_vf1=target_vf1,
-        target_vf2=target_vf2,
+        target_policy=target_policy,
         **variant['trainer_kwargs']
     )
     algorithm = TorchBatchRLAlgorithm(
@@ -79,16 +61,14 @@ def experiment(variant):
     algorithm.to(ptu.device)
     algorithm.train()
 
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='Cartpole')
-    parser.add_argument('--log_dir', type=str, default='FlowQ')
+    parser.add_argument('--log_dir', type=str, default='DDPG_Dist')
     parser.add_argument('--lr', type=float, default=None)
-    parser.add_argument('--sr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
-    parser.add_argument('--tui', type=int, default=None) # target update interval
-    parser.add_argument('--ae', type=int, default=None) # auto entropy, 0=False
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--snapshot_mode', type=str, default="gap")
@@ -98,17 +78,10 @@ if __name__ == "__main__":
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
                 +(('lr'+str(args.lr)) if args.lr else '')\
-                +(('sr'+str(args.sr)) if args.sr else '')\
-                +(('bs'+str(args.bs)) if args.bs else '')\
-                +(('tui'+str(args.tui)) if args.tui else '')\
-                +(('ae'+str(args.ae)) if args.ae==0 else '')
+                +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
-        algorithm="FlowQ",
-        version="normal",
-        layer_size=256,
-        replay_buffer_size=int(1E6),
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 100),
             num_eval_steps_per_epoch=500,
@@ -119,14 +92,19 @@ if __name__ == "__main__":
             batch_size=(args.bs if args.bs else 256),
         ),
         trainer_kwargs=dict(
+            use_soft_update=True,
+            tau=1e-2,
             discount=0.99,
-            soft_target_tau=5e-3,
-            target_update_period=(args.tui if args.tui else 1),
-            policy_lr=(args.lr if args.lr else 3E-4),
-            vf_lr=(args.lr if args.lr else 3E-4),
-            reward_scale=(args.sr if args.sr else 1),
-            use_automatic_entropy_tuning=(False if args.ae==0 else True),
+            qf_learning_rate=(args.lr if args.lr else 1e-3),
+            policy_learning_rate=(args.lr if args.lr else 1e-4),
         ),
+        qf_kwargs=dict(
+            hidden_sizes=[400, 300],
+        ),
+        policy_kwargs=dict(
+            hidden_sizes=[400, 300],
+        ),
+        replay_buffer_size=int(1E6),
     )
     import os
     if not os.path.isdir(log_dir):

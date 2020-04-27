@@ -1,71 +1,58 @@
-from cartpole import CartPoleEnv
+import gym
+from torch import nn as nn
 
+from rlkit.exploration_strategies.base import \
+    PolicyWrappedWithExplorationStrategy
+from rlkit.exploration_strategies.epsilon_greedy import EpsilonGreedy
+from rlkit.policies.argmax import ArgmaxDiscretePolicy
+from rlkit.torch.dqn.dqn import DQNTrainer
+from rlkit.torch.networks import Mlp
 import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
-from rlkit.envs.wrappers import NormalizedBoxEnv
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.samplers.data_collector import MdpPathCollector
-from rlkit.torch.sac.policies import TanhGaussianPolicy, MakeDeterministic
-from rlkit.torch.flowq.flowq import FlowQTrainer
-from rlkit.torch.networks import FlattenMlp
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 
 
 def experiment(variant):
-    expl_env = NormalizedBoxEnv(CartPoleEnv(mode=1))
-    eval_env = NormalizedBoxEnv(CartPoleEnv(mode=1))
+    expl_env = gym.make('CartPole-v0')
+    eval_env = gym.make('CartPole-v0')
     obs_dim = expl_env.observation_space.low.size
-    action_dim = eval_env.action_space.low.size
+    action_dim = eval_env.action_space.n
 
-    M = variant['layer_size']
-    vf1 = FlattenMlp(
+    qf = Mlp(
+        hidden_sizes=[32, 32],
         input_size=obs_dim,
-        output_size=1,
-        hidden_sizes=[M, M],
+        output_size=action_dim,
     )
-    vf2 = FlattenMlp(
+    target_qf = Mlp(
+        hidden_sizes=[32, 32],
         input_size=obs_dim,
-        output_size=1,
-        hidden_sizes=[M, M],
+        output_size=action_dim,
     )
-    target_vf1 = FlattenMlp(
-        input_size=obs_dim,
-        output_size=1,
-        hidden_sizes=[M, M],
+    qf_criterion = nn.MSELoss()
+    eval_policy = ArgmaxDiscretePolicy(qf)
+    expl_policy = PolicyWrappedWithExplorationStrategy(
+        EpsilonGreedy(expl_env.action_space),
+        eval_policy,
     )
-    target_vf2 = FlattenMlp(
-        input_size=obs_dim,
-        output_size=1,
-        hidden_sizes=[M, M],
-    )
-    policy = TanhGaussianPolicy(
-        obs_dim=obs_dim,
-        action_dim=action_dim,
-        hidden_sizes=[M, M],
-        return_raw_action=True,
-    )
-    eval_policy = MakeDeterministic(policy)
     eval_path_collector = MdpPathCollector(
         eval_env,
         eval_policy,
     )
     expl_path_collector = MdpPathCollector(
         expl_env,
-        policy,
+        expl_policy,
+    )
+    trainer = DQNTrainer(
+        qf=qf,
+        target_qf=target_qf,
+        qf_criterion=qf_criterion,
+        **variant['trainer_kwargs']
     )
     replay_buffer = EnvReplayBuffer(
         variant['replay_buffer_size'],
         expl_env,
-        store_raw_action=True,
-    )
-    trainer = FlowQTrainer(
-        env=eval_env,
-        policy=policy,
-        vf1=vf1,
-        vf2=vf2,
-        target_vf1=target_vf1,
-        target_vf2=target_vf2,
-        **variant['trainer_kwargs']
     )
     algorithm = TorchBatchRLAlgorithm(
         trainer=trainer,
@@ -83,12 +70,9 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='Cartpole')
-    parser.add_argument('--log_dir', type=str, default='FlowQ')
+    parser.add_argument('--log_dir', type=str, default='DQN')
     parser.add_argument('--lr', type=float, default=None)
-    parser.add_argument('--sr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
-    parser.add_argument('--tui', type=int, default=None) # target update interval
-    parser.add_argument('--ae', type=int, default=None) # auto entropy, 0=False
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--snapshot_mode', type=str, default="gap")
@@ -98,14 +82,11 @@ if __name__ == "__main__":
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
                 +(('lr'+str(args.lr)) if args.lr else '')\
-                +(('sr'+str(args.sr)) if args.sr else '')\
-                +(('bs'+str(args.bs)) if args.bs else '')\
-                +(('tui'+str(args.tui)) if args.tui else '')\
-                +(('ae'+str(args.ae)) if args.ae==0 else '')
+                +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
-        algorithm="FlowQ",
+        algorithm="DQN",
         version="normal",
         layer_size=256,
         replay_buffer_size=int(1E6),
@@ -120,12 +101,7 @@ if __name__ == "__main__":
         ),
         trainer_kwargs=dict(
             discount=0.99,
-            soft_target_tau=5e-3,
-            target_update_period=(args.tui if args.tui else 1),
-            policy_lr=(args.lr if args.lr else 3E-4),
-            vf_lr=(args.lr if args.lr else 3E-4),
-            reward_scale=(args.sr if args.sr else 1),
-            use_automatic_entropy_tuning=(False if args.ae==0 else True),
+            learning_rate=(args.lr if args.lr else 3E-4),
         ),
     )
     import os
