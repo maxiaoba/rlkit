@@ -17,13 +17,10 @@ from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 from rlkit.core.ma_eval_util import get_generic_ma_path_information
 
 def experiment(variant):
-    import sys
-    sys.path.append("./multiagent_particle_envs")
-    from make_env import make_env
-    from particle_env_wrapper import ParticleEnv
-    expl_env = ParticleEnv(make_env(args.exp_name,discrete_action_space=True,discrete_action_input=True))
-    eval_env = ParticleEnv(make_env(args.exp_name,discrete_action_space=True,discrete_action_input=True))
-    num_agent = expl_env.num_agent
+    num_agent = variant['num_agent']
+    from rlkit.envs.zmq_env import ZMQEnv
+    expl_env = ZMQEnv(variant['port'])
+    eval_env = expl_env
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
 
@@ -89,7 +86,8 @@ def experiment(variant):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp_name', type=str, default='simple')
+    parser.add_argument('--exp_name', type=str, default='BlockedRoad')
+    parser.add_argument('--port', type=int, default=9393)
     parser.add_argument('--log_dir', type=str, default='PRGDiscrete')
     parser.add_argument('--double_q', action='store_true', default=False)
     parser.add_argument('--soft', action='store_true', default=False)
@@ -118,6 +116,7 @@ if __name__ == "__main__":
     # noinspection PyTypeChecker
     variant = dict(
         num_agent=2,
+        port=args.port,
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 1000),
             num_eval_steps_per_epoch=1000,

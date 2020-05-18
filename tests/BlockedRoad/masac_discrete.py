@@ -20,7 +20,7 @@ from log_path import get_ma_path_information
 def experiment(variant):
     num_agent = variant['num_agent']
     from rlkit.envs.zmq_env import ZMQEnv
-    expl_env = ZMQEnv(9393)
+    expl_env = ZMQEnv(variant['port'])
     eval_env = expl_env
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
@@ -88,6 +88,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='BlockedRoad')
+    parser.add_argument('--port', type=int, default=9393)
     parser.add_argument('--log_dir', type=str, default='MASACDiscrete')
     parser.add_argument('--online_action', action='store_true', default=False)
     parser.add_argument('--learn_temperature', action='store_true', default=False)
@@ -114,6 +115,7 @@ if __name__ == "__main__":
     # noinspection PyTypeChecker
     variant = dict(
         num_agent=2,
+        port=args.port,
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 1000),
             num_eval_steps_per_epoch=1000,
