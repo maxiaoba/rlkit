@@ -23,6 +23,7 @@ class MASACDiscreteTrainer(TorchTrainer):
             target_qf2_n,
             policy_n,
             online_action,
+            clip_gradient=0.,
 
             discount=0.99,
             reward_scale=1.0,
@@ -44,6 +45,7 @@ class MASACDiscreteTrainer(TorchTrainer):
         super().__init__()
         if qf_criterion is None:
             qf_criterion = nn.MSELoss()
+            # qf_criterion = nn.SmoothL1Loss() # Huber Loss
         self.env = env
         self.qf1_n = qf1_n
         self.target_qf1_n = target_qf1_n
@@ -51,6 +53,7 @@ class MASACDiscreteTrainer(TorchTrainer):
         self.target_qf2_n = target_qf2_n
         self.policy_n = policy_n
         self.online_action = online_action
+        self.clip_gradient = clip_gradient
 
         self.discount = discount
         self.reward_scale = reward_scale
@@ -146,6 +149,7 @@ class MASACDiscreteTrainer(TorchTrainer):
             q2_output = self.qf2_n[agent](whole_obs, other_actions.view(batch_size, -1))
             min_q_output = torch.min(q1_output,q2_output) # batch x |A|
             policy_loss = (pis*(alpha*torch.log(pis) - min_q_output)).sum(-1).mean()
+            # policy_loss = (pis*(torch.log(pis)-torch.log(torch.softmax(min_q_output/alpha, dim=-1)))).sum(-1).mean()
 
             """
             Critic operations.
@@ -180,14 +184,20 @@ class MASACDiscreteTrainer(TorchTrainer):
 
             self.policy_optimizer_n[agent].zero_grad()
             policy_loss.backward()
+            if self.clip_gradient > 0.:
+                nn.utils.clip_grad_norm_(self.policy_n[agent].parameters(), self.clip_gradient)
             self.policy_optimizer_n[agent].step()
 
             self.qf1_optimizer_n[agent].zero_grad()
             qf1_loss.backward()
+            if self.clip_gradient > 0.:
+                nn.utils.clip_grad_norm_(self.qf1_n[agent].parameters(), self.clip_gradient)
             self.qf1_optimizer_n[agent].step()
 
             self.qf2_optimizer_n[agent].zero_grad()
             qf2_loss.backward()
+            if self.clip_gradient > 0.:
+                nn.utils.clip_grad_norm_(self.qf2_n[agent].parameters(), self.clip_gradient)
             self.qf2_optimizer_n[agent].step()
 
             """

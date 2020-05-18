@@ -92,9 +92,11 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='simple')
     parser.add_argument('--log_dir', type=str, default='MASACDiscrete')
     parser.add_argument('--online_action', action='store_true', default=False)
+    parser.add_argument('--cg', type=float, default=0.)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--ae', type=int, default=None) # auto entropy, 0=False
+    parser.add_argument('--rs', type=float, default=None) # reward scale
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--snapshot_mode', type=str, default="gap_and_last")
@@ -104,8 +106,10 @@ if __name__ == "__main__":
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
                 +('online_action' if args.online_action else '')\
+                +(('cg'+str(args.cg)) if args.cg>0. else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
-                +(('bs'+str(args.bs)) if args.bs else '')
+                +(('bs'+str(args.bs)) if args.bs else '')\
+                +(('rs'+str(args.rs)) if args.rs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
@@ -125,6 +129,8 @@ if __name__ == "__main__":
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
             online_action=args.online_action,
+            clip_gradient=args.cg,
+            reward_scale=(args.rs if args.rs else 1.0),
         ),
         qf_kwargs=dict(
             hidden_sizes=[400, 300],

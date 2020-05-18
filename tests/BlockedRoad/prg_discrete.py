@@ -97,6 +97,8 @@ if __name__ == "__main__":
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--ae', type=int, default=None) # auto entropy, 0=False
+    parser.add_argument('--rs', type=float, default=None) # reward scale
+    parser.add_argument('--cg', type=float, default=0.) # clip gradient
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--snapshot_mode', type=str, default="gap_and_last")
@@ -109,7 +111,9 @@ if __name__ == "__main__":
                 +('soft' if args.soft else 'hard')\
                 +('Learnt' if args.learn_temperature else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
-                +(('bs'+str(args.bs)) if args.bs else '')
+                +(('bs'+str(args.bs)) if args.bs else '')\
+                +(('rs'+str(args.rs)) if args.rs else '')\
+                +(('cg'+str(args.cg)) if args.cg>0. else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
@@ -131,6 +135,8 @@ if __name__ == "__main__":
             policy_learning_rate=(args.lr if args.lr else 1e-4),
             double_q=args.double_q,
             gumbel_hard=(not args.soft),
+            clip_gradient=args.cg,
+            reward_scale=(args.rs if args.rs else 1.0),
         ),
         qf_kwargs=dict(
             hidden_sizes=[400, 300],

@@ -27,6 +27,7 @@ class PRGDiscreteTrainer(TorchTrainer):
             use_automatic_entropy_tuning=True,
             target_entropy=None,
             gumbel_hard=False,
+            clip_gradient=0.,
 
             logit_level=1,
 
@@ -59,6 +60,7 @@ class PRGDiscreteTrainer(TorchTrainer):
 
         self.logit_level = logit_level
         self.gumbel_hard = gumbel_hard
+        self.clip_gradient = clip_gradient
 
         self.discount = discount
         self.reward_scale = reward_scale
@@ -255,15 +257,21 @@ class PRGDiscreteTrainer(TorchTrainer):
 
             self.policy_optimizer_n[agent].zero_grad()
             policy_loss.backward()
+            if self.clip_gradient > 0.:
+                nn.utils.clip_grad_norm_(self.policy_n[agent].parameters(), self.clip_gradient)
             self.policy_optimizer_n[agent].step()
 
             self.qf_optimizer_n[agent].zero_grad()
             qf_loss.backward()
+            if self.clip_gradient > 0.:
+                nn.utils.clip_grad_norm_(self.qf_n[agent].parameters(), self.clip_gradient)
             self.qf_optimizer_n[agent].step()
 
             if self.double_q:
                 self.qf2_optimizer_n[agent].zero_grad()
                 qf2_loss.backward()
+                if self.clip_gradient > 0.:
+                    nn.utils.clip_grad_norm_(self.qf2_n[agent].parameters(), self.clip_gradient)
                 self.qf2_optimizer_n[agent].step()
 
             """
