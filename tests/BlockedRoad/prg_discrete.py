@@ -14,7 +14,7 @@ from rlkit.torch.policies.deterministic_policies import SoftmaxMlpPolicy
 from rlkit.torch.prg.prg_discrete import PRGDiscreteTrainer
 import rlkit.torch.pytorch_util as ptu
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
-from rlkit.core.ma_eval_util import get_generic_ma_path_information
+from log_path import get_ma_path_information
 
 def experiment(variant):
     num_agent = variant['num_agent']
@@ -76,7 +76,7 @@ def experiment(variant):
         exploration_data_collector=expl_path_collector,
         evaluation_data_collector=eval_path_collector,
         replay_buffer=replay_buffer,
-        log_path_function=get_generic_ma_path_information,
+        log_path_function=get_ma_path_information,
         **variant['algorithm_kwargs']
     )
     algorithm.to(ptu.device)
