@@ -4,7 +4,7 @@ from torch import nn as nn
 
 from rlkit.policies.base import ExplorationPolicy, Policy
 from rlkit.torch.core import eval_np
-from rlkit.torch.distributions import TanhNormal
+from rlkit.torch.distributions.tanh_normal import TanhNormal
 from rlkit.torch.networks import Mlp
 
 
@@ -71,17 +71,18 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
 
     def get_actions(self, obs_np, deterministic=False):
         if self.return_raw_action:
-            outputs = eval_np(self, obs_np, deterministic=deterministic)
-            return outputs[0], outputs[-1]
+            actions, info = eval_np(self, obs_np, deterministic=deterministic,return_info=True)
+            raw_actions = info['preactivation']
+            return actions, raw_actions
         else:
-            return eval_np(self, obs_np, deterministic=deterministic)[0]
+            return eval_np(self, obs_np, deterministic=deterministic)
 
     def forward(
             self,
             obs,
             reparameterize=True,
             deterministic=False,
-            return_log_prob=False,
+            return_info=False,
     ):
         """
         :param obs: Observation
@@ -118,7 +119,7 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
                 action, pre_tanh_value = tanh_normal.sample(
                     return_pretanh_value=True
                 )
-            if return_log_prob:
+            if return_info:
                 log_prob = tanh_normal.log_prob(
                     action,
                     pre_tanh_value=pre_tanh_value
@@ -130,10 +131,19 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
             #     else:
             #         action = tanh_normal.sample()
 
-        return (
-            action, mean, log_std, log_prob, entropy, std,
-            mean_action_log_prob, pre_tanh_value,
-        )
+        # return (
+        #     action, mean, log_std, log_prob, entropy, std,
+        #     mean_action_log_prob, pre_tanh_value,
+        # )
+        info = dict(
+            mean=mean,log_std=log_std,log_prob=log_prob,entropy=entropy,
+            std=std,mean_action_log_prob=mean_action_log_prob,
+            preactivation=pre_tanh_value
+            )
+        if return_info:
+            return action, info
+        else:
+            return action
 
     def log_prob(
             self,

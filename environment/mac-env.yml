@@ -26,3 +26,4 @@ dependencies:
   - gtimer==1.0.0b5
   - pygame==1.9.2
   - ipdb  # technically unnecessary
+  - zmq

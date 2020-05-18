@@ -15,10 +15,16 @@ from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 
 
 def experiment(variant):
-    expl_env = gym.make('CartPole-v0')
-    eval_env = gym.make('CartPole-v0')
-    obs_dim = expl_env.observation_space.low.size
+    from cartpole import CartPoleEnv
+    expl_env = CartPoleEnv(mode=2)
+    eval_env = CartPoleEnv(mode=2)
+    obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
+    # import gym
+    # expl_env = gym.make('CartPole-v0')
+    # eval_env = gym.make('CartPole-v0')
+    # obs_dim = eval_env.observation_space.low.size
+    # action_dim = eval_env.action_space.n
 
     qf = Mlp(
         hidden_sizes=[32, 32],
@@ -75,7 +81,7 @@ if __name__ == "__main__":
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--snapshot_mode', type=str, default="gap")
+    parser.add_argument('--snapshot_mode', type=str, default="gap_and_last")
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
@@ -115,6 +121,7 @@ if __name__ == "__main__":
     with open(osp.join(log_dir, 'cmd_input.txt'), 'a') as f:
         f.write(cmd_input)
     setup_logger(args.exp_name+'/'+main_dir, variant=variant,
+                snapshot_mode=args.snapshot_mode, snapshot_gap=args.snapshot_gap,
                 log_dir=log_dir)
     import numpy as np
     import torch

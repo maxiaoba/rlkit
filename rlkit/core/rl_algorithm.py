@@ -30,6 +30,7 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
             exploration_data_collector: DataCollector,
             evaluation_data_collector: DataCollector,
             replay_buffer: ReplayBuffer,
+            log_path_function = eval_util.get_generic_path_information,
     ):
         self.trainer = trainer
         self.expl_env = exploration_env
@@ -37,6 +38,7 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
         self.expl_data_collector = exploration_data_collector
         self.eval_data_collector = evaluation_data_collector
         self.replay_buffer = replay_buffer
+        self.log_path_function = log_path_function
         self._start_epoch = 0
 
         self.post_epoch_funcs = []
@@ -107,7 +109,7 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
                 prefix='exploration/',
             )
         logger.record_dict(
-            eval_util.get_generic_path_information(expl_paths),
+            self.log_path_function(expl_paths),
             prefix="exploration/",
         )
         """
@@ -124,7 +126,7 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
                 prefix='evaluation/',
             )
         logger.record_dict(
-            eval_util.get_generic_path_information(eval_paths),
+            self.log_path_function(eval_paths),
             prefix="evaluation/",
         )
 

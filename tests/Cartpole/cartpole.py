@@ -7,7 +7,7 @@ permalink: https://perma.cc/C9ZM-652R
 import math
 import gym
 from gym import logger
-from gym.spaces import Box
+from gym.spaces import Box, Discrete
 from gym.utils import seeding
 import numpy as np
 # from rllab.envs.base import Env
@@ -92,12 +92,16 @@ class CartPoleEnv:
 
     @property
     def action_space(self):
-        if self.mode == 0:
+        if self.mode == 0: # normal
             return Box(low=-np.ones(1), high=np.ones(1), dtype=np.float32)
-        elif self.mode == 1:
+        elif self.mode == 1: # mean of a 2d action
             return Box(low=-np.ones(2), high=np.ones(2), dtype=np.float32)
-        elif self.mode == 2:
-            return Box(low=np.zeros(3), high=np.ones(3), dtype=np.float32)
+        elif self.mode == 2: # Discrete(2)
+            return Discrete(2)
+        elif self.mode == 3: # mean of two agent actions
+            return Box(low=-np.ones(1), high=np.ones(1), dtype=np.float32)
+        elif self.mode == 4: # mean of two Discrete(2)
+            return Discrete(2)
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -105,10 +109,12 @@ class CartPoleEnv:
 
     def step(self, action):
         # assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
-        if (self.mode == 0) or (self.mode == 1):
+        if (self.mode == 0) or (self.mode == 1) or (self.mode == 3):
             action = np.mean(action)
         elif self.mode == 2:
-            action = np.random.choice([-1.,0.,1.],p=action)
+            action = [-1.,1.][action]
+        elif self.mode == 4:
+            action = np.mean(np.array([-1.,1.])[action])
         state = self.state
         x, x_dot, theta, theta_dot = state
         # force = self.force_mag if action==1 else -self.force_mag
@@ -147,12 +153,18 @@ class CartPoleEnv:
             self.steps_beyond_done += 1
             reward = 0.0
 
-        return np.array(self.state), reward, done, {}
+        if (self.mode == 3) or (self.mode == 4):
+            return np.array([self.state, self.state]), np.array([reward,reward]), np.array([done,done]), {}
+        else:
+            return np.array(self.state), reward, done, {}
 
     def reset(self):
         self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
         self.steps_beyond_done = None
-        return np.array(self.state)
+        if (self.mode == 3) or (self.mode == 4):
+            return np.array([self.state, self.state])
+        else:
+            return np.array(self.state)
 
     def render(self, mode='human'):
         screen_width = 600

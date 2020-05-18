@@ -1,52 +1,72 @@
 import copy
 
-from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
-from rlkit.envs.wrappers import NormalizedBoxEnv
+from rlkit.data_management.ma_env_replay_buffer import MAEnvReplayBuffer
+# from rlkit.envs.wrappers import NormalizedBoxEnv
 from rlkit.exploration_strategies.base import (
     PolicyWrappedWithExplorationStrategy
 )
 from rlkit.exploration_strategies.ou_strategy import OUStrategy
 from rlkit.launchers.launcher_util import setup_logger
-from rlkit.samplers.data_collector import MdpPathCollector
-from rlkit.torch.networks import FlattenMlp, SoftmaxMlpPolicy
-from rlkit.torch.ddpg.ddpg import DDPGTrainer
+from rlkit.samplers.data_collector.ma_path_collector import MAMdpPathCollector
+from rlkit.torch.networks import FlattenMlp, TanhMlpPolicy
+from rlkit.torch.maddpg.maddpg import MADDPGTrainer
 import rlkit.torch.pytorch_util as ptu
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
-
+from rlkit.core.ma_eval_util import get_generic_ma_path_information
 
 def experiment(variant):
+    num_agent = variant['num_agent']
     from cartpole import CartPoleEnv
-    expl_env = NormalizedBoxEnv(CartPoleEnv(mode=2),scale_action=False)
-    eval_env = NormalizedBoxEnv(CartPoleEnv(mode=2),scale_action=False)
+    expl_env = CartPoleEnv(mode=3)
+    eval_env = CartPoleEnv(mode=3)
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
-    qf = FlattenMlp(
-        input_size=obs_dim + action_dim,
-        output_size=1,
-        **variant['qf_kwargs']
-    )
-    policy = SoftmaxMlpPolicy(
-        input_size=obs_dim,
-        output_size=action_dim,
-        **variant['policy_kwargs']
-    )
-    target_qf = copy.deepcopy(qf)
-    target_policy = copy.deepcopy(policy)
-    eval_path_collector = MdpPathCollector(eval_env, policy)
-    # remove this since need action to be a prob
-    # exploration_policy = PolicyWrappedWithExplorationStrategy(
-    #     exploration_strategy=OUStrategy(action_space=expl_env.action_space),
-    #     policy=policy,
-    # )
-    exploration_policy = policy
-    expl_path_collector = MdpPathCollector(expl_env, exploration_policy)
-    replay_buffer = EnvReplayBuffer(variant['replay_buffer_size'], expl_env)
-    trainer = DDPGTrainer(
-        qf=qf,
-        target_qf=target_qf,
-        policy=policy,
-        target_policy=target_policy,
+    qf_n, policy_n, target_qf_n, target_policy_n, exploration_policy_n = \
+        [], [], [], [], []
+    qf2_n, target_qf2_n = [], []
+    for i in range(num_agent):
+        qf = FlattenMlp(
+            input_size=(obs_dim*num_agent+action_dim*num_agent),
+            output_size=1,
+            **variant['qf_kwargs']
+        )
+        policy = TanhMlpPolicy(
+            input_size=obs_dim,
+            output_size=action_dim,
+            **variant['policy_kwargs']
+        )
+        target_qf = copy.deepcopy(qf)
+        target_policy = copy.deepcopy(policy)
+        exploration_policy = PolicyWrappedWithExplorationStrategy(
+            exploration_strategy=OUStrategy(action_space=expl_env.action_space),
+            policy=policy,
+        )
+        qf_n.append(qf)
+        policy_n.append(policy)
+        target_qf_n.append(target_qf)
+        target_policy_n.append(target_policy)
+        exploration_policy_n.append(exploration_policy)
+        if variant['trainer_kwargs']['double_q']:
+            qf2 = FlattenMlp(
+                input_size=(obs_dim*num_agent+action_dim*num_agent),
+                output_size=1,
+                **variant['qf_kwargs']
+            )
+            target_qf2 = copy.deepcopy(qf2)
+            qf2_n.append(qf2)
+            target_qf2_n.append(target_qf2)
+
+    eval_path_collector = MAMdpPathCollector(eval_env, policy_n)
+    expl_path_collector = MAMdpPathCollector(expl_env, exploration_policy_n)
+    replay_buffer = MAEnvReplayBuffer(variant['replay_buffer_size'], expl_env, num_agent=num_agent)
+    trainer = MADDPGTrainer(
+        qf_n=qf_n,
+        target_qf_n=target_qf_n,
+        policy_n=policy_n,
+        target_policy_n=target_policy_n,
+        qf2_n = qf2_n,
+        target_qf2_n = target_qf2_n,
         **variant['trainer_kwargs']
     )
     algorithm = TorchBatchRLAlgorithm(
@@ -56,6 +76,7 @@ def experiment(variant):
         exploration_data_collector=expl_path_collector,
         evaluation_data_collector=eval_path_collector,
         replay_buffer=replay_buffer,
+        log_path_function=get_generic_ma_path_information,
         **variant['algorithm_kwargs']
     )
     algorithm.to(ptu.device)
@@ -66,22 +87,27 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='Cartpole')
-    parser.add_argument('--log_dir', type=str, default='DDPG_Dist')
+    parser.add_argument('--log_dir', type=str, default='MADDPG')
+    parser.add_argument('--online_action', action='store_true', default=False)
+    parser.add_argument('--double_q', action='store_true', default=False)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--snapshot_mode', type=str, default="gap")
+    parser.add_argument('--snapshot_mode', type=str, default="gap_and_last")
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
+                +('online_action' if args.online_action else '')\
+                +('double_q' if args.double_q else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
+        num_agent=2,
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 100),
             num_eval_steps_per_epoch=500,
@@ -97,6 +123,8 @@ if __name__ == "__main__":
             discount=0.99,
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
+            online_action=args.online_action,
+            double_q=args.double_q,
         ),
         qf_kwargs=dict(
             hidden_sizes=[400, 300],
@@ -117,6 +145,7 @@ if __name__ == "__main__":
     with open(osp.join(log_dir, 'cmd_input.txt'), 'a') as f:
         f.write(cmd_input)
     setup_logger(args.exp_name+'/'+main_dir, variant=variant,
+                snapshot_mode=args.snapshot_mode, snapshot_gap=args.snapshot_gap,
                 log_dir=log_dir)
     import numpy as np
     import torch

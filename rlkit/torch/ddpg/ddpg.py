@@ -111,7 +111,7 @@ class DDPGTrainer(TorchTrainer):
             next_obs,
             next_actions,
         )
-        q_target = rewards + (1. - terminals) * self.discount * target_q_values
+        q_target = self.reward_scale*rewards + (1. - terminals) * self.discount * target_q_values
         q_target = q_target.detach()
         q_target = torch.clamp(q_target, self.min_q_value, self.max_q_value)
         q_pred = self.qf(obs, actions)
@@ -199,7 +199,7 @@ class DDPGTrainer(TorchTrainer):
             self.target_qf,
         ]
 
-    def get_epoch_snapshot(self):
+    def get_snapshot(self):
         return dict(
             qf=self.qf,
             target_qf=self.target_qf,

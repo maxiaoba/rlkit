@@ -5,11 +5,11 @@ matplotlib.rcParams.update({'font.size': 10})
 from matplotlib import pyplot as plt
 import numpy as np
 
-itr_interval = 1
+itr_interval = 10
 max_itr = 2e4
 
 fields = [
-            'evaluation/Average Returns',
+            'evaluation/Average Returns 1',
             ]
 itr_name = 'epoch'
 min_loss = [-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]
@@ -20,17 +20,25 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'DQN',
-            'DDPG',
-            'DDPG_Dist'
+            # 'DQN',
+            # 'DDPG',
+            # 'DDPG_Dist',
+            # 'MADDPG',
+            'MADDPGdoubleq',
+            'MASAC',
+            # 'PRG_k1',
+            # 'PRG_k2',
+            'PRGk1doubleq'
+            # 'PRGDiscretehardk1',
+            # 'PRGDiscretesoftk1',
         ]
-seeds = [0]
+seeds = [0,1,2,3,4]
 policy_names = policies
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = ''
+extra_name = 'doubel_q'
 
 pre_name = ''
 post_name = ''
@@ -89,8 +97,8 @@ for fid,field in enumerate(fields):
         y = np.mean(Losses,0)
         yerr = np.std(Losses,0)
         plot, = plt.plot(itrs,y,colors[policy_index])
-        plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
-                            facecolor=colors[policy_index],alpha=0.3)
+        # plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
+        #                     facecolor=colors[policy_index],alpha=0.3)
         plts.append(plot)
         legends.append(policy_names[policy_index])
 

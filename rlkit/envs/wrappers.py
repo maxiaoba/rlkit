@@ -172,3 +172,23 @@ class NormalizedBoxEnv(ProxyEnv):
     def __str__(self):
         return "Normalized: %s" % self._wrapped_env
 
+class ProbDiscreteEnv(ProxyEnv):
+    """
+    Convert discrete action space to continuous prob space
+    """
+
+    def __init__(
+            self,
+            env,
+    ):
+        ProxyEnv.__init__(self, env)
+        self.n = self._wrapped_env.action_space.n
+        self.action_space = Box(np.zeros(self.n), np.ones(self.n))
+
+    def step(self, action):
+        true_action = np.random.choice(np.arange(self.n),p=action)
+        return self._wrapped_env.step(true_action)
+
+    def __str__(self):
+        return "ProbDiscrete: %s" % self._wrapped_env
+
