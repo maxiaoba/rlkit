@@ -109,7 +109,7 @@ if __name__ == "__main__":
             num_eval_steps_per_epoch=1000,
             num_trains_per_train_loop=1000,
             num_expl_steps_per_train_loop=1000,
-            min_num_steps_before_training=1000,
+            min_num_steps_before_training=10000,
             max_path_length=200,
             batch_size=(args.bs if args.bs else 256),
         ),
