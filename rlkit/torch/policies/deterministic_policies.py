@@ -77,6 +77,6 @@ class SoftmaxMlpPolicy(MlpPolicy):
     def one_hot(self, obs):
         probs = self.forward(obs)
         max_idx = torch.argmax(probs, -1, keepdim=True)
-        one_hot = torch.FloatTensor(probs.shape).zero_()
+        one_hot = torch.FloatTensor(probs.shape).zero_().to(ptu.device)
         one_hot.scatter_(-1,max_idx,1)
         return one_hot

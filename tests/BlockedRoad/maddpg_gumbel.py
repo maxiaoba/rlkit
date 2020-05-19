@@ -24,10 +24,15 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
 
-    qf_n, policy_n, target_qf_n, target_policy_n, eval_policy_n, expl_policy_n = \
-        [], [], [], [], [], []
+    qf_n, qf2_n, policy_n, target_qf_n, target_qf2_n, target_policy_n, eval_policy_n, expl_policy_n = \
+        [], [], [], [], [], [], [], []
     for i in range(num_agent):
         qf = FlattenMlp(
+            input_size=(obs_dim*num_agent+action_dim*num_agent),
+            output_size=1,
+            **variant['qf_kwargs']
+        )
+        qf2 = FlattenMlp(
             input_size=(obs_dim*num_agent+action_dim*num_agent),
             output_size=1,
             **variant['qf_kwargs']
@@ -38,6 +43,7 @@ def experiment(variant):
             **variant['policy_kwargs']
         )
         target_qf = copy.deepcopy(qf)
+        target_qf2 = copy.deepcopy(qf2)
         target_policy = copy.deepcopy(policy)
         eval_policy = ArgmaxDiscretePolicy(policy,use_preactivation=True)
         expl_policy = PolicyWrappedWithExplorationStrategy(
@@ -45,8 +51,10 @@ def experiment(variant):
             eval_policy,
         )
         qf_n.append(qf)
+        qf2_n.append(qf2)
         policy_n.append(policy)
         target_qf_n.append(target_qf)
+        target_qf2_n.append(target_qf2)
         target_policy_n.append(target_policy)
         eval_policy_n.append(eval_policy)
         expl_policy_n.append(expl_policy)
@@ -57,6 +65,8 @@ def experiment(variant):
     trainer = MADDPGTrainer(
         qf_n=qf_n,
         target_qf_n=target_qf_n,
+        qf2_n=qf2_n,
+        target_qf2_n=target_qf2_n,
         policy_n=policy_n,
         target_policy_n=target_policy_n,
         **variant['trainer_kwargs']
@@ -79,6 +89,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='BlockedRoad')
+    parser.add_argument('--gpu', action='store_true', default=False)
     parser.add_argument('--port', type=int, default=9393)
     parser.add_argument('--num_agent', type=int, default=2)
     parser.add_argument('--log_dir', type=str, default='MADDPGGumbel')
@@ -149,5 +160,6 @@ if __name__ == "__main__":
     import torch
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    # ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
+    if args.gpu:
+        ptu.set_gpu_mode(True)
     experiment(variant)

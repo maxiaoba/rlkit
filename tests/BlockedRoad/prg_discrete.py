@@ -43,7 +43,7 @@ def experiment(variant):
             output_size=action_dim,
             **variant['qf_kwargs']
         )
-        target_qf2 = copy.deepcopy(qf1)
+        target_qf2 = copy.deepcopy(qf2)
         eval_policy = ArgmaxDiscretePolicy(policy)
         expl_policy = PolicyWrappedWithExplorationStrategy(
             EpsilonGreedy(expl_env.action_space),
@@ -87,6 +87,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='BlockedRoad')
+    parser.add_argument('--gpu', action='store_true', default=False)
     parser.add_argument('--port', type=int, default=9393)
     parser.add_argument('--num_agent', type=int, default=2)
     parser.add_argument('--log_dir', type=str, default='PRGDiscrete')
@@ -164,5 +165,6 @@ if __name__ == "__main__":
     import torch
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    # ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
+    if args.gpu:
+        ptu.set_gpu_mode(True)
     experiment(variant)

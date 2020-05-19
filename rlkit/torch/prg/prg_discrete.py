@@ -149,7 +149,7 @@ class PRGDiscreteTrainer(TorchTrainer):
                     (pre_value**2).sum(dim=1).mean()
                 )
             else:
-                pre_activation_policy_loss = torch.tensor(0.) 
+                pre_activation_policy_loss = torch.tensor(0.).to(ptu.device) 
 
             if self.use_automatic_entropy_tuning:
                 alpha_loss = -(pis.detach() * self.log_alpha_n[agent].exp() * (torch.log(pis+1e-3) + self.target_entropy).detach()).sum(-1).mean()
@@ -161,10 +161,10 @@ class PRGDiscreteTrainer(TorchTrainer):
                 alpha_loss = torch.zeros(1)
                 alpha = torch.ones(1)
 
-            q_output = torch.zeros_like(pis)
+            q_output = torch.zeros_like(pis).to(ptu.device)
             for a_i in range(self.env.action_space.n):
                 current_actions = online_actions_n.detach().clone()
-                action_i = torch.zeros(self.env.action_space.n)
+                action_i = torch.zeros(self.env.action_space.n).to(ptu.device)
                 action_i[a_i] = 1.
                 current_actions[:,agent,:] = action_i
                 next_actions = torch.zeros_like(current_actions)
