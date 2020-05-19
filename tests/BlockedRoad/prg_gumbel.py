@@ -106,9 +106,11 @@ if __name__ == "__main__":
     parser.add_argument('--log_dir', type=str, default='PRGGumbel')
     parser.add_argument('--soft', action='store_true', default=False)
     parser.add_argument('--double_q', action='store_true', default=False)
+    parser.add_argument('--entropy', action='store_true', default=False)
     parser.add_argument('--k', type=int, default=1)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
+    parser.add_argument('--rs', type=float, default=None) # reward scale
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--snapshot_mode', type=str, default="gap_and_last")
@@ -120,8 +122,10 @@ if __name__ == "__main__":
                 +'k'+str(args.k)\
                 +('soft' if args.soft else 'hard')\
                 +('double_q' if args.double_q else '')\
+                +('entropy' if args.entropy else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
-                +(('bs'+str(args.bs)) if args.bs else '')
+                +(('bs'+str(args.bs)) if args.bs else '')\
+                +(('rs'+str(args.rs)) if args.rs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
@@ -145,6 +149,8 @@ if __name__ == "__main__":
             policy_learning_rate=(args.lr if args.lr else 1e-4),
             logit_level=args.k,
             double_q=args.double_q,
+            use_entropy_loss=args.entropy,
+            reward_scale=(args.rs if args.rs else 1.0),
         ),
         qf_kwargs=dict(
             hidden_sizes=[400, 300],
