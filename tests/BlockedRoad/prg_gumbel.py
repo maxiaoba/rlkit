@@ -89,6 +89,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='BlockedRoad')
     parser.add_argument('--port', type=int, default=9393)
+    parser.add_argument('--num_agent', type=int, default=2)
     parser.add_argument('--log_dir', type=str, default='PRGGumbel')
     parser.add_argument('--soft', action='store_true', default=False)
     parser.add_argument('--k', type=int, default=1)
@@ -109,7 +110,7 @@ if __name__ == "__main__":
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
-        num_agent=2,
+        num_agent=args.num_agent,
         port=args.port,
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 1000),
