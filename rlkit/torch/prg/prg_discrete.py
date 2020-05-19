@@ -152,14 +152,14 @@ class PRGDiscreteTrainer(TorchTrainer):
                 pre_activation_policy_loss = torch.tensor(0.) 
 
             if self.use_automatic_entropy_tuning:
-                alpha_loss = -(pis.detach() * self.log_alpha_n[agent].exp() * (torch.log(pis) + self.target_entropy).detach()).sum(-1).mean()
+                alpha_loss = -(pis.detach() * self.log_alpha_n[agent].exp() * (torch.log(pis+1e-3) + self.target_entropy).detach()).sum(-1).mean()
                 self.alpha_optimizer_n[agent].zero_grad()
                 alpha_loss.backward()
                 self.alpha_optimizer_n[agent].step()
                 alpha = self.log_alpha_n[agent].exp()
             else:
-                alpha_loss = torch.tensor(0.)
-                alpha = torch.tensor(1.)
+                alpha_loss = torch.zeros(1)
+                alpha = torch.ones(1)
 
             q_output = torch.zeros_like(pis)
             for a_i in range(self.env.action_space.n):
@@ -195,7 +195,7 @@ class PRGDiscreteTrainer(TorchTrainer):
 
 
             raw_policy_loss = (- pis * q_output).sum(-1).mean()
-            entropy_loss = (pis * alpha * torch.log(pis)).sum(-1).mean()
+            entropy_loss = (pis * alpha * torch.log(pis+1e-3)).sum(-1).mean()
             policy_loss = (
                     raw_policy_loss +
                     pre_activation_policy_loss * self.pre_activation_weight +
@@ -223,7 +223,7 @@ class PRGDiscreteTrainer(TorchTrainer):
                 )
                 next_target_q_values = torch.min(next_target_q_values, next_target_q2_values)
 
-            next_target_q_values =  (new_pis*(next_target_q_values - alpha * torch.log(new_pis))).sum(-1,keepdim=True) # batch
+            next_target_q_values =  (new_pis*(next_target_q_values - alpha * torch.log(new_pis+1e-3))).sum(-1,keepdim=True) # batch
             q_target = self.reward_scale*rewards_n[:,agent,:] + (1. - terminals_n[:,agent,:]) * self.discount * next_target_q_values
             q_target = q_target.detach()
             q_target = torch.clamp(q_target, self.min_q_value, self.max_q_value)

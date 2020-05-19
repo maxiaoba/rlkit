@@ -35,6 +35,7 @@ class MASACDiscreteTrainer(TorchTrainer):
             tau=1e-2,
             use_soft_update=False,
             qf_criterion=None,
+            pre_activation_weight=0.,
             use_automatic_entropy_tuning=True,
             target_entropy=None,
             optimizer_class=optim.Adam,
@@ -127,17 +128,17 @@ class MASACDiscreteTrainer(TorchTrainer):
             """
             Policy operations.
             """
-            pis = self.policy_n[agent](obs_n[:,agent,:]) # batch x |A|
-
+            pis,info = self.policy_n[agent](obs_n[:,agent,:],return_info=True) # batch x |A|
+            logits = info['preactivation']
             if self.use_automatic_entropy_tuning:
-                alpha_loss = -(pis.detach() * self.log_alpha_n[agent].exp() * (torch.log(pis) + self.target_entropy).detach()).sum(-1).mean()
+                alpha_loss = -(pis.detach() * self.log_alpha_n[agent].exp() * (torch.log(pis+1e-3) + self.target_entropy).detach()).sum(-1).mean()
                 self.alpha_optimizer_n[agent].zero_grad()
                 alpha_loss.backward()
                 self.alpha_optimizer_n[agent].step()
                 alpha = self.log_alpha_n[agent].exp()
             else:
-                alpha_loss = torch.tensor(0.)
-                alpha = torch.tensor(1.)
+                alpha_loss = torch.zeros(1)
+                alpha = torch.ones(1)
 
             if self.online_action:
                 current_actions = online_actions_n.clone()
@@ -148,8 +149,8 @@ class MASACDiscreteTrainer(TorchTrainer):
             q1_output = self.qf1_n[agent](whole_obs, other_actions.view(batch_size, -1))
             q2_output = self.qf2_n[agent](whole_obs, other_actions.view(batch_size, -1))
             min_q_output = torch.min(q1_output,q2_output) # batch x |A|
-            policy_loss = (pis*(alpha*torch.log(pis) - min_q_output)).sum(-1).mean()
-            # policy_loss = (pis*(torch.log(pis)-torch.log(torch.softmax(min_q_output/alpha, dim=-1)))).sum(-1).mean()
+            policy_loss = (pis*(alpha*torch.log(pis+1e-3) - min_q_output)).sum(-1).mean()
+            # policy_loss = (pis*(torch.log(pis+1e-3)-torch.log(torch.softmax(min_q_output/alpha, dim=-1)+1e-3))).sum(-1).mean()
 
             """
             Critic operations.
@@ -168,7 +169,7 @@ class MASACDiscreteTrainer(TorchTrainer):
                 next_other_actions.view(batch_size,-1),
             )
             next_target_min_q_values = torch.min(next_target_q1_values,next_target_q2_values) # batch x |A|
-            next_target_q_values =  (new_pis*(next_target_min_q_values - alpha * torch.log(new_pis))).sum(-1,keepdim=True) # batch
+            next_target_q_values =  (new_pis*(next_target_min_q_values - alpha * torch.log(new_pis+1e-3))).sum(-1,keepdim=True) # batch
             q_target = self.reward_scale*rewards_n[:,agent,:] + (1. - terminals_n[:,agent,:]) * self.discount * next_target_q_values
             q_target = q_target.detach()
             q_target = torch.clamp(q_target, self.min_q_value, self.max_q_value)
