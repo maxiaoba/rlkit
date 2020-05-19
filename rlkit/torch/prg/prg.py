@@ -156,7 +156,7 @@ class PRGTrainer(TorchTrainer):
                     (pre_value**2).sum(dim=1).mean()
                 )
             else:
-                pre_activation_policy_loss = torch.tensor(0.) 
+                pre_activation_policy_loss = torch.tensor(0.).to(ptu.device) 
             if self.use_entropy_loss:
                 log_pi = info['log_prob']
                 if self.use_automatic_entropy_tuning:
@@ -166,11 +166,11 @@ class PRGTrainer(TorchTrainer):
                     self.alpha_optimizer_n[agent].step()
                     alpha = self.log_alpha_n[agent].exp()
                 else:
-                    alpha_loss = torch.tensor(0.)
-                    alpha = torch.tensor(1.)
+                    alpha_loss = torch.tensor(0.).to(ptu.device)
+                    alpha = torch.tensor(1.).to(ptu.device)
                 entropy_loss = (alpha*log_pi).mean()
             else:
-                entropy_loss = torch.tensor(0.)
+                entropy_loss = torch.tensor(0.).to(ptu.device)
 
             current_actions = online_actions_n.detach().clone()
             current_actions[:,agent,:] = policy_actions
@@ -268,7 +268,7 @@ class PRGTrainer(TorchTrainer):
                     (cactor_pre_value**2).sum(dim=1).mean()
                 )
             else:
-                pre_activation_cactor_loss = torch.tensor(0.)
+                pre_activation_cactor_loss = torch.tensor(0.).to(ptu.device)
             current_actions = actions_n.clone()
             current_actions[:,agent,:] = cactor_actions 
             q_output = self.qf_n[agent](whole_obs, current_actions.view(batch_size, -1))
