@@ -16,18 +16,18 @@ fields = [
 itr_name = 'epoch'
 min_loss = [-100,0,0]
 max_loss = [0,1,1]
-exp_name = "2pHard"
+exp_name = "2pEasy"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
             'MASACDiscreters100.0',
-            # 'MASACDiscreteLearnt',
-            # 'MADDPGGumbelHard',
-            # 'MADDPGGumbelSoft',
-            # 'PRGGumbelHardk1',
-            # 'PRGGumbelSoftk1',
+            'PRGDiscretedouble_qhardrs100.0',
+            'MADDPGGumbelHard',
+            'MADDPGGumbelSoft',
+            'PRGGumbelHardk1',
+            'PRGGumbelSoftk1',
         ]
 seeds = [0,1,2,3,4]
 policy_names = policies
