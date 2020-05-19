@@ -24,6 +24,7 @@ class PRGTrainer(TorchTrainer):
             cactor_n,
             target_cactor_n,
             double_q,
+            online_action,
             qf2_n=None,
             target_qf2_n=None,
             use_entropy_loss=False,
@@ -60,6 +61,7 @@ class PRGTrainer(TorchTrainer):
         self.cactor_n = cactor_n
         self.target_cactor_n = target_cactor_n
         self.double_q = double_q
+        self.online_action = online_action
         self.qf2_n = qf2_n
         self.target_qf2_n = target_qf2_n
 
@@ -135,9 +137,10 @@ class PRGTrainer(TorchTrainer):
         whole_actions = actions_n.view(batch_size, -1)
         whole_next_obs = next_obs_n.view(batch_size, -1) 
 
-        online_actions_n = [self.policy_n[agent](obs_n[:,agent,:]).detach() for agent in range(num_agent)]
-        online_actions_n = torch.stack(online_actions_n) # num_agent x batch x a_dim
-        online_actions_n = online_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
+        if self.online_action:
+            online_actions_n = [self.policy_n[agent](obs_n[:,agent,:]).detach() for agent in range(num_agent)]
+            online_actions_n = torch.stack(online_actions_n) # num_agent x batch x a_dim
+            online_actions_n = online_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
 
         next_target_actions_n = [self.target_policy_n[agent](next_obs_n[:,agent,:]).detach() for agent in range(num_agent)]
         next_target_actions_n = torch.stack(next_target_actions_n) # num_agent x batch x a_dim
@@ -160,7 +163,7 @@ class PRGTrainer(TorchTrainer):
             if self.use_entropy_loss:
                 log_pi = info['log_prob']
                 if self.use_automatic_entropy_tuning:
-                    alpha_loss = -(self.log_alpha_n[agent] * (log_pi + self.target_entropy).detach()).mean()
+                    alpha_loss = -(self.log_alpha_n[agent].exp() * (log_pi + self.target_entropy).detach()).mean()
                     self.alpha_optimizer_n[agent].zero_grad()
                     alpha_loss.backward()
                     self.alpha_optimizer_n[agent].step()
@@ -172,7 +175,10 @@ class PRGTrainer(TorchTrainer):
             else:
                 entropy_loss = torch.tensor(0.).to(ptu.device)
 
-            current_actions = online_actions_n.detach().clone()
+            if self.online_action:
+                current_actions = online_actions_n.clone()
+            else:
+                current_actions = actions_n.clone()
             current_actions[:,agent,:] = policy_actions
             next_actions = torch.zeros_like(current_actions)
             for k in range(self.logit_level):
@@ -185,12 +191,11 @@ class PRGTrainer(TorchTrainer):
                     else:
                         next_actions[:,agent_j,:] = policy_actions
                 current_actions = next_actions
-
             q_output = self.qf_n[agent](whole_obs, current_actions.view(batch_size, -1))
             if self.double_q:
                 q2_output = self.qf2_n[agent](whole_obs, current_actions.view(batch_size, -1))
                 q_output = torch.min(q_output,q2_output)
-            raw_policy_loss = - q_output.mean()
+            raw_policy_loss = -q_output.mean()
             policy_loss = (
                     raw_policy_loss +
                     pre_activation_policy_loss * self.pre_activation_weight +

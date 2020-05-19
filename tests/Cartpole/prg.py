@@ -8,7 +8,8 @@ from rlkit.exploration_strategies.base import (
 from rlkit.exploration_strategies.ou_strategy import OUStrategy
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.samplers.data_collector.ma_path_collector import MAMdpPathCollector
-from rlkit.torch.networks import FlattenMlp, TanhMlpPolicy
+from rlkit.torch.networks import FlattenMlp
+from rlkit.torch.policies.deterministic_policies import TanhMlpPolicy
 from rlkit.torch.prg.prg import PRGTrainer
 import rlkit.torch.pytorch_util as ptu
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
@@ -70,6 +71,7 @@ def experiment(variant):
     expl_path_collector = MAMdpPathCollector(expl_env, exploration_policy_n)
     replay_buffer = MAEnvReplayBuffer(variant['replay_buffer_size'], expl_env, num_agent=num_agent)
     trainer = PRGTrainer(
+        env=expl_env,
         qf_n=qf_n,
         target_qf_n=target_qf_n,
         policy_n=policy_n,

@@ -9,7 +9,8 @@ from rlkit.exploration_strategies.epsilon_greedy import EpsilonGreedy
 from rlkit.policies.argmax import ArgmaxDiscretePolicy
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.samplers.data_collector.ma_path_collector import MAMdpPathCollector
-from rlkit.torch.networks import FlattenMlp, GumbelSoftmaxMlpPolicy
+from rlkit.torch.networks import FlattenMlp
+from rlkit.torch.policies.gumbel_softmax_policy import GumbelSoftmaxMlpPolicy
 from rlkit.torch.prg.prg import PRGTrainer
 import rlkit.torch.pytorch_util as ptu
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
@@ -63,6 +64,7 @@ def experiment(variant):
     expl_path_collector = MAMdpPathCollector(expl_env, expl_policy_n)
     replay_buffer = MAEnvReplayBuffer(variant['replay_buffer_size'], expl_env, num_agent=num_agent)
     trainer = PRGTrainer(
+        env=expl_env,
         qf_n=qf_n,
         target_qf_n=target_qf_n,
         policy_n=policy_n,
@@ -89,7 +91,9 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='Cartpole')
-    parser.add_argument('--log_dir', type=str, default='PRGDiscrete')
+    parser.add_argument('--log_dir', type=str, default='PRGGumbel')
+    parser.add_argument('--double_q', action='store_true', default=False)
+    parser.add_argument('--online_action', action='store_true', default=False)
     parser.add_argument('--soft', action='store_true', default=False)
     parser.add_argument('--k', type=int, default=1)
     parser.add_argument('--lr', type=float, default=None)
@@ -104,6 +108,8 @@ if __name__ == "__main__":
     main_dir = args.log_dir\
                 +('soft' if args.soft else 'hard')\
                 +'k'+str(args.k)\
+                +('double_q' if args.double_q else '')\
+                +('online_action' if args.online_action else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
@@ -127,6 +133,8 @@ if __name__ == "__main__":
             cactor_learning_rate=(args.lr if args.lr else 1e-4),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
             logit_level=args.k,
+            double_q=args.double_q,
+            online_action=args.online_action,
         ),
         qf_kwargs=dict(
             hidden_sizes=[400, 300],
