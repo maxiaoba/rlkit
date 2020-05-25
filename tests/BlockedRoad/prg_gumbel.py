@@ -24,8 +24,8 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
 
-    qf_n, qf2_n, cactor_n, policy_n, target_qf_n, target_qf2_n, target_cactor_n, target_policy_n, eval_policy_n, expl_policy_n = \
-        [], [], [], [], [], [], [], [], [], []
+    qf_n, qf2_n, cactor_n, policy_n, target_qf_n, target_qf2_n, target_policy_n, eval_policy_n, expl_policy_n = \
+        [], [], [], [], [], [], [], [], []
     for i in range(num_agent):
         qf = FlattenMlp(
             input_size=(obs_dim*num_agent+action_dim*num_agent),
@@ -49,7 +49,6 @@ def experiment(variant):
         )
         target_qf = copy.deepcopy(qf)
         target_qf2 = copy.deepcopy(qf2)
-        target_cactor = copy.deepcopy(cactor)
         target_policy = copy.deepcopy(policy)
         eval_policy = ArgmaxDiscretePolicy(policy,use_preactivation=True)
         expl_policy = PolicyWrappedWithExplorationStrategy(
@@ -62,7 +61,6 @@ def experiment(variant):
         policy_n.append(policy)
         target_qf_n.append(target_qf)
         target_qf2_n.append(target_qf2)
-        target_cactor_n.append(target_cactor)
         target_policy_n.append(target_policy)
         eval_policy_n.append(eval_policy)
         expl_policy_n.append(expl_policy)
@@ -79,7 +77,6 @@ def experiment(variant):
         policy_n=policy_n,
         target_policy_n=target_policy_n,
         cactor_n=cactor_n,
-        target_cactor_n=target_cactor_n,
         **variant['trainer_kwargs']
     )
     algorithm = TorchBatchRLAlgorithm(
@@ -107,6 +104,7 @@ if __name__ == "__main__":
     parser.add_argument('--soft', action='store_true', default=False)
     parser.add_argument('--double_q', action='store_true', default=False)
     parser.add_argument('--online_action', action='store_true', default=False)
+    parser.add_argument('--target_action', action='store_true', default=False)
     parser.add_argument('--entropy', action='store_true', default=False)
     parser.add_argument('--k', type=int, default=1)
     parser.add_argument('--lr', type=float, default=None)
@@ -124,6 +122,7 @@ if __name__ == "__main__":
                 +('soft' if args.soft else 'hard')\
                 +('double_q' if args.double_q else '')\
                 +('online_action' if args.online_action else '')\
+                +('target_action' if args.target_action else '')\
                 +('entropy' if args.entropy else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')\
@@ -154,6 +153,7 @@ if __name__ == "__main__":
             use_entropy_loss=args.entropy,
             reward_scale=(args.rs if args.rs else 1.0),
             online_action=args.online_action,
+            target_action=args.target_action,
         ),
         qf_kwargs=dict(
             hidden_sizes=[400, 300],

@@ -22,9 +22,9 @@ class PRGTrainer(TorchTrainer):
             policy_n,
             target_policy_n,
             cactor_n,
-            target_cactor_n,
             double_q,
             online_action,
+            target_action,
             qf2_n=None,
             target_qf2_n=None,
             use_entropy_loss=False,
@@ -59,9 +59,9 @@ class PRGTrainer(TorchTrainer):
         self.policy_n = policy_n
         self.target_policy_n = target_policy_n
         self.cactor_n = cactor_n
-        self.target_cactor_n = target_cactor_n
         self.double_q = double_q
         self.online_action = online_action
+        self.target_action = target_action
         self.qf2_n = qf2_n
         self.target_qf2_n = target_qf2_n
 
@@ -141,6 +141,10 @@ class PRGTrainer(TorchTrainer):
             online_actions_n = [self.policy_n[agent](obs_n[:,agent,:]).detach() for agent in range(num_agent)]
             online_actions_n = torch.stack(online_actions_n) # num_agent x batch x a_dim
             online_actions_n = online_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
+        elif self.target_action:
+            target_actions_n = [self.target_policy_n[agent](obs_n[:,agent,:]).detach() for agent in range(num_agent)]
+            target_actions_n = torch.stack(target_actions_n) # num_agent x batch x a_dim
+            target_actions_n = target_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
 
         next_target_actions_n = [self.target_policy_n[agent](next_obs_n[:,agent,:]).detach() for agent in range(num_agent)]
         next_target_actions_n = torch.stack(next_target_actions_n) # num_agent x batch x a_dim
@@ -177,6 +181,8 @@ class PRGTrainer(TorchTrainer):
 
             if self.online_action:
                 current_actions = online_actions_n.clone()
+            elif self.target_action:
+                current_actions = target_actions_n.clone()
             else:
                 current_actions = actions_n.clone()
             current_actions[:,agent,:] = policy_actions
@@ -401,7 +407,6 @@ class PRGTrainer(TorchTrainer):
             *self.cactor_n,
             *self.qf_n,
             *self.target_policy_n,
-            *self.target_cactor_n,
             *self.target_qf_n,
         ]
         if self.double_q:
@@ -413,7 +418,6 @@ class PRGTrainer(TorchTrainer):
             qf_n=self.qf_n,
             target_qf_n=self.target_qf_n,
             cactor_n=self.cactor_n,
-            target_cactor_n=self.target_cactor_n,
             trained_policy_n=self.policy_n,
             target_policy_n=self.target_policy_n,
         )

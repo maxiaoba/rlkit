@@ -21,7 +21,10 @@ class PRGDiscreteTrainer(TorchTrainer):
             qf_n,
             target_qf_n,
             policy_n,
+            target_policy_n,
             double_q,
+            online_action,
+            target_action,
             qf2_n=None,
             target_qf2_n=None,
             use_automatic_entropy_tuning=True,
@@ -54,7 +57,10 @@ class PRGDiscreteTrainer(TorchTrainer):
         self.qf_n = qf_n
         self.target_qf_n = target_qf_n
         self.policy_n = policy_n
+        self.target_policy_n = target_policy_n
         self.double_q = double_q
+        self.online_action = online_action
+        self.target_action = target_action
         self.qf2_n = qf2_n
         self.target_qf2_n = target_qf2_n
 
@@ -126,9 +132,14 @@ class PRGDiscreteTrainer(TorchTrainer):
         whole_actions = actions_n.view(batch_size, -1)
         whole_next_obs = next_obs_n.view(batch_size, -1) 
 
-        online_actions_n = [self.policy_n[agent].one_hot(obs_n[:,agent,:]).detach() for agent in range(num_agent)]
-        online_actions_n = torch.stack(online_actions_n) # num_agent x batch x a_dim
-        online_actions_n = online_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
+        if self.online_action:
+            online_actions_n = [self.policy_n[agent].one_hot((obs_n[:,agent,:])).detach() for agent in range(num_agent)]
+            online_actions_n = torch.stack(online_actions_n) # num_agent x batch x a_dim
+            online_actions_n = online_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
+        elif self.target_action:
+            target_actions_n = [self.target_policy_n[agent].one_hot((obs_n[:,agent,:])).detach() for agent in range(num_agent)]
+            target_actions_n = torch.stack(target_actions_n) # num_agent x batch x a_dim
+            target_actions_n = target_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
 
         next_actions_n = [self.policy_n[agent].one_hot(next_obs_n[:,agent,:]).detach() for agent in range(num_agent)]
         next_actions_n = torch.stack(next_actions_n) # num_agent x batch x a_dim
@@ -162,8 +173,15 @@ class PRGDiscreteTrainer(TorchTrainer):
                 alpha = torch.ones(1)
 
             q_output = torch.zeros_like(pis).to(ptu.device)
+
             for a_i in range(self.env.action_space.n):
-                current_actions = online_actions_n.detach().clone()
+                # current_actions = online_actions_n.detach().clone()
+                if self.online_action:
+                    current_actions = online_actions_n.clone()
+                elif self.target_action:
+                    current_actions = target_actions_n.clone()
+                else:
+                    current_actions = actions_n.clone()
                 action_i = torch.zeros(self.env.action_space.n).to(ptu.device)
                 action_i[a_i] = 1.
                 current_actions[:,agent,:] = action_i
@@ -319,12 +337,14 @@ class PRGDiscreteTrainer(TorchTrainer):
         self._n_train_steps_total += 1
 
     def _update_target_networks(self):
-        for qf, target_qf in \
-            zip(self.qf_n, self.target_qf_n):
+        for policy, target_policy, qf, target_qf in \
+            zip(self.policy_n, self.target_policy_n, self.qf_n, self.target_qf_n):
             if self.use_soft_update:
+                ptu.soft_update_from_to(policy, target_policy, self.tau)
                 ptu.soft_update_from_to(qf, target_qf, self.tau)
             else:
                 if self._n_train_steps_total % self.target_hard_update_period == 0:
+                    ptu.copy_model_params_from_to(policy, target_policy)
                     ptu.copy_model_params_from_to(qf, target_qf)
         if self.double_q:
             for qf2, target_qf2 in \
@@ -345,6 +365,7 @@ class PRGDiscreteTrainer(TorchTrainer):
     def networks(self):
         res = [
             *self.policy_n,
+            *self.target_policy_n,
             *self.qf_n,
             *self.target_qf_n,
         ]
@@ -357,6 +378,7 @@ class PRGDiscreteTrainer(TorchTrainer):
             qf_n=self.qf_n,
             target_qf_n=self.target_qf_n,
             trained_policy_n=self.policy_n,
+            target_policy_n=self.target_policy_n,
         )
         if self.double_q:
             res['qf2_n'] = self.qf2_n
