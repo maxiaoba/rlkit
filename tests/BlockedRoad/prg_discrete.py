@@ -97,6 +97,7 @@ if __name__ == "__main__":
     parser.add_argument('--double_q', action='store_true', default=False)
     parser.add_argument('--online_action', action='store_true', default=False)
     parser.add_argument('--target_action', action='store_true', default=False)
+    parser.add_argument('--use_gumbel', action='store_true', default=False)
     parser.add_argument('--soft', action='store_true', default=False)
     parser.add_argument('--learn_temperature', action='store_true', default=False)
     parser.add_argument('--lr', type=float, default=None)
@@ -115,7 +116,7 @@ if __name__ == "__main__":
                 +('double_q' if args.double_q else '')\
                 +('online_action' if args.online_action else '')\
                 +('target_action' if args.target_action else '')\
-                +('soft' if args.soft else 'hard')\
+                +(('soft' if args.soft else 'hard') if args.use_gumbel else '')\
                 +('Learnt' if args.learn_temperature else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')\
@@ -142,6 +143,7 @@ if __name__ == "__main__":
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
             double_q=args.double_q,
+            use_gumbel=args.use_gumbel,
             gumbel_hard=(not args.soft),
             clip_gradient=args.cg,
             reward_scale=(args.rs if args.rs else 1.0),
