@@ -55,8 +55,10 @@ class PRGDiscreteTrainer(TorchTrainer):
         self.env = env
         if qf_criterion is None:
             qf_criterion = nn.MSELoss()
-        self.qf_n = qf_n
-        self.target_qf_n = target_qf_n
+        # self.qf_n = qf_n
+        # self.target_qf_n = target_qf_n
+        self.qf1_n = qf_n
+        self.target_qf1_n = target_qf_n
         self.policy_n = policy_n
         self.target_policy_n = target_policy_n
         self.double_q = double_q
@@ -97,17 +99,22 @@ class PRGDiscreteTrainer(TorchTrainer):
                     lr=self.policy_learning_rate,
                 ) for i in range(len(self.log_alpha_n))]
 
-        self.qf_optimizer_n = [ 
-            optimizer_class(
-                self.qf_n[i].parameters(),
-                lr=self.qf_learning_rate,
-            ) for i in range(len(self.qf_n))]
+        # self.qf_optimizer_n = [ 
+        #     optimizer_class(
+        #         self.qf_n[i].parameters(),
+        #         lr=self.qf_learning_rate,
+        #     ) for i in range(len(self.qf_n))]
         # if self.double_q:
         #     self.qf2_optimizer_n = [ 
         #         optimizer_class(
         #             self.qf2_n[i].parameters(),
         #             lr=self.qf_learning_rate,
         #         ) for i in range(len(self.qf2_n))]
+        self.qf1_optimizer_n = [ 
+            optimizer_class(
+                self.qf1_n[i].parameters(),
+                lr=self.qf_learning_rate,
+            ) for i in range(len(self.qf1_n))]
         self.qf2_optimizer_n = [ 
             optimizer_class(
                 self.qf2_n[i].parameters(),
@@ -121,7 +128,7 @@ class PRGDiscreteTrainer(TorchTrainer):
             ) for i in range(len(self.policy_n))]
 
         num_agent = len(self.policy_n)
-        self.other_action_indices = [np.array([i for i in range(num_agent) if i!=agent]) for agent in range(num_agent)]
+        # self.other_action_indices = [np.array([i for i in range(num_agent) if i!=agent]) for agent in range(num_agent)]
         self.eval_statistics = OrderedDict()
         self._n_train_steps_total = 0
         self._need_to_update_eval_statistics = True
@@ -152,32 +159,32 @@ class PRGDiscreteTrainer(TorchTrainer):
         next_actions_n = torch.stack(next_actions_n) # num_agent x batch x a_dim
         next_actions_n = next_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
 
-        if self.use_automatic_entropy_tuning:
-            alpha_n = [self.log_alpha_n[i].exp() for i in range(num_agent)]
-        else:
-            alpha_n = [1. for i in range(num_agent)]
+        # if self.use_automatic_entropy_tuning:
+        #     alpha_n = [self.log_alpha_n[i].exp() for i in range(num_agent)]
+        # else:
+        #     alpha_n = [1. for i in range(num_agent)]
         for agent in range(num_agent):
             """
             Policy operations.
             """
-            pis, info = self.policy_n[agent](obs_n[:,agent,:],return_info=True) # batch x |A|
-            pre_value = info['preactivation']
-            if self.pre_activation_weight > 0.:
-                pre_activation_policy_loss = (
-                    (pre_value**2).sum(dim=1).mean()
-                )
-            else:
-                pre_activation_policy_loss = torch.tensor(0.).to(ptu.device) 
+            # pis, info = self.policy_n[agent](obs_n[:,agent,:],return_info=True) # batch x |A|
+            # pre_value = info['preactivation']
+            # if self.pre_activation_weight > 0.:
+            #     pre_activation_policy_loss = (
+            #         (pre_value**2).sum(dim=1).mean()
+            #     )
+            # else:
+            #     pre_activation_policy_loss = torch.tensor(0.).to(ptu.device) 
 
-            if self.use_automatic_entropy_tuning:
-                alpha_loss = -(pis.detach() * self.log_alpha_n[agent].exp() * (torch.log(pis+1e-3) + self.target_entropy).detach()).sum(-1).mean()
-                self.alpha_optimizer_n[agent].zero_grad()
-                alpha_loss.backward()
-                self.alpha_optimizer_n[agent].step()
-                alpha = self.log_alpha_n[agent].exp()
-            else:
-                alpha_loss = torch.zeros(1)
-                alpha = torch.ones(1)
+            # if self.use_automatic_entropy_tuning:
+            #     alpha_loss = -(pis.detach() * self.log_alpha_n[agent].exp() * (torch.log(pis+1e-3) + self.target_entropy).detach()).sum(-1).mean()
+            #     self.alpha_optimizer_n[agent].zero_grad()
+            #     alpha_loss.backward()
+            #     self.alpha_optimizer_n[agent].step()
+            #     alpha = self.log_alpha_n[agent].exp()
+            # else:
+            #     alpha_loss = torch.zeros(1)
+            #     alpha = torch.ones(1)
 
             # q_output = torch.zeros_like(pis).to(ptu.device)
 
@@ -223,41 +230,45 @@ class PRGDiscreteTrainer(TorchTrainer):
             #         q_output_i = torch.min(q_output_i,q2_output_i)
             #     q_output[:,a_i] = q_output_i
 
+            # raw_policy_loss = (- pis * q_output).sum(-1).mean()
+            # entropy_loss = (pis * alpha * torch.log(pis+1e-3)).sum(-1).mean()
+            # policy_loss = (
+            #         raw_policy_loss +
+            #         pre_activation_policy_loss * self.pre_activation_weight +
+            #         entropy_loss
+            # )
+
+            pis,info = self.policy_n[agent](obs_n[:,agent,:],return_info=True) # batch x |A|
+            logits = info['preactivation']
+            if self.use_automatic_entropy_tuning:
+                alpha_loss = -(pis.detach() * self.log_alpha_n[agent].exp() * (torch.log(pis+1e-3) + self.target_entropy).detach()).sum(-1).mean()
+                self.alpha_optimizer_n[agent].zero_grad()
+                alpha_loss.backward()
+                self.alpha_optimizer_n[agent].step()
+                alpha = self.log_alpha_n[agent].exp()
+            else:
+                alpha_loss = torch.zeros(1)
+                alpha = torch.ones(1)
+
             if self.online_action:
                 current_actions = online_actions_n.clone()
-            elif self.target_action:
-                current_actions = target_actions_n.clone()
             else:
                 current_actions = actions_n.clone()
-            other_action_index = self.other_action_indices[agent]
+            other_action_index = np.array([i for i in range(num_agent) if i!=agent])
             other_actions = current_actions[:,other_action_index,:]
-            # q_output = self.qf_n[agent](whole_obs, other_actions.view(batch_size, -1))
-            # if self.double_q:
-            #     q2_output = self.qf2_n[agent](whole_obs, other_actions.view(batch_size, -1))
-            #     q_output = torch.min(q_output,q2_output) # batch x |A|
-            # raw_policy_loss = (- pis * q_output).sum(-1).mean()
-
-            q1_output = self.qf_n[agent](whole_obs, other_actions.view(batch_size, -1))
+            q1_output = self.qf1_n[agent](whole_obs, other_actions.view(batch_size, -1))
             q2_output = self.qf2_n[agent](whole_obs, other_actions.view(batch_size, -1))
             min_q_output = torch.min(q1_output,q2_output) # batch x |A|
-            raw_policy_loss = (- pis * min_q_output).sum(-1).mean()
-            
-            entropy_loss = (pis * alpha * torch.log(pis+1e-3)).sum(-1).mean()
-            policy_loss = (
-                    raw_policy_loss +
-                    pre_activation_policy_loss * self.pre_activation_weight +
-                    entropy_loss
-            )
-
+            policy_loss = (pis*(alpha*torch.log(pis+1e-3) - min_q_output)).sum(-1).mean()
             """
             Critic operations.
             """
             # speed up computation by not backpropping these gradients
-            new_pis = self.policy_n[agent](next_obs_n[:,agent,:]).detach()
-            next_current_actions = next_actions_n.clone()
-            other_action_index = self.other_action_indices[agent]
-            next_other_actions = next_current_actions[:,other_action_index,:].detach()
-            other_actions = actions_n[:,other_action_index,:].detach()
+            # new_pis = self.policy_n[agent](next_obs_n[:,agent,:]).detach()
+            # next_current_actions = next_actions_n.clone()
+            # other_action_index = self.other_action_indices[agent]
+            # next_other_actions = next_current_actions[:,other_action_index,:].detach()
+            # other_actions = actions_n[:,other_action_index,:].detach()
 
             # next_target_q_values = self.target_qf_n[agent](
             #     whole_next_obs,
@@ -270,7 +281,12 @@ class PRGDiscreteTrainer(TorchTrainer):
             #     )
             #     next_target_q_values = torch.min(next_target_q_values, next_target_q2_values)
             # next_target_q_values =  (new_pis*(next_target_q_values - alpha * torch.log(new_pis+1e-3))).sum(-1,keepdim=True) # batch
-            next_target_q1_values = self.target_qf_n[agent](
+
+            new_pis = self.policy_n[agent](next_obs_n[:,agent,:]).detach()
+            next_current_actions = next_actions_n.clone()
+            next_other_actions = next_current_actions[:,other_action_index,:].detach()
+            other_actions = actions_n[:,other_action_index,:].detach()
+            next_target_q1_values = self.target_qf1_n[agent](
                 whole_next_obs,
                 next_other_actions.view(batch_size,-1),
             )
@@ -280,16 +296,16 @@ class PRGDiscreteTrainer(TorchTrainer):
             )
             next_target_min_q_values = torch.min(next_target_q1_values,next_target_q2_values) # batch x |A|
             next_target_q_values =  (new_pis*(next_target_min_q_values - alpha * torch.log(new_pis+1e-3))).sum(-1,keepdim=True) # batch
-            
             q_target = self.reward_scale*rewards_n[:,agent,:] + (1. - terminals_n[:,agent,:]) * self.discount * next_target_q_values
             q_target = q_target.detach()
             q_target = torch.clamp(q_target, self.min_q_value, self.max_q_value)
 
-            q_pred = torch.sum(self.qf_n[agent](whole_obs, other_actions.view(batch_size,-1))*actions_n[:,agent,:].detach(),dim=-1,keepdim=True)
+            q1_pred = torch.sum(self.qf1_n[agent](whole_obs, other_actions.view(batch_size,-1))*actions_n[:,agent,:].detach(),dim=-1,keepdim=True)
             q2_pred = torch.sum(self.qf2_n[agent](whole_obs, other_actions.view(batch_size,-1))*actions_n[:,agent,:].detach(),dim=-1,keepdim=True)
 
-            qf_loss = self.qf_criterion(q_pred, q_target)
+            qf1_loss = self.qf_criterion(q1_pred, q_target)
             qf2_loss = self.qf_criterion(q2_pred, q_target)
+
             # q_pred = torch.sum(self.qf_n[agent](whole_obs, other_actions.view(batch_size,-1))*actions_n[:,agent,:].detach(),dim=-1,keepdim=True)
             # raw_qf_loss = self.qf_criterion(q_pred, q_target)
             # if self.qf_weight_decay > 0:
@@ -317,27 +333,27 @@ class PRGDiscreteTrainer(TorchTrainer):
             Update Networks
             """
 
-            self.policy_optimizer_n[agent].zero_grad()
-            policy_loss.backward()
-            if self.clip_gradient > 0.:
-                nn.utils.clip_grad_norm_(self.policy_n[agent].parameters(), self.clip_gradient)
-            policy_grad_norm = torch.tensor(0.).to(ptu.device) 
-            for p in self.policy_n[agent].parameters():
-                param_norm = p.grad.data.norm(2)
-                policy_grad_norm += param_norm.item() ** 2
-            policy_grad_norm = policy_grad_norm ** (1. / 2)
-            self.policy_optimizer_n[agent].step()
+            # self.policy_optimizer_n[agent].zero_grad()
+            # policy_loss.backward()
+            # if self.clip_gradient > 0.:
+            #     nn.utils.clip_grad_norm_(self.policy_n[agent].parameters(), self.clip_gradient)
+            # policy_grad_norm = torch.tensor(0.).to(ptu.device) 
+            # for p in self.policy_n[agent].parameters():
+            #     param_norm = p.grad.data.norm(2)
+            #     policy_grad_norm += param_norm.item() ** 2
+            # policy_grad_norm = policy_grad_norm ** (1. / 2)
+            # self.policy_optimizer_n[agent].step()
 
-            self.qf_optimizer_n[agent].zero_grad()
-            qf_loss.backward()
-            if self.clip_gradient > 0.:
-                nn.utils.clip_grad_norm_(self.qf_n[agent].parameters(), self.clip_gradient)
-            qf_grad_norm = torch.tensor(0.).to(ptu.device) 
-            for p in self.qf_n[agent].parameters():
-                param_norm = p.grad.data.norm(2)
-                qf_grad_norm += param_norm.item() ** 2
-            qf_grad_norm = qf_grad_norm ** (1. / 2)
-            self.qf_optimizer_n[agent].step()
+            # self.qf_optimizer_n[agent].zero_grad()
+            # qf_loss.backward()
+            # if self.clip_gradient > 0.:
+            #     nn.utils.clip_grad_norm_(self.qf_n[agent].parameters(), self.clip_gradient)
+            # qf_grad_norm = torch.tensor(0.).to(ptu.device) 
+            # for p in self.qf_n[agent].parameters():
+            #     param_norm = p.grad.data.norm(2)
+            #     qf_grad_norm += param_norm.item() ** 2
+            # qf_grad_norm = qf_grad_norm ** (1. / 2)
+            # self.qf_optimizer_n[agent].step()
 
             # if self.double_q:
             #     self.qf2_optimizer_n[agent].zero_grad()
@@ -350,6 +366,29 @@ class PRGDiscreteTrainer(TorchTrainer):
             #         qf2_grad_norm += param_norm.item() ** 2
             #     qf2_grad_norm = qf2_grad_norm ** (1. / 2)
             #     self.qf2_optimizer_n[agent].step()
+
+            self.policy_optimizer_n[agent].zero_grad()
+            policy_loss.backward()
+            if self.clip_gradient > 0.:
+                nn.utils.clip_grad_norm_(self.policy_n[agent].parameters(), self.clip_gradient)
+            policy_grad_norm = torch.tensor(0.).to(ptu.device) 
+            for p in self.policy_n[agent].parameters():
+                param_norm = p.grad.data.norm(2)
+                policy_grad_norm += param_norm.item() ** 2
+            policy_grad_norm = policy_grad_norm ** (1. / 2)
+            self.policy_optimizer_n[agent].step()
+
+            self.qf1_optimizer_n[agent].zero_grad()
+            qf1_loss.backward()
+            if self.clip_gradient > 0.:
+                nn.utils.clip_grad_norm_(self.qf1_n[agent].parameters(), self.clip_gradient)
+            qf1_grad_norm = torch.tensor(0.).to(ptu.device) 
+            for p in self.qf1_n[agent].parameters():
+                param_norm = p.grad.data.norm(2)
+                qf1_grad_norm += param_norm.item() ** 2
+            qf1_grad_norm = qf1_grad_norm ** (1. / 2)
+            self.qf1_optimizer_n[agent].step()
+
             self.qf2_optimizer_n[agent].zero_grad()
             qf2_loss.backward()
             if self.clip_gradient > 0.:
@@ -365,50 +404,87 @@ class PRGDiscreteTrainer(TorchTrainer):
             Save some statistics for eval using just one batch.
             """
             if self._need_to_update_eval_statistics:
-                self.eval_statistics['QF Loss {}'.format(agent)] = np.mean(ptu.get_numpy(qf_loss))
-                self.eval_statistics['QF Gradient {}'.format(agent)] = np.mean(ptu.get_numpy(
-                    qf_grad_norm
+                self.eval_statistics['QF1 Loss {}'.format(agent)] = np.mean(ptu.get_numpy(qf1_loss))
+                self.eval_statistics['QF1 Gradient {}'.format(agent)] = np.mean(ptu.get_numpy(
+                    qf1_grad_norm
                 ))
-                if self.double_q:
-                    self.eval_statistics['QF2 Loss {}'.format(agent)] = np.mean(ptu.get_numpy(qf2_loss))
-                    self.eval_statistics['QF2 Gradient {}'.format(agent)] = np.mean(ptu.get_numpy(
-                        qf2_grad_norm
-                    ))
+                self.eval_statistics['QF2 Loss {}'.format(agent)] = np.mean(ptu.get_numpy(qf2_loss))
+                self.eval_statistics['QF2 Gradient {}'.format(agent)] = np.mean(ptu.get_numpy(
+                    qf2_grad_norm
+                ))
                 self.eval_statistics['Policy Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
                     policy_loss
-                ))
-                self.eval_statistics['Raw Policy Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
-                    raw_policy_loss
-                ))
-                self.eval_statistics['Preactivation Policy Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
-                    pre_activation_policy_loss
                 ))
                 self.eval_statistics['Policy Gradient {}'.format(agent)] = np.mean(ptu.get_numpy(
                     policy_grad_norm
                 ))
-                self.eval_statistics['Entropy Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
-                    entropy_loss
-                ))
-                self.eval_statistics['Alpha {}'.format(agent)] = np.mean(ptu.get_numpy(
-                    alpha
+                self.eval_statistics['Alpha Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
+                    alpha_loss
                 ))
                 self.eval_statistics.update(create_stats_ordered_dict(
-                    'Q Predictions {}'.format(agent),
-                    ptu.get_numpy(q_pred),
+                    'Q1 Predictions {}'.format(agent),
+                    ptu.get_numpy(q1_pred),
+                ))
+                self.eval_statistics.update(create_stats_ordered_dict(
+                    'Q2 Predictions {}'.format(agent),
+                    ptu.get_numpy(q2_pred),
                 ))
                 self.eval_statistics.update(create_stats_ordered_dict(
                     'Q Targets {}'.format(agent),
                     ptu.get_numpy(q_target),
                 ))
-                if self.double_q:
-                    self.eval_statistics.update(create_stats_ordered_dict(
-                        'Q2 Predictions {}'.format(agent),
-                        ptu.get_numpy(q2_pred),
-                    ))
                 self.eval_statistics.update(create_stats_ordered_dict(
                     'Pis {}'.format(agent),
                     ptu.get_numpy(pis),
                 ))
+                self.eval_statistics.update(create_stats_ordered_dict(
+                    'Alpha {}'.format(agent),
+                    ptu.get_numpy(alpha),
+                ))
+                # self.eval_statistics['QF Loss {}'.format(agent)] = np.mean(ptu.get_numpy(qf_loss))
+                # self.eval_statistics['QF Gradient {}'.format(agent)] = np.mean(ptu.get_numpy(
+                #     qf_grad_norm
+                # ))
+                # if self.double_q:
+                #     self.eval_statistics['QF2 Loss {}'.format(agent)] = np.mean(ptu.get_numpy(qf2_loss))
+                #     self.eval_statistics['QF2 Gradient {}'.format(agent)] = np.mean(ptu.get_numpy(
+                #         qf2_grad_norm
+                #     ))
+                # self.eval_statistics['Policy Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
+                #     policy_loss
+                # ))
+                # self.eval_statistics['Raw Policy Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
+                #     raw_policy_loss
+                # ))
+                # self.eval_statistics['Preactivation Policy Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
+                #     pre_activation_policy_loss
+                # ))
+                # self.eval_statistics['Policy Gradient {}'.format(agent)] = np.mean(ptu.get_numpy(
+                #     policy_grad_norm
+                # ))
+                # self.eval_statistics['Entropy Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
+                #     entropy_loss
+                # ))
+                # self.eval_statistics['Alpha {}'.format(agent)] = np.mean(ptu.get_numpy(
+                #     alpha
+                # ))
+                # self.eval_statistics.update(create_stats_ordered_dict(
+                #     'Q Predictions {}'.format(agent),
+                #     ptu.get_numpy(q_pred),
+                # ))
+                # self.eval_statistics.update(create_stats_ordered_dict(
+                #     'Q Targets {}'.format(agent),
+                #     ptu.get_numpy(q_target),
+                # ))
+                # if self.double_q:
+                #     self.eval_statistics.update(create_stats_ordered_dict(
+                #         'Q2 Predictions {}'.format(agent),
+                #         ptu.get_numpy(q2_pred),
+                #     ))
+                # self.eval_statistics.update(create_stats_ordered_dict(
+                #     'Pis {}'.format(agent),
+                #     ptu.get_numpy(pis),
+                # ))
                 
         self._need_to_update_eval_statistics = False
         self._update_target_networks()
@@ -433,7 +509,7 @@ class PRGDiscreteTrainer(TorchTrainer):
         #             if self._n_train_steps_total % self.target_hard_update_period == 0:
         #                 ptu.copy_model_params_from_to(qf2, target_qf2)
         for qf1, target_qf1, qf2, target_qf2 in \
-            zip(self.qf_n, self.target_qf_n, self.qf2_n, self.target_qf2_n):
+            zip(self.qf1_n, self.target_qf1_n, self.qf2_n, self.target_qf2_n):
             if self.use_soft_update:
                 ptu.soft_update_from_to(qf1, target_qf1, self.tau)
                 ptu.soft_update_from_to(qf2, target_qf2, self.tau)
@@ -458,15 +534,14 @@ class PRGDiscreteTrainer(TorchTrainer):
         # ]
         # if self.double_q:
         #     res += [*self.qf2_n, *self.target_qf2_n]
-        res = [
+        # return res
+        return [
             *self.policy_n,
-            *self.target_policy_n,
-            *self.qf_n,
-            *self.target_qf_n,
+            *self.qf1_n,
             *self.qf2_n,
-            *self.target_qf2_n
+            *self.target_qf1_n,
+            *self.target_qf2_n,
         ]
-        return res
 
     def get_snapshot(self):
         # res = dict(
@@ -478,12 +553,11 @@ class PRGDiscreteTrainer(TorchTrainer):
         # if self.double_q:
         #     res['qf2_n'] = self.qf2_n
         #     res['target_qf2_n'] = self.target_qf2_n
-        res = dict(
-            qf_n=self.qf_n,
-            target_qf_n=self.target_qf_n,
+        # return res
+        return dict(
+            qf1_n=self.qf1_n,
+            target_qf1_n=self.target_qf1_n,
             qf2_n=self.qf2_n,
             target_qf2_n=self.target_qf2_n,
             trained_policy_n=self.policy_n,
-            target_policy_n=self.target_policy_n,
         )
-        return res
