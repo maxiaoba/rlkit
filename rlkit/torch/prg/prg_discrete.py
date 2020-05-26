@@ -102,12 +102,17 @@ class PRGDiscreteTrainer(TorchTrainer):
                 self.qf_n[i].parameters(),
                 lr=self.qf_learning_rate,
             ) for i in range(len(self.qf_n))]
-        if self.double_q:
-            self.qf2_optimizer_n = [ 
-                optimizer_class(
-                    self.qf2_n[i].parameters(),
-                    lr=self.qf_learning_rate,
-                ) for i in range(len(self.qf2_n))]
+        # if self.double_q:
+        #     self.qf2_optimizer_n = [ 
+        #         optimizer_class(
+        #             self.qf2_n[i].parameters(),
+        #             lr=self.qf_learning_rate,
+        #         ) for i in range(len(self.qf2_n))]
+        self.qf2_optimizer_n = [ 
+            optimizer_class(
+                self.qf2_n[i].parameters(),
+                lr=self.qf_learning_rate,
+            ) for i in range(len(self.qf2_n))]
 
         self.policy_optimizer_n = [
             optimizer_class(
@@ -281,27 +286,32 @@ class PRGDiscreteTrainer(TorchTrainer):
             q_target = torch.clamp(q_target, self.min_q_value, self.max_q_value)
 
             q_pred = torch.sum(self.qf_n[agent](whole_obs, other_actions.view(batch_size,-1))*actions_n[:,agent,:].detach(),dim=-1,keepdim=True)
-            raw_qf_loss = self.qf_criterion(q_pred, q_target)
-            if self.qf_weight_decay > 0:
-                reg_loss = self.qf_weight_decay * sum(
-                    torch.sum(param ** 2)
-                    for param in self.qf_n[agent].regularizable_parameters()
-                )
-                qf_loss = raw_qf_loss + reg_loss
-            else:
-                qf_loss = raw_qf_loss
+            q2_pred = torch.sum(self.qf2_n[agent](whole_obs, other_actions.view(batch_size,-1))*actions_n[:,agent,:].detach(),dim=-1,keepdim=True)
 
-            if self.double_q:
-                q2_pred = torch.sum(self.qf2_n[agent](whole_obs, other_actions.view(batch_size,-1))*actions_n[:,agent,:].detach(),dim=-1,keepdim=True)
-                raw_qf2_loss = self.qf_criterion(q2_pred, q_target)
-                if self.qf_weight_decay > 0:
-                    reg_loss2 = self.qf_weight_decay * sum(
-                        torch.sum(param ** 2)
-                        for param in self.qf2_n[agent].regularizable_parameters()
-                    )
-                    qf2_loss = raw_qf2_loss + reg_loss2
-                else:
-                    qf2_loss = raw_qf2_loss
+            qf_loss = self.qf_criterion(q_pred, q_target)
+            qf2_loss = self.qf_criterion(q2_pred, q_target)
+            # q_pred = torch.sum(self.qf_n[agent](whole_obs, other_actions.view(batch_size,-1))*actions_n[:,agent,:].detach(),dim=-1,keepdim=True)
+            # raw_qf_loss = self.qf_criterion(q_pred, q_target)
+            # if self.qf_weight_decay > 0:
+            #     reg_loss = self.qf_weight_decay * sum(
+            #         torch.sum(param ** 2)
+            #         for param in self.qf_n[agent].regularizable_parameters()
+            #     )
+            #     qf_loss = raw_qf_loss + reg_loss
+            # else:
+            #     qf_loss = raw_qf_loss
+
+            # if self.double_q:
+            #     q2_pred = torch.sum(self.qf2_n[agent](whole_obs, other_actions.view(batch_size,-1))*actions_n[:,agent,:].detach(),dim=-1,keepdim=True)
+            #     raw_qf2_loss = self.qf_criterion(q2_pred, q_target)
+            #     if self.qf_weight_decay > 0:
+            #         reg_loss2 = self.qf_weight_decay * sum(
+            #             torch.sum(param ** 2)
+            #             for param in self.qf2_n[agent].regularizable_parameters()
+            #         )
+            #         qf2_loss = raw_qf2_loss + reg_loss2
+            #     else:
+            #         qf2_loss = raw_qf2_loss
 
             """
             Update Networks
@@ -329,17 +339,27 @@ class PRGDiscreteTrainer(TorchTrainer):
             qf_grad_norm = qf_grad_norm ** (1. / 2)
             self.qf_optimizer_n[agent].step()
 
-            if self.double_q:
-                self.qf2_optimizer_n[agent].zero_grad()
-                qf2_loss.backward()
-                if self.clip_gradient > 0.:
-                    nn.utils.clip_grad_norm_(self.qf2_n[agent].parameters(), self.clip_gradient)
-                qf2_grad_norm = torch.tensor(0.).to(ptu.device) 
-                for p in self.qf2_n[agent].parameters():
-                    param_norm = p.grad.data.norm(2)
-                    qf2_grad_norm += param_norm.item() ** 2
-                qf2_grad_norm = qf2_grad_norm ** (1. / 2)
-                self.qf2_optimizer_n[agent].step()
+            # if self.double_q:
+            #     self.qf2_optimizer_n[agent].zero_grad()
+            #     qf2_loss.backward()
+            #     if self.clip_gradient > 0.:
+            #         nn.utils.clip_grad_norm_(self.qf2_n[agent].parameters(), self.clip_gradient)
+            #     qf2_grad_norm = torch.tensor(0.).to(ptu.device) 
+            #     for p in self.qf2_n[agent].parameters():
+            #         param_norm = p.grad.data.norm(2)
+            #         qf2_grad_norm += param_norm.item() ** 2
+            #     qf2_grad_norm = qf2_grad_norm ** (1. / 2)
+            #     self.qf2_optimizer_n[agent].step()
+            self.qf2_optimizer_n[agent].zero_grad()
+            qf2_loss.backward()
+            if self.clip_gradient > 0.:
+                nn.utils.clip_grad_norm_(self.qf2_n[agent].parameters(), self.clip_gradient)
+            qf2_grad_norm = torch.tensor(0.).to(ptu.device) 
+            for p in self.qf2_n[agent].parameters():
+                param_norm = p.grad.data.norm(2)
+                qf2_grad_norm += param_norm.item() ** 2
+            qf2_grad_norm = qf2_grad_norm ** (1. / 2)
+            self.qf2_optimizer_n[agent].step()
 
             """
             Save some statistics for eval using just one batch.
@@ -430,24 +450,40 @@ class PRGDiscreteTrainer(TorchTrainer):
 
     @property
     def networks(self):
+        # res = [
+        #     *self.policy_n,
+        #     *self.target_policy_n,
+        #     *self.qf_n,
+        #     *self.target_qf_n,
+        # ]
+        # if self.double_q:
+        #     res += [*self.qf2_n, *self.target_qf2_n]
         res = [
             *self.policy_n,
             *self.target_policy_n,
             *self.qf_n,
             *self.target_qf_n,
+            *self.qf2_n,
+            *self.target_qf2_n
         ]
-        if self.double_q:
-            res += [*self.qf2_n, *self.target_qf2_n]
         return res
 
     def get_snapshot(self):
+        # res = dict(
+        #     qf_n=self.qf_n,
+        #     target_qf_n=self.target_qf_n,
+        #     trained_policy_n=self.policy_n,
+        #     target_policy_n=self.target_policy_n,
+        # )
+        # if self.double_q:
+        #     res['qf2_n'] = self.qf2_n
+        #     res['target_qf2_n'] = self.target_qf2_n
         res = dict(
             qf_n=self.qf_n,
             target_qf_n=self.target_qf_n,
+            qf2_n=self.qf2_n,
+            target_qf2_n=self.target_qf2_n,
             trained_policy_n=self.policy_n,
             target_policy_n=self.target_policy_n,
         )
-        if self.double_q:
-            res['qf2_n'] = self.qf2_n
-            res['target_qf2_n'] = self.target_qf2_n
         return res
