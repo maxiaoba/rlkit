@@ -226,12 +226,17 @@ class PRGDiscreteTrainer(TorchTrainer):
                 current_actions = actions_n.clone()
             other_action_index = self.other_action_indices[agent]
             other_actions = current_actions[:,other_action_index,:]
-            q_output = self.qf_n[agent](whole_obs, other_actions.view(batch_size, -1))
-            if self.double_q:
-                q2_output = self.qf2_n[agent](whole_obs, other_actions.view(batch_size, -1))
-                q_output = torch.min(q_output,q2_output) # batch x |A|
+            # q_output = self.qf_n[agent](whole_obs, other_actions.view(batch_size, -1))
+            # if self.double_q:
+            #     q2_output = self.qf2_n[agent](whole_obs, other_actions.view(batch_size, -1))
+            #     q_output = torch.min(q_output,q2_output) # batch x |A|
+            # raw_policy_loss = (- pis * q_output).sum(-1).mean()
 
-            raw_policy_loss = (- pis * q_output).sum(-1).mean()
+            q1_output = self.qf_n[agent](whole_obs, other_actions.view(batch_size, -1))
+            q2_output = self.qf2_n[agent](whole_obs, other_actions.view(batch_size, -1))
+            min_q_output = torch.min(q1_output,q2_output) # batch x |A|
+            raw_policy_loss = (- pis * min_q_output).sum(-1).mean()
+            
             entropy_loss = (pis * alpha * torch.log(pis+1e-3)).sum(-1).mean()
             policy_loss = (
                     raw_policy_loss +
@@ -249,18 +254,28 @@ class PRGDiscreteTrainer(TorchTrainer):
             next_other_actions = next_current_actions[:,other_action_index,:].detach()
             other_actions = actions_n[:,other_action_index,:].detach()
 
-            next_target_q_values = self.target_qf_n[agent](
+            # next_target_q_values = self.target_qf_n[agent](
+            #     whole_next_obs,
+            #     next_other_actions.view(batch_size,-1),
+            # )
+            # if self.double_q:
+            #     next_target_q2_values = self.target_qf2_n[agent](
+            #         whole_next_obs,
+            #         next_other_actions.view(batch_size,-1),
+            #     )
+            #     next_target_q_values = torch.min(next_target_q_values, next_target_q2_values)
+            # next_target_q_values =  (new_pis*(next_target_q_values - alpha * torch.log(new_pis+1e-3))).sum(-1,keepdim=True) # batch
+            next_target_q1_values = self.target_qf_n[agent](
                 whole_next_obs,
                 next_other_actions.view(batch_size,-1),
             )
-            if self.double_q:
-                next_target_q2_values = self.target_qf2_n[agent](
-                    whole_next_obs,
-                    next_other_actions.view(batch_size,-1),
-                )
-                next_target_q_values = torch.min(next_target_q_values, next_target_q2_values)
-
-            next_target_q_values =  (new_pis*(next_target_q_values - alpha * torch.log(new_pis+1e-3))).sum(-1,keepdim=True) # batch
+            next_target_q2_values = self.target_qf2_n[agent](
+                whole_next_obs,
+                next_other_actions.view(batch_size,-1),
+            )
+            next_target_min_q_values = torch.min(next_target_q1_values,next_target_q2_values) # batch x |A|
+            next_target_q_values =  (new_pis*(next_target_min_q_values - alpha * torch.log(new_pis+1e-3))).sum(-1,keepdim=True) # batch
+            
             q_target = self.reward_scale*rewards_n[:,agent,:] + (1. - terminals_n[:,agent,:]) * self.discount * next_target_q_values
             q_target = q_target.detach()
             q_target = torch.clamp(q_target, self.min_q_value, self.max_q_value)
@@ -380,23 +395,32 @@ class PRGDiscreteTrainer(TorchTrainer):
         self._n_train_steps_total += 1
 
     def _update_target_networks(self):
-        for policy, target_policy, qf, target_qf in \
-            zip(self.policy_n, self.target_policy_n, self.qf_n, self.target_qf_n):
+        # for policy, target_policy, qf, target_qf in \
+        #     zip(self.policy_n, self.target_policy_n, self.qf_n, self.target_qf_n):
+        #     if self.use_soft_update:
+        #         ptu.soft_update_from_to(policy, target_policy, self.tau)
+        #         ptu.soft_update_from_to(qf, target_qf, self.tau)
+        #     else:
+        #         if self._n_train_steps_total % self.target_hard_update_period == 0:
+        #             ptu.copy_model_params_from_to(policy, target_policy)
+        #             ptu.copy_model_params_from_to(qf, target_qf)
+        # if self.double_q:
+        #     for qf2, target_qf2 in \
+        #         zip(self.qf2_n, self.target_qf2_n):
+        #         if self.use_soft_update:
+        #             ptu.soft_update_from_to(qf2, target_qf2, self.tau)
+        #         else:
+        #             if self._n_train_steps_total % self.target_hard_update_period == 0:
+        #                 ptu.copy_model_params_from_to(qf2, target_qf2)
+        for qf1, target_qf1, qf2, target_qf2 in \
+            zip(self.qf_n, self.target_qf_n, self.qf2_n, self.target_qf2_n):
             if self.use_soft_update:
-                ptu.soft_update_from_to(policy, target_policy, self.tau)
-                ptu.soft_update_from_to(qf, target_qf, self.tau)
+                ptu.soft_update_from_to(qf1, target_qf1, self.tau)
+                ptu.soft_update_from_to(qf2, target_qf2, self.tau)
             else:
                 if self._n_train_steps_total % self.target_hard_update_period == 0:
-                    ptu.copy_model_params_from_to(policy, target_policy)
-                    ptu.copy_model_params_from_to(qf, target_qf)
-        if self.double_q:
-            for qf2, target_qf2 in \
-                zip(self.qf2_n, self.target_qf2_n):
-                if self.use_soft_update:
-                    ptu.soft_update_from_to(qf2, target_qf2, self.tau)
-                else:
-                    if self._n_train_steps_total % self.target_hard_update_period == 0:
-                        ptu.copy_model_params_from_to(qf2, target_qf2)
+                    ptu.copy_model_params_from_to(qf1, target_qf1)
+                    ptu.copy_model_params_from_to(qf2, target_qf2)
 
     def get_diagnostics(self):
         return self.eval_statistics
