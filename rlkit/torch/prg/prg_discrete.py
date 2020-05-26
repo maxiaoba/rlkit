@@ -84,6 +84,19 @@ class PRGDiscreteTrainer(TorchTrainer):
         self.min_q_value = min_q_value
         self.max_q_value = max_q_value
 
+        self.use_automatic_entropy_tuning = use_automatic_entropy_tuning
+        if self.use_automatic_entropy_tuning:
+            if target_entropy:
+                self.target_entropy = target_entropy
+            else:
+                self.target_entropy = 0.5*np.log(self.env.action_space.n)  # heuristic value from Tuomas
+            self.log_alpha_n = [ptu.zeros(1, requires_grad=True) for i in range(len(self.policy_n))]
+            self.alpha_optimizer_n = [
+                optimizer_class(
+                    [self.log_alpha_n[i]],
+                    lr=self.policy_learning_rate,
+                ) for i in range(len(self.log_alpha_n))]
+
         self.qf_optimizer_n = [ 
             optimizer_class(
                 self.qf_n[i].parameters(),
@@ -101,19 +114,6 @@ class PRGDiscreteTrainer(TorchTrainer):
                 self.policy_n[i].parameters(),
                 lr=self.policy_learning_rate,
             ) for i in range(len(self.policy_n))]
-
-        self.use_automatic_entropy_tuning = use_automatic_entropy_tuning
-        if self.use_automatic_entropy_tuning:
-            if target_entropy:
-                self.target_entropy = target_entropy
-            else:
-                self.target_entropy = 0.5*np.log(self.env.action_space.n)  # heuristic value from Tuomas
-            self.log_alpha_n = [ptu.zeros(1, requires_grad=True) for i in range(len(self.policy_n))]
-            self.alpha_optimizer_n = [
-                optimizer_class(
-                    [self.log_alpha_n[i]],
-                    lr=self.policy_learning_rate,
-                ) for i in range(len(self.log_alpha_n))]
 
         num_agent = len(self.policy_n)
         self.other_action_indices = [np.array([i for i in range(num_agent) if i!=agent]) for agent in range(num_agent)]
@@ -174,50 +174,62 @@ class PRGDiscreteTrainer(TorchTrainer):
                 alpha_loss = torch.zeros(1)
                 alpha = torch.ones(1)
 
-            q_output = torch.zeros_like(pis).to(ptu.device)
+            # q_output = torch.zeros_like(pis).to(ptu.device)
 
-            for a_i in range(self.env.action_space.n):
-                # current_actions = online_actions_n.detach().clone()
-                if self.online_action:
-                    current_actions = online_actions_n.clone()
-                elif self.target_action:
-                    current_actions = target_actions_n.clone()
-                else:
-                    current_actions = actions_n.clone()
-                action_i = torch.zeros(self.env.action_space.n).to(ptu.device)
-                action_i[a_i] = 1.
-                current_actions[:,agent,:] = action_i
-                next_actions = torch.zeros_like(current_actions)
-                for k in range(self.logit_level):
-                    for agent_j in range(num_agent):
-                        other_action_index = self.other_action_indices[agent_j]
-                        current_other_actions = current_actions[:,other_action_index,:]
-                        if agent_j != agent:
-                            q_j = self.qf_n[agent_j](whole_obs,current_other_actions.view(batch_size, -1)).detach()
-                            if self.double_q:
-                                q2_j = self.qf2_n[agent_j](whole_obs,current_other_actions.view(batch_size, -1)).detach()
-                                q_j = torch.min(q_j,q2_j)
-                            if self.use_gumbel:
-                                action_j = F.gumbel_softmax(q_j, tau=alpha_n[agent_j], hard=self.gumbel_hard)
-                            else:
-                                max_idx = torch.argmax(q_j, -1, keepdim=True)
-                                action_j = torch.FloatTensor(q_j.shape).zero_().to(ptu.device)
-                                action_j.scatter_(-1,max_idx,1)
-                            next_actions[:,agent_j,:] = action_j
-                        else:
-                            next_actions[:,agent_j,:] = action_i
-                    current_actions = next_actions
+            # for a_i in range(self.env.action_space.n):
+            #     # current_actions = online_actions_n.detach().clone()
+            #     if self.online_action:
+            #         current_actions = online_actions_n.clone()
+            #     elif self.target_action:
+            #         current_actions = target_actions_n.clone()
+            #     else:
+            #         current_actions = actions_n.clone()
+            #     action_i = torch.zeros(self.env.action_space.n).to(ptu.device)
+            #     action_i[a_i] = 1.
+            #     current_actions[:,agent,:] = action_i
+            #     next_actions = torch.zeros_like(current_actions)
+            #     for k in range(self.logit_level):
+            #         for agent_j in range(num_agent):
+            #             other_action_index = self.other_action_indices[agent_j]
+            #             current_other_actions = current_actions[:,other_action_index,:]
+            #             if agent_j != agent:
+            #                 q_j = self.qf_n[agent_j](whole_obs,current_other_actions.view(batch_size, -1)).detach()
+            #                 if self.double_q:
+            #                     q2_j = self.qf2_n[agent_j](whole_obs,current_other_actions.view(batch_size, -1)).detach()
+            #                     q_j = torch.min(q_j,q2_j)
+            #                 if self.use_gumbel:
+            #                     action_j = F.gumbel_softmax(q_j, tau=alpha_n[agent_j], hard=self.gumbel_hard)
+            #                 else:
+            #                     max_idx = torch.argmax(q_j, -1, keepdim=True)
+            #                     action_j = torch.FloatTensor(q_j.shape).zero_().to(ptu.device)
+            #                     action_j.scatter_(-1,max_idx,1)
+            #                 next_actions[:,agent_j,:] = action_j
+            #             else:
+            #                 next_actions[:,agent_j,:] = action_i
+            #         current_actions = next_actions
 
-                other_action_index = self.other_action_indices[agent]
-                current_other_actions = current_actions[:,other_action_index,:]
-                q_output_i = self.qf_n[agent](whole_obs, current_other_actions.view(batch_size, -1)).detach()
-                q_output_i = torch.sum(q_output_i*action_i,dim=-1)
-                if self.double_q:
-                    q2_output_i = self.qf2_n[agent](whole_obs, current_other_actions.view(batch_size, -1)).detach()
-                    q2_output_i = torch.sum(q2_output_i*action_i,dim=-1)
-                    q_output_i = torch.min(q_output_i,q2_output_i)
-                q_output[:,a_i] = q_output_i
+            #     other_action_index = self.other_action_indices[agent]
+            #     current_other_actions = current_actions[:,other_action_index,:]
+            #     q_output_i = self.qf_n[agent](whole_obs, current_other_actions.view(batch_size, -1)).detach()
+            #     q_output_i = torch.sum(q_output_i*action_i,dim=-1)
+            #     if self.double_q:
+            #         q2_output_i = self.qf2_n[agent](whole_obs, current_other_actions.view(batch_size, -1)).detach()
+            #         q2_output_i = torch.sum(q2_output_i*action_i,dim=-1)
+            #         q_output_i = torch.min(q_output_i,q2_output_i)
+            #     q_output[:,a_i] = q_output_i
 
+            if self.online_action:
+                current_actions = online_actions_n.clone()
+            elif self.target_action:
+                current_actions = target_actions_n.clone()
+            else:
+                current_actions = actions_n.clone()
+            other_action_index = self.other_action_indices[agent]
+            other_actions = current_actions[:,other_action_index,:]
+            q_output = self.qf_n[agent](whole_obs, other_actions.view(batch_size, -1))
+            if self.double_q:
+                q2_output = self.qf2_n[agent](whole_obs, other_actions.view(batch_size, -1))
+                q_output = torch.min(q_output,q2_output) # batch x |A|
 
             raw_policy_loss = (- pis * q_output).sum(-1).mean()
             entropy_loss = (pis * alpha * torch.log(pis+1e-3)).sum(-1).mean()

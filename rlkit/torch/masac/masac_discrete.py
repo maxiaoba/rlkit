@@ -115,6 +115,7 @@ class MASACDiscreteTrainer(TorchTrainer):
         whole_obs = obs_n.view(batch_size, -1)
         whole_actions = actions_n.view(batch_size, -1)
         whole_next_obs = next_obs_n.view(batch_size, -1)
+        
         if self.online_action:
             online_actions_n = [self.policy_n[agent].one_hot(obs_n[:,agent,:]).detach() for agent in range(num_agent)]
             online_actions_n = torch.stack(online_actions_n) # num_agent x batch x a_dim
