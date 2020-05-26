@@ -187,18 +187,33 @@ class MASACDiscreteTrainer(TorchTrainer):
             policy_loss.backward()
             if self.clip_gradient > 0.:
                 nn.utils.clip_grad_norm_(self.policy_n[agent].parameters(), self.clip_gradient)
+            policy_grad_norm = torch.tensor(0.).to(ptu.device) 
+            for p in self.policy_n[agent].parameters():
+                param_norm = p.grad.data.norm(2)
+                policy_grad_norm += param_norm.item() ** 2
+            policy_grad_norm = policy_grad_norm ** (1. / 2)
             self.policy_optimizer_n[agent].step()
 
             self.qf1_optimizer_n[agent].zero_grad()
             qf1_loss.backward()
             if self.clip_gradient > 0.:
                 nn.utils.clip_grad_norm_(self.qf1_n[agent].parameters(), self.clip_gradient)
+            qf1_grad_norm = torch.tensor(0.).to(ptu.device) 
+            for p in self.qf1_n[agent].parameters():
+                param_norm = p.grad.data.norm(2)
+                qf1_grad_norm += param_norm.item() ** 2
+            qf1_grad_norm = qf1_grad_norm ** (1. / 2)
             self.qf1_optimizer_n[agent].step()
 
             self.qf2_optimizer_n[agent].zero_grad()
             qf2_loss.backward()
             if self.clip_gradient > 0.:
                 nn.utils.clip_grad_norm_(self.qf2_n[agent].parameters(), self.clip_gradient)
+            qf2_grad_norm = torch.tensor(0.).to(ptu.device) 
+            for p in self.qf2_n[agent].parameters():
+                param_norm = p.grad.data.norm(2)
+                qf2_grad_norm += param_norm.item() ** 2
+            qf2_grad_norm = qf2_grad_norm ** (1. / 2)
             self.qf2_optimizer_n[agent].step()
 
             """
@@ -206,9 +221,18 @@ class MASACDiscreteTrainer(TorchTrainer):
             """
             if self._need_to_update_eval_statistics:
                 self.eval_statistics['QF1 Loss {}'.format(agent)] = np.mean(ptu.get_numpy(qf1_loss))
+                self.eval_statistics['QF1 Gradient {}'.format(agent)] = np.mean(ptu.get_numpy(
+                    qf1_grad_norm
+                ))
                 self.eval_statistics['QF2 Loss {}'.format(agent)] = np.mean(ptu.get_numpy(qf2_loss))
+                self.eval_statistics['QF2 Gradient {}'.format(agent)] = np.mean(ptu.get_numpy(
+                    qf2_grad_norm
+                ))
                 self.eval_statistics['Policy Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
                     policy_loss
+                ))
+                self.eval_statistics['Policy Gradient {}'.format(agent)] = np.mean(ptu.get_numpy(
+                    policy_grad_norm
                 ))
                 self.eval_statistics['Alpha Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
                     alpha_loss

@@ -284,12 +284,22 @@ class PRGDiscreteTrainer(TorchTrainer):
             policy_loss.backward()
             if self.clip_gradient > 0.:
                 nn.utils.clip_grad_norm_(self.policy_n[agent].parameters(), self.clip_gradient)
+            policy_grad_norm = torch.tensor(0.).to(ptu.device) 
+            for p in self.policy_n[agent].parameters():
+                param_norm = p.grad.data.norm(2)
+                policy_grad_norm += param_norm.item() ** 2
+            policy_grad_norm = policy_grad_norm ** (1. / 2)
             self.policy_optimizer_n[agent].step()
 
             self.qf_optimizer_n[agent].zero_grad()
             qf_loss.backward()
             if self.clip_gradient > 0.:
                 nn.utils.clip_grad_norm_(self.qf_n[agent].parameters(), self.clip_gradient)
+            qf_grad_norm = torch.tensor(0.).to(ptu.device) 
+            for p in self.qf_n[agent].parameters():
+                param_norm = p.grad.data.norm(2)
+                qf_grad_norm += param_norm.item() ** 2
+            qf_grad_norm = qf_grad_norm ** (1. / 2)
             self.qf_optimizer_n[agent].step()
 
             if self.double_q:
@@ -297,6 +307,11 @@ class PRGDiscreteTrainer(TorchTrainer):
                 qf2_loss.backward()
                 if self.clip_gradient > 0.:
                     nn.utils.clip_grad_norm_(self.qf2_n[agent].parameters(), self.clip_gradient)
+                qf2_grad_norm = torch.tensor(0.).to(ptu.device) 
+                for p in self.qf2_n[agent].parameters():
+                    param_norm = p.grad.data.norm(2)
+                    qf2_grad_norm += param_norm.item() ** 2
+                qf2_grad_norm = qf2_grad_norm ** (1. / 2)
                 self.qf2_optimizer_n[agent].step()
 
             """
@@ -304,8 +319,14 @@ class PRGDiscreteTrainer(TorchTrainer):
             """
             if self._need_to_update_eval_statistics:
                 self.eval_statistics['QF Loss {}'.format(agent)] = np.mean(ptu.get_numpy(qf_loss))
+                self.eval_statistics['QF Gradient {}'.format(agent)] = np.mean(ptu.get_numpy(
+                    qf_grad_norm
+                ))
                 if self.double_q:
                     self.eval_statistics['QF2 Loss {}'.format(agent)] = np.mean(ptu.get_numpy(qf2_loss))
+                    self.eval_statistics['QF2 Gradient {}'.format(agent)] = np.mean(ptu.get_numpy(
+                        qf2_grad_norm
+                    ))
                 self.eval_statistics['Policy Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
                     policy_loss
                 ))
@@ -314,6 +335,9 @@ class PRGDiscreteTrainer(TorchTrainer):
                 ))
                 self.eval_statistics['Preactivation Policy Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
                     pre_activation_policy_loss
+                ))
+                self.eval_statistics['Policy Gradient {}'.format(agent)] = np.mean(ptu.get_numpy(
+                    policy_grad_norm
                 ))
                 self.eval_statistics['Entropy Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
                     entropy_loss
