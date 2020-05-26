@@ -29,6 +29,7 @@ class PRGDiscreteTrainer(TorchTrainer):
             target_qf2_n=None,
             use_automatic_entropy_tuning=True,
             target_entropy=None,
+            use_gumbel=True,
             gumbel_hard=False,
             clip_gradient=0.,
 
@@ -65,6 +66,7 @@ class PRGDiscreteTrainer(TorchTrainer):
         self.target_qf2_n = target_qf2_n
 
         self.logit_level = logit_level
+        self.use_gumbel = use_gumbel
         self.gumbel_hard = gumbel_hard
         self.clip_gradient = clip_gradient
 
@@ -195,7 +197,12 @@ class PRGDiscreteTrainer(TorchTrainer):
                             if self.double_q:
                                 q2_j = self.qf2_n[agent_j](whole_obs,current_other_actions.view(batch_size, -1)).detach()
                                 q_j = torch.min(q_j,q2_j)
-                            action_j = F.gumbel_softmax(q_j, tau=alpha_n[agent_j], hard=self.gumbel_hard)
+                            if self.use_gumbel:
+                                action_j = F.gumbel_softmax(q_j, tau=alpha_n[agent_j], hard=self.gumbel_hard)
+                            else:
+                                max_idx = torch.argmax(q_j, -1, keepdim=True)
+                                action_j = torch.FloatTensor(q_j.shape).zero_().to(ptu.device)
+                                action_j.scatter_(-1,max_idx,1)
                             next_actions[:,agent_j,:] = action_j
                         else:
                             next_actions[:,agent_j,:] = action_i

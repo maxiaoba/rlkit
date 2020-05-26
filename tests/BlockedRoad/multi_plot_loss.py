@@ -22,13 +22,14 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            # 'MASACDiscreters100.0',
-            'MADDPGGumbelharddouble_q',
-            'MADDPGGumbelharddouble_qonline_action',
-            'PRGDiscretedouble_qhardrs100.0',
-            'PRGGumbelk1harddouble_q',
-            'PRGGumbelk1harddouble_qonline_action',
-            'PRGGumbelk1harddouble_qtarget_action',
+            'MASACDiscreters10.0',
+            'MASACDiscreters100.0',
+            # 'MADDPGGumbelharddouble_q',
+            # 'MADDPGGumbelharddouble_qonline_action',
+            # 'PRGDiscretedouble_qhardrs100.0',
+            # 'PRGGumbelk1harddouble_q',
+            # 'PRGGumbelk1harddouble_qonline_action',
+            # 'PRGGumbelk1harddouble_qtarget_action',
         ]
 seeds = [0,1,2,3,4]
 policy_names = policies
