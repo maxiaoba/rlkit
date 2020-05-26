@@ -64,8 +64,8 @@ def experiment(variant):
     replay_buffer = MAEnvReplayBuffer(variant['replay_buffer_size'], expl_env, num_agent=num_agent)
     trainer = PRGDiscreteTrainer(
         env = expl_env,
-        qf_n=qf1_n,
-        target_qf_n=target_qf1_n,
+        qf1_n=qf1_n,
+        target_qf1_n=target_qf1_n,
         qf2_n=qf2_n,
         target_qf2_n=target_qf2_n,
         policy_n=policy_n,
@@ -95,7 +95,6 @@ if __name__ == "__main__":
     parser.add_argument('--num_agent', type=int, default=2)
     parser.add_argument('--log_dir', type=str, default='PRGDiscrete')
     parser.add_argument('--k', type=int, default=1)
-    parser.add_argument('--double_q', action='store_true', default=False)
     parser.add_argument('--online_action', action='store_true', default=False)
     parser.add_argument('--target_action', action='store_true', default=False)
     parser.add_argument('--use_gumbel', action='store_true', default=False)
@@ -115,7 +114,6 @@ if __name__ == "__main__":
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
                 +'k'+str(args.k)\
-                +('double_q' if args.double_q else '')\
                 +('online_action' if args.online_action else '')\
                 +('target_action' if args.target_action else '')\
                 +(('soft' if args.soft else 'hard') if args.use_gumbel else '')\
@@ -145,7 +143,6 @@ if __name__ == "__main__":
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
             logit_level=args.k,
-            double_q=args.double_q,
             use_gumbel=args.use_gumbel,
             gumbel_hard=(not args.soft),
             clip_gradient=args.cg,
