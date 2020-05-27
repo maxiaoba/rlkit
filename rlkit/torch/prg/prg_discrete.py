@@ -209,11 +209,9 @@ class PRGDiscreteTrainer(TorchTrainer):
                 other_action_index = self.other_action_indices[agent]
                 current_other_actions = current_actions[:,other_action_index,:]
                 q1_output_i = self.qf1_n[agent](whole_obs, current_other_actions.view(batch_size, -1)).detach()
-                q1_output_i = torch.sum(q1_output_i*action_i,dim=-1)
                 q2_output_i = self.qf2_n[agent](whole_obs, current_other_actions.view(batch_size, -1)).detach()
-                q2_output_i = torch.sum(q2_output_i*action_i,dim=-1)
                 min_q_output_i = torch.min(q1_output_i,q2_output_i)
-                min_q_output[:,a_i] = min_q_output_i
+                min_q_output[:,a_i] = min_q_output_i[:,a_i]
 
             raw_policy_loss = (- pis * min_q_output).sum(-1).mean()
             
