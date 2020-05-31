@@ -97,6 +97,7 @@ if __name__ == "__main__":
     parser.add_argument('--k', type=int, default=1)
     parser.add_argument('--online_action', action='store_true', default=False)
     parser.add_argument('--target_action', action='store_true', default=False)
+    parser.add_argument('--target_q', action='store_true', default=False)
     parser.add_argument('--use_gumbel', action='store_true', default=False)
     parser.add_argument('--soft', action='store_true', default=False)
     parser.add_argument('--learn_temperature', action='store_true', default=False)
@@ -116,6 +117,7 @@ if __name__ == "__main__":
                 +'k'+str(args.k)\
                 +('online_action' if args.online_action else '')\
                 +('target_action' if args.target_action else '')\
+                +('target_q' if args.target_q else '')\
                 +(('soft' if args.soft else 'hard') if args.use_gumbel else '')\
                 +('Learnt' if args.learn_temperature else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
@@ -149,6 +151,7 @@ if __name__ == "__main__":
             reward_scale=(args.rs if args.rs else 1.0),
             online_action=args.online_action,
             target_action=args.target_action,
+            target_q=args.target_q,
         ),
         qf_kwargs=dict(
             hidden_sizes=[400, 300],

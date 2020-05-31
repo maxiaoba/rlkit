@@ -1,4 +1,4 @@
-  
+
 from collections import OrderedDict
 
 import numpy as np
@@ -25,6 +25,7 @@ class PRGDiscreteTrainer(TorchTrainer):
             target_policy_n,
             online_action,
             target_action,
+            target_q,
             qf2_n=None,
             target_qf2_n=None,
             use_automatic_entropy_tuning=True,
@@ -61,6 +62,7 @@ class PRGDiscreteTrainer(TorchTrainer):
         self.target_policy_n = target_policy_n
         self.online_action = online_action
         self.target_action = target_action
+        self.target_q = target_q
         self.qf2_n = qf2_n
         self.target_qf2_n = target_qf2_n
 
@@ -192,8 +194,12 @@ class PRGDiscreteTrainer(TorchTrainer):
                         other_action_index = self.other_action_indices[agent_j]
                         current_other_actions = current_actions[:,other_action_index,:]
                         if agent_j != agent:
-                            q1_j = self.qf1_n[agent_j](whole_obs,current_other_actions.view(batch_size, -1)).detach()
-                            q2_j = self.qf2_n[agent_j](whole_obs,current_other_actions.view(batch_size, -1)).detach()
+                            if self.target_q:
+                                q1_j = self.target_qf1_n[agent_j](whole_obs,current_other_actions.view(batch_size, -1)).detach()
+                                q2_j = self.target_qf2_n[agent_j](whole_obs,current_other_actions.view(batch_size, -1)).detach()
+                            else:
+                                q1_j = self.qf1_n[agent_j](whole_obs,current_other_actions.view(batch_size, -1)).detach()
+                                q2_j = self.qf2_n[agent_j](whole_obs,current_other_actions.view(batch_size, -1)).detach()
                             q_j = torch.min(q1_j,q2_j)
                             if self.use_gumbel:
                                 action_j = F.gumbel_softmax(q_j, tau=alpha_n[agent_j], hard=self.gumbel_hard)

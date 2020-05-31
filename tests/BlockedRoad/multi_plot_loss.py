@@ -11,33 +11,43 @@ max_itr = 2e4
 fields = [
             'evaluation/Average Returns 0',
             'evaluation/Success Rate',
+            'exploration/Average Returns 0',
             'exploration/Success Rate',
+            "trainer/QF1 Gradient 0",
+            "trainer/Policy Gradient 0",
             ]
 itr_name = 'epoch'
-min_loss = [-100,0,0]
-max_loss = [0,1,1]
+min_loss = [-100,0,-100,0,-np.inf,-np.inf]
+max_loss = [1,1,1,1,np.inf,np.inf]
 exp_name = "2pHard"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'MASACDiscreters10.0',
+            # 'MASACDiscreters10.0',
             'MASACDiscreters100.0',
+            'MASACDiscreteonline_actionrs100.0',
             # 'MADDPGGumbelharddouble_q',
             # 'MADDPGGumbelharddouble_qonline_action',
-            # 'PRGDiscretedouble_qhardrs100.0',
             # 'PRGGumbelk1harddouble_q',
             # 'PRGGumbelk1harddouble_qonline_action',
             # 'PRGGumbelk1harddouble_qtarget_action',
+            'PRGDiscretek0rs100.0',
+            'PRGDiscretek1rs100.0',
+            'PRGDiscretek1online_actionrs100.0',
+            'PRGDiscretek1target_actionrs100.0',
+            'PRGDiscretek1target_qrs100.0',
+            'PRGDiscretek1online_actiontarget_qrs100.0',
+            'PRGDiscretek1target_actiontarget_qrs100.0',
         ]
-seeds = [0,1,2,3,4]
+seeds = [0] #[0,1,2,3,4]
 policy_names = policies
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = ''
+extra_name = 'Discrete'
 
 pre_name = ''
 post_name = ''
