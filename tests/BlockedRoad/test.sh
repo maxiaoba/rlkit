@@ -1,11 +1,10 @@
-for seed in 0
+# for seed in 1 2
+for seed in 0 1 2
 do
-	# python masac_discrete.py --rs 100 --seed $seed --num_agent 3 --epoch 300 --exp_name 3pHard --port 9394 --gpu
-	# python prg_discrete.py --rs 100 --double_q --seed $seed --num_agent 2 --epoch 300 --exp_name 2pHard --port 9393 --gpu
-	# python prg_discrete.py --rs 100 --double_q --seed $seed --num_agent 3 --epoch 300 --exp_name 3pHard --port 9394 --gpu
-	# python maddpg_gumbel.py --double_q --seed $seed --num_agent 2 --epoch 300 --exp_name 2pHard --port 9393 --gpu
-	# python maddpg_gumbel.py --double_q --online_action --seed $seed --num_agent 2 --epoch 300 --exp_name 2pHard --port 9393 --gpu
-	# python maddpg_gumbel.py --double_q --seed $seed --num_agent 3 --epoch 300 --exp_name 3pHard --port 9394 --gpu
-	# python prg_gumbel.py --double_q --seed $seed --num_agent 2 --epoch 300 --exp_name 2pHard --port 9394 --gpu
-	# python prg_gumbel.py --double_q --entropy --rs 10.0 --seed $seed --num_agent 2 --epoch 300 --exp_name 2pHard --port 9393 --gpu
+	# python prg_discrete.py --rs 100 --seed 0 --num_agent 2 --epoch 300 --exp_name 2pHard --port 9393 --gpu --seed $seed --target_action
+	# python prg_discrete.py --rs 100 --seed 0 --num_agent 2 --epoch 300 --exp_name 2pHard --port 9393 --gpu --seed $seed
+	# python masac_discrete.py --rs 100 --seed 0 --num_agent 2 --epoch 300 --exp_name 2pHard --port 9394 --gpu --seed $seed --online_action
+	# python masac_discrete.py --rs 100 --seed 0 --num_agent 2 --epoch 300 --exp_name 2pHard --port 9394 --gpu --seed $seed
+	# python masac_discrete.py --rs 100 --num_agent 3 --epoch 300 --seed $seed --exp_name 3pHard --port 9395 --gpu
+	python masac_discrete.py --rs 100 --num_agent 3 --epoch 300 --seed $seed --exp_name 3pHard --port 9396 --gpu --online_action
 done

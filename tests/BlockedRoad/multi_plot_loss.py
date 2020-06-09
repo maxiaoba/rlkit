@@ -19,7 +19,7 @@ fields = [
 itr_name = 'epoch'
 min_loss = [-100,0,-100,0,-np.inf,-np.inf]
 max_loss = [1,1,1,1,np.inf,np.inf]
-exp_name = "2pHard"
+exp_name = "3pHard"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
@@ -33,15 +33,16 @@ policies = [
             # 'PRGGumbelk1harddouble_q',
             # 'PRGGumbelk1harddouble_qonline_action',
             # 'PRGGumbelk1harddouble_qtarget_action',
-            'PRGDiscretek0rs100.0',
-            'PRGDiscretek1rs100.0',
-            'PRGDiscretek1online_actionrs100.0',
-            'PRGDiscretek1target_actionrs100.0',
-            'PRGDiscretek1target_qrs100.0',
-            'PRGDiscretek1online_actiontarget_qrs100.0',
-            'PRGDiscretek1target_actiontarget_qrs100.0',
+            # 'PRGDiscretek0rs100.0',
+            # 'PRGDiscretek1rs100.0',
+            # 'PRGDiscretek1online_actionrs100.0',
+            # 'PRGDiscretek1target_actionrs100.0',
+            # 'PRGDiscretek1target_qrs100.0',
+            # 'PRGDiscretek1online_actiontarget_qrs100.0',
+            # 'PRGDiscretek1target_actiontarget_qrs100.0',
+            # 'MASACDiscreteSimplifiedActionrs100.0',
         ]
-seeds = [0] #[0,1,2,3,4]
+seeds = [0,1,2,3,4]
 policy_names = policies
 colors = []
 for pid in range(len(policies)):
@@ -98,7 +99,7 @@ for fid,field in enumerate(fields):
                                 loss = []
                     if len(losses) < min_itr:
                         min_itr = len(losses)
-            Losses.append(losses)
+                Losses.append(losses)
         Losses = [losses[:min_itr] for losses in Losses]
         itrs = itrs[:min_itr]
         Losses = np.array(Losses)
