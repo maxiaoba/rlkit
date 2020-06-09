@@ -25,8 +25,8 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
-    qf_n, policy_n, target_qf_n, target_policy_n, exploration_policy_n = \
-        [], [], [], [], []
+    qf_n, policy_n, target_qf_n, target_policy_n, eval_policy_n, expl_policy_n = \
+        [], [], [], [], [], []
     qf2_n, target_qf2_n = [], []
     for i in range(num_agent):
         qf = FlattenMlp(
@@ -41,7 +41,8 @@ def experiment(variant):
         )
         target_qf = copy.deepcopy(qf)
         target_policy = copy.deepcopy(policy)
-        exploration_policy = PolicyWrappedWithExplorationStrategy(
+        eval_policy = policy
+        expl_policy = PolicyWrappedWithExplorationStrategy(
             exploration_strategy=OUStrategy(action_space=expl_env.action_space),
             policy=policy,
         )
@@ -49,7 +50,8 @@ def experiment(variant):
         policy_n.append(policy)
         target_qf_n.append(target_qf)
         target_policy_n.append(target_policy)
-        exploration_policy_n.append(exploration_policy)
+        eval_policy_n.append(eval_policy)
+        expl_policy_n.append(expl_policy)
         if variant['trainer_kwargs']['double_q']:
             qf2 = FlattenMlp(
                 input_size=(obs_dim*num_agent+action_dim*num_agent),
@@ -60,8 +62,8 @@ def experiment(variant):
             qf2_n.append(qf2)
             target_qf2_n.append(target_qf2)
 
-    eval_path_collector = MAMdpPathCollector(eval_env, policy_n)
-    expl_path_collector = MAMdpPathCollector(expl_env, exploration_policy_n)
+    eval_path_collector = MAMdpPathCollector(eval_env, eval_policy_n)
+    expl_path_collector = MAMdpPathCollector(expl_env, expl_policy_n)
     replay_buffer = MAEnvReplayBuffer(variant['replay_buffer_size'], expl_env, num_agent=num_agent)
     trainer = MADDPGTrainer(
         qf_n=qf_n,

@@ -99,7 +99,6 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='simple')
     parser.add_argument('--log_dir', type=str, default='PRGGaussian')
     parser.add_argument('--k', type=int, default=1)
-    parser.add_argument('--entropy', action='store_true', default=False)
     parser.add_argument('--online_action', action='store_true', default=False)
     parser.add_argument('--target_action', action='store_true', default=False)
     parser.add_argument('--lr', type=float, default=None)
@@ -113,7 +112,6 @@ if __name__ == "__main__":
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
                 +'k'+str(args.k)\
-                +('entropy' if args.entropy else '')\
                 +('online_action' if args.online_action else '')\
                 +('target_action' if args.target_action else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
@@ -138,7 +136,7 @@ if __name__ == "__main__":
             cactor_learning_rate=(args.lr if args.lr else 1e-4),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
             logit_level=args.k,
-            use_entropy_loss=args.entropy,
+            use_entropy_loss=True,
             online_action=args.online_action,
             target_action=args.target_action,
         ),

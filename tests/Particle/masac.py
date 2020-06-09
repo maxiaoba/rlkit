@@ -46,7 +46,7 @@ def experiment(variant):
             output_size=1,
             **variant['qf_kwargs']
         )
-        target_qf2 = copy.deepcopy(qf1)
+        target_qf2 = copy.deepcopy(qf2)
         policy_n.append(policy)
         eval_policy_n.append(eval_policy)
         qf1_n.append(qf1)
@@ -103,7 +103,6 @@ if __name__ == "__main__":
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
-        num_agent=2,
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 100),
             num_eval_steps_per_epoch=500,
