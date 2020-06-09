@@ -104,11 +104,11 @@ if __name__ == "__main__":
     # noinspection PyTypeChecker
     variant = dict(
         algorithm_kwargs=dict(
-            num_epochs=(args.epoch if args.epoch else 100),
+            num_epochs=(args.epoch if args.epoch else 500),
             num_eval_steps_per_epoch=500,
-            num_trains_per_train_loop=100,
-            num_expl_steps_per_train_loop=100,
-            min_num_steps_before_training=100,
+            num_trains_per_train_loop=200,
+            num_expl_steps_per_train_loop=200,
+            min_num_steps_before_training=200,
             max_path_length=100,
             batch_size=(args.bs if args.bs else 256),
         ),
