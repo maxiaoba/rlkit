@@ -46,7 +46,7 @@ def experiment(variant):
             output_size=action_dim,
             **variant['qf_kwargs']
         )
-        target_qf2 = copy.deepcopy(qf1)
+        target_qf2 = copy.deepcopy(qf2)
         eval_policy = ArgmaxDiscretePolicy(policy)
         expl_policy = PolicyWrappedWithExplorationStrategy(
             EpsilonGreedy(expl_env.action_space),
@@ -90,13 +90,15 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='simple')
+    parser.add_argument('--gpu', action='store_true', default=False)
     parser.add_argument('--log_dir', type=str, default='MASACDiscrete')
     parser.add_argument('--online_action', action='store_true', default=False)
-    parser.add_argument('--cg', type=float, default=0.)
+    parser.add_argument('--learn_temperature', action='store_true', default=False)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--ae', type=int, default=None) # auto entropy, 0=False
     parser.add_argument('--rs', type=float, default=None) # reward scale
+    parser.add_argument('--cg', type=float, default=0.) # clip gradient
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--snapshot_mode', type=str, default="gap_and_last")
@@ -106,10 +108,11 @@ if __name__ == "__main__":
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
                 +('online_action' if args.online_action else '')\
-                +(('cg'+str(args.cg)) if args.cg>0. else '')\
+                +('Learnt' if args.learn_temperature else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')\
-                +(('rs'+str(args.rs)) if args.rs else '')
+                +(('rs'+str(args.rs)) if args.rs else '')\
+                +(('cg'+str(args.cg)) if args.cg>0. else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
@@ -137,7 +140,7 @@ if __name__ == "__main__":
         ),
         policy_kwargs=dict(
             hidden_sizes=[400, 300],
-            learn_temperature=False,
+            learn_temperature=args.learn_temperature,
         ),
         replay_buffer_size=int(1E6),
     )
@@ -158,5 +161,6 @@ if __name__ == "__main__":
     import torch
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    # ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
+    if args.gpu:
+        ptu.set_gpu_mode(True)
     experiment(variant)

@@ -27,14 +27,15 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
 
-    policy_n, qf1_n, target_qf1_n, qf2_n, target_qf2_n, eval_policy_n, expl_policy_n = \
-        [], [], [], [], [], [], []
+    policy_n, target_policy_n, qf1_n, target_qf1_n, qf2_n, target_qf2_n, eval_policy_n, expl_policy_n = \
+        [], [], [], [], [], [], [], []
     for i in range(num_agent):
         policy = SoftmaxMlpPolicy(
             input_size=obs_dim,
             output_size=action_dim,
             **variant['policy_kwargs']
         )
+        target_policy = copy.deepcopy(policy)
         qf1 = FlattenMlp(
             input_size=(obs_dim*num_agent+action_dim*(num_agent-1)),
             output_size=action_dim,
@@ -46,13 +47,14 @@ def experiment(variant):
             output_size=action_dim,
             **variant['qf_kwargs']
         )
-        target_qf2 = copy.deepcopy(qf1)
+        target_qf2 = copy.deepcopy(qf2)
         eval_policy = ArgmaxDiscretePolicy(policy)
         expl_policy = PolicyWrappedWithExplorationStrategy(
             EpsilonGreedy(expl_env.action_space),
             eval_policy,
         )
         policy_n.append(policy)
+        target_policy_n.append(target_policy)
         qf1_n.append(qf1)
         target_qf1_n.append(target_qf1)
         qf2_n.append(qf2)
@@ -65,11 +67,12 @@ def experiment(variant):
     replay_buffer = MAEnvReplayBuffer(variant['replay_buffer_size'], expl_env, num_agent=num_agent)
     trainer = PRGDiscreteTrainer(
         env = expl_env,
-        qf_n=qf1_n,
-        target_qf_n=target_qf1_n,
+        qf1_n=qf1_n,
+        target_qf1_n=target_qf1_n,
         qf2_n=qf2_n,
         target_qf2_n=target_qf2_n,
         policy_n=policy_n,
+        target_policy_n=target_policy_n,
         **variant['trainer_kwargs']
     )
     algorithm = TorchBatchRLAlgorithm(
@@ -90,14 +93,20 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='simple')
+    parser.add_argument('--gpu', action='store_true', default=False)
     parser.add_argument('--log_dir', type=str, default='PRGDiscrete')
-    parser.add_argument('--double_q', action='store_true', default=False)
+    parser.add_argument('--k', type=int, default=1)
+    parser.add_argument('--online_action', action='store_true', default=False)
+    parser.add_argument('--target_action', action='store_true', default=False)
+    parser.add_argument('--target_q', action='store_true', default=False)
+    parser.add_argument('--use_gumbel', action='store_true', default=False)
     parser.add_argument('--soft', action='store_true', default=False)
-    parser.add_argument('--cg', type=float, default=0.)
+    parser.add_argument('--learn_temperature', action='store_true', default=False)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--ae', type=int, default=None) # auto entropy, 0=False
     parser.add_argument('--rs', type=float, default=None) # reward scale
+    parser.add_argument('--cg', type=float, default=0.) # clip gradient
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--snapshot_mode', type=str, default="gap_and_last")
@@ -106,16 +115,19 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
-                +('double_q' if args.double_q else '')\
-                +('soft' if args.soft else 'hard')\
-                +(('cg'+str(args.cg)) if args.cg>0. else '')\
+                +'k'+str(args.k)\
+                +('online_action' if args.online_action else '')\
+                +('target_action' if args.target_action else '')\
+                +('target_q' if args.target_q else '')\
+                +(('soft' if args.soft else 'hard') if args.use_gumbel else '')\
+                +('Learnt' if args.learn_temperature else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')\
-                +(('rs'+str(args.rs)) if args.rs else '')
+                +(('rs'+str(args.rs)) if args.rs else '')\
+                +(('cg'+str(args.cg)) if args.cg>0. else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
-        num_agent=2,
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 100),
             num_eval_steps_per_epoch=500,
@@ -131,17 +143,21 @@ if __name__ == "__main__":
             discount=0.99,
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
-            double_q=args.double_q,
+            logit_level=args.k,
+            use_gumbel=args.use_gumbel,
             gumbel_hard=(not args.soft),
             clip_gradient=args.cg,
             reward_scale=(args.rs if args.rs else 1.0),
+            online_action=args.online_action,
+            target_action=args.target_action,
+            target_q=args.target_q,
         ),
         qf_kwargs=dict(
             hidden_sizes=[400, 300],
         ),
         policy_kwargs=dict(
             hidden_sizes=[400, 300],
-            learn_temperature=False,
+            learn_temperature=args.learn_temperature,
         ),
         replay_buffer_size=int(1E6),
     )
@@ -162,5 +178,6 @@ if __name__ == "__main__":
     import torch
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    # ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
+    if args.gpu:
+        ptu.set_gpu_mode(True)
     experiment(variant)

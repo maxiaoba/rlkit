@@ -26,8 +26,8 @@ class PRGDiscreteTrainer(TorchTrainer):
             online_action,
             target_action,
             target_q,
-            qf2_n=None,
-            target_qf2_n=None,
+            qf2_n,
+            target_qf2_n,
             use_automatic_entropy_tuning=True,
             target_entropy=None,
             use_gumbel=True,
@@ -58,14 +58,14 @@ class PRGDiscreteTrainer(TorchTrainer):
             qf_criterion = nn.MSELoss()
         self.qf1_n = qf1_n
         self.target_qf1_n = target_qf1_n
+        self.qf2_n = qf2_n
+        self.target_qf2_n = target_qf2_n
         self.policy_n = policy_n
         self.target_policy_n = target_policy_n
+
         self.online_action = online_action
         self.target_action = target_action
         self.target_q = target_q
-        self.qf2_n = qf2_n
-        self.target_qf2_n = target_qf2_n
-
         self.logit_level = logit_level
         self.use_gumbel = use_gumbel
         self.gumbel_hard = gumbel_hard
@@ -351,10 +351,12 @@ class PRGDiscreteTrainer(TorchTrainer):
         for policy, target_policy, qf1, target_qf1, qf2, target_qf2 in \
             zip(self.policy_n, self.target_policy_n, self.qf1_n, self.target_qf1_n, self.qf2_n, self.target_qf2_n):
             if self.use_soft_update:
+                ptu.soft_update_from_to(policy, target_policy, self.tau)
                 ptu.soft_update_from_to(qf1, target_qf1, self.tau)
                 ptu.soft_update_from_to(qf2, target_qf2, self.tau)
             else:
                 if self._n_train_steps_total % self.target_hard_update_period == 0:
+                    ptu.copy_model_params_from_to(policy, target_policy)
                     ptu.copy_model_params_from_to(qf1, target_qf1)
                     ptu.copy_model_params_from_to(qf2, target_qf2)
 
