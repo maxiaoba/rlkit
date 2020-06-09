@@ -95,6 +95,7 @@ if __name__ == "__main__":
     parser.add_argument('--k', type=int, default=1)
     parser.add_argument('--online_action', action='store_true', default=False)
     parser.add_argument('--target_action', action='store_true', default=False)
+    parser.add_argument('--target_q', action='store_true', default=False)
     parser.add_argument('--use_gumbel', action='store_true', default=False)
     parser.add_argument('--soft', action='store_true', default=False)
     parser.add_argument('--lr', type=float, default=None)
@@ -138,6 +139,7 @@ if __name__ == "__main__":
             gumbel_hard=(not args.soft),
             online_action=args.online_action,
             target_action=args.target_action,
+            target_q=args.target_q,
         ),
         qf_kwargs=dict(
             hidden_sizes=[400, 300],

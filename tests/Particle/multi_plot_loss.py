@@ -20,16 +20,19 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'MADDPG',
-            'MADDPGdouble_q',
-            'MASAC',
+            # 'MADDPG',
+            # 'MADDPGdouble_q',
+            # 'MASAC',
             'MASACDiscrete',
-            'PRGk1',
-            'PRGk1double_q',
+            'MASACDiscreters0.1',
+            # 'PRGk1',
+            # 'PRGk1double_q',
             'MADDPGGumbelHard',
             'PRGGumbelhardk1',
-            'PRGGaussiank1double_q',
-            'PRGGaussiank1double_qentropy'
+            'PRGDiscretek1',
+            'PRGDiscretek1online_action',
+            # 'PRGGaussiank1double_q',
+            # 'PRGGaussiank1double_qentropy'
         ]
 seeds = [0,1,2,3,4]
 policy_names = policies
@@ -37,7 +40,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = ''
+extra_name = 'Discrete'
 
 pre_name = ''
 post_name = ''
@@ -88,7 +91,7 @@ for fid,field in enumerate(fields):
                                 loss = []
                     if len(losses) < min_itr:
                         min_itr = len(losses)
-            Losses.append(losses)
+                Losses.append(losses)
         Losses = [losses[:min_itr] for losses in Losses]
         itrs = itrs[:min_itr]
         Losses = np.array(Losses)

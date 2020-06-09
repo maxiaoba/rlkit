@@ -185,6 +185,7 @@ class PRGDiscreteTrainer(TorchTrainer):
                     current_actions = target_actions_n.clone()
                 else:
                     current_actions = actions_n.clone()
+
                 action_i = torch.zeros(self.env.action_space.n).to(ptu.device)
                 action_i[a_i] = 1.
                 current_actions[:,agent,:] = action_i
@@ -220,7 +221,6 @@ class PRGDiscreteTrainer(TorchTrainer):
                 min_q_output[:,a_i] = min_q_output_i[:,a_i]
 
             raw_policy_loss = (- pis * min_q_output).sum(-1).mean()
-            
             entropy_loss = (pis * alpha * torch.log(pis+1e-3)).sum(-1).mean()
             policy_loss = (
                     raw_policy_loss +
@@ -247,7 +247,7 @@ class PRGDiscreteTrainer(TorchTrainer):
                 next_other_actions.view(batch_size,-1),
             )
             next_target_min_q_values = torch.min(next_target_q1_values,next_target_q2_values) # batch x |A|
-            next_target_q_values =  (new_pis*(next_target_min_q_values - alpha * torch.log(new_pis+1e-3))).sum(-1,keepdim=True) # batch
+            next_target_q_values =  (new_pis*(next_target_min_q_values - alpha * torch.log(new_pis+1e-3))).sum(-1,keepdim=True) # batch x 1
             
             q_target = self.reward_scale*rewards_n[:,agent,:] + (1. - terminals_n[:,agent,:]) * self.discount * next_target_q_values
             q_target = q_target.detach()
@@ -262,7 +262,6 @@ class PRGDiscreteTrainer(TorchTrainer):
             """
             Update Networks
             """
-
             self.policy_optimizer_n[agent].zero_grad()
             policy_loss.backward()
             if self.clip_gradient > 0.:
