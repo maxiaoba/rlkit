@@ -93,6 +93,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='simple')
+    parser.add_argument('--gpu', action='store_true', default=False)
     parser.add_argument('--log_dir', type=str, default='MADDPG')
     parser.add_argument('--online_action', action='store_true', default=False)
     parser.add_argument('--double_q', action='store_true', default=False)
@@ -156,5 +157,6 @@ if __name__ == "__main__":
     import torch
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    # ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
+    if args.gpu:
+        ptu.set_gpu_mode(True)
     experiment(variant)
