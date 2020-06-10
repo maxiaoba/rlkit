@@ -17,7 +17,7 @@ from rlkit.core.ma_eval_util import get_generic_ma_path_information
 
 def experiment(variant):
     import sys
-    sys.path.append("./multiagent_particle_envs")
+    sys.path.append("./multiagent-particle-envs")
     from make_env import make_env
     from particle_env_wrapper import ParticleEnv
     expl_env = ParticleEnv(make_env(args.exp_name,discrete_action_space=True,discrete_action_input=True))

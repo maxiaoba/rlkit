@@ -1,0 +1,3 @@
+[submodule "tests/Particle/multiagent-particle-envs"]
+	path = tests/Particle/multiagent-particle-envs
+	url = https://github.com/maxiaoba/multiagent-particle-envs
