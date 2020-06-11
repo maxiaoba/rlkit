@@ -20,19 +20,14 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            # 'MADDPG',
-            # 'MADDPGdouble_q',
-            # 'MASAC',
-            'MASACDiscrete',
-            'MASACDiscreters0.1',
-            # 'PRGk1',
-            # 'PRGk1double_q',
-            'MADDPGGumbelHard',
-            'PRGGumbelhardk1',
-            'PRGDiscretek1',
-            'PRGDiscretek1online_action',
-            # 'PRGGaussiank1double_q',
-            # 'PRGGaussiank1double_qentropy'
+            'MADDPG',
+            'MASAC',
+            'PRGk1',
+            'PRGk1online_action',
+            'PRGk1target_action',
+            'PRGGaussiank1',
+            'PRGGaussiank1online_action',
+            'PRGGaussiank1target_action'
         ]
 seeds = [0,1,2,3,4]
 policy_names = policies
@@ -40,7 +35,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'Discrete'
+extra_name = ''
 
 pre_name = ''
 post_name = ''

@@ -45,7 +45,7 @@ def experiment(variant):
             output_size=1,
             **variant['qf_kwargs']
         )
-        target_qf2 = copy.deepcopy(qf1)
+        target_qf2 = copy.deepcopy(qf2)
         policy_n.append(policy)
         eval_policy_n.append(eval_policy)
         qf1_n.append(qf1)
@@ -82,7 +82,7 @@ def experiment(variant):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp_name', type=str, default='max2')
+    parser.add_argument('--exp_name', type=str, default='zero_sum')
     parser.add_argument('--log_dir', type=str, default='MASAC')
     parser.add_argument('--online_action', action='store_true', default=False)
     parser.add_argument('--lr', type=float, default=None)

@@ -5,13 +5,15 @@ matplotlib.rcParams.update({'font.size': 10})
 from matplotlib import pyplot as plt
 import numpy as np
 
-itr_interval = 10
-max_itr = 2e4
+itr_interval = 1
+max_itr = 100
 
 fields = [
             'evaluation/Actions 0 Mean',
             # 'evaluation/Average Returns 0',
             ]
+use_abs = False
+plot_err = False
 itr_name = 'epoch'
 min_loss = [-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]
 max_loss = [np.inf,np.inf,np.inf,np.inf,np.inf]
@@ -25,8 +27,8 @@ policies = [
             'MADDPGonline_action',
             'MASAC',
             'MASAConline_action',
-            'PRGk1',
-            'PRGk2',
+            'PRGk1online_action',
+            'PRGGaussiank1online_action',
         ]
 seeds = [0,1,2,3,4]
 policy_names = policies
@@ -86,28 +88,33 @@ for fid,field in enumerate(fields):
                                 loss = []
                     if len(losses) < min_itr:
                         min_itr = len(losses)
-            # Losses.append(losses)
-        # Losses = [losses[:min_itr] for losses in Losses]
-            # itrs = itrs[:min_itr]
-            # Losses = np.array(Losses)
-            Losses = np.array(losses)
-            print(Losses.shape)
-            # y = np.mean(Losses,0)
-            y = Losses
-            # yerr = np.std(Losses,0)
-            # plot, = plt.plot(itrs,y,colors[policy_index])
-            # plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
-            #                     facecolor=colors[policy_index],alpha=0.3)
-            # legends.append(policy_names[policy_index])
-            if trial == 0:
-                plot, = plt.plot(itrs,y,colors[policy_index],label=policy_names[policy_index])
-            else:
-                plot, = plt.plot(itrs,y,colors[policy_index])
-            plts.append(plot)
+            Losses.append(losses)
+        Losses = [losses[:min_itr] for losses in Losses]
+        itrs = itrs[:min_itr]
+        Losses = np.array(Losses)
+        if use_abs:
+            Losses = np.abs(Losses)
+        # Losses = np.array(Losses)
+            # Losses = np.array(losses)
+            # y = Losses
+        # print(Losses.shape)
+        y = np.mean(Losses,0)
+        yerr = np.std(Losses,0)
+        plot, = plt.plot(itrs,y,colors[policy_index])
+        if plot_err:
+            plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
+                                facecolor=colors[policy_index],alpha=0.3)
+        plts.append(plot)
+        legends.append(policy_names[policy_index])
+            # if trial == 0:
+            #     plot, = plt.plot(itrs,y,colors[policy_index],label=policy_names[policy_index])
+            # else:
+            #     plot, = plt.plot(itrs,y,colors[policy_index])
+            # plts.append(plot)
 
-    # plt.legend(plts,legends,loc='best')
-    plt.legend()
-    plt.xlabel('Itr')
-    plt.ylabel(field) 
+    plt.legend(plts,legends,loc='best')
+    # plt.legend()
+    # plt.xlabel('Itr')
+    # plt.ylabel(field) 
 fig.savefig(plot_path+'/'+plot_name+'.pdf')
 plt.close(fig)
