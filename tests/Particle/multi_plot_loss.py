@@ -24,10 +24,10 @@ policies = [
             'MASAC',
             'PRGk1',
             'PRGk1online_action',
-            'PRGk1target_action',
+            # 'PRGk1target_action',
             'PRGGaussiank1',
             'PRGGaussiank1online_action',
-            'PRGGaussiank1target_action'
+            # 'PRGGaussiank1target_action'
         ]
 seeds = [0,1,2,3,4]
 policy_names = policies

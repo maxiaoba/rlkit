@@ -2,8 +2,8 @@ import torch
 import numpy as np
 import time
 import pdb
-from rlkit.torch.sac.policies import TanhGaussianPolicy, MakeDeterministic
-from rlkit.torch.networks import GumbelSoftmaxMlpPolicy
+from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy, MakeDeterministic
+from rlkit.torch.policies.gumbel_softmax_policy import GumbelSoftmaxMlpPolicy
 from rlkit.policies.argmax import ArgmaxDiscretePolicy
 
 import argparse
@@ -15,7 +15,7 @@ parser.add_argument('--seed', type=int, default=0)
 args = parser.parse_args()
 
 data_path = './Data/{}/{}/seed{}/params.pkl'.format(args.exp_name,args.log_dir,args.seed)
-data = torch.load(data_path)
+data = torch.load(data_path,map_location='cpu')
 policy_n = data['trainer/trained_policy_n']
 if isinstance(policy_n[0],TanhGaussianPolicy):
 	policy_n = [MakeDeterministic(policy) for policy in policy_n]
@@ -23,7 +23,7 @@ elif  isinstance(policy_n[0],GumbelSoftmaxMlpPolicy):
 	policy_n = [ArgmaxDiscretePolicy(policy,use_preactivation=True) for policy in policy_n]
 
 import sys
-sys.path.append("./multiagent_particle_envs")
+sys.path.append("./multiagent-particle-envs")
 from make_env import make_env
 from particle_env_wrapper import ParticleEnv
 # env = ParticleEnv(make_env(args.exp_name,discrete_action_space=True,discrete_action_input=True))
