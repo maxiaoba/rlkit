@@ -9,10 +9,14 @@ itr_interval = 1
 max_itr = 100
 
 fields = [
-            'evaluation/Actions 0 Mean',
+            # 'evaluation/Actions 0 Mean',
+            'evaluation/Actions 1 Mean',
             # 'evaluation/Average Returns 0',
             ]
-use_abs = False
+field_names = [
+            'Average absolute action value'
+            ]
+use_abs = True
 plot_err = False
 itr_name = 'epoch'
 min_loss = [-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]
@@ -30,13 +34,25 @@ policies = [
             'PRGk1online_action',
             'PRGGaussiank1online_action',
         ]
+# policy_names = policies
+policy_names = [
+                'MADDPG',
+                'MADDPGonline',
+                'MASAC',
+                'MASAConline',
+                # 'PRGk1',
+                'PRGk1online',
+                # 'PRGGaussiank1',
+                'PRGGaussiank1online',
+                # 'PRGGaussiank1target'
+            ]
 seeds = [0,1,2,3,4]
-policy_names = policies
+
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'a1'
+extra_name = 'absa1'
 
 pre_name = ''
 post_name = ''
@@ -44,7 +60,7 @@ post_name = ''
 plot_name = extra_name
 
 fig = plt.figure()
-for fid,field in enumerate(fields):
+for fid,(field,field_name) in enumerate(zip(fields,field_names)):
     print(field)
     plt.subplot(len(fields),1,fid+1)
     legends = []
@@ -94,10 +110,7 @@ for fid,field in enumerate(fields):
         Losses = np.array(Losses)
         if use_abs:
             Losses = np.abs(Losses)
-        # Losses = np.array(Losses)
-            # Losses = np.array(losses)
-            # y = Losses
-        # print(Losses.shape)
+        print(Losses.shape)
         y = np.mean(Losses,0)
         yerr = np.std(Losses,0)
         plot, = plt.plot(itrs,y,colors[policy_index])
@@ -106,15 +119,15 @@ for fid,field in enumerate(fields):
                                 facecolor=colors[policy_index],alpha=0.3)
         plts.append(plot)
         legends.append(policy_names[policy_index])
+            # y = np.array(losses)
             # if trial == 0:
             #     plot, = plt.plot(itrs,y,colors[policy_index],label=policy_names[policy_index])
             # else:
             #     plot, = plt.plot(itrs,y,colors[policy_index])
-            # plts.append(plot)
 
     plt.legend(plts,legends,loc='best')
     # plt.legend()
-    # plt.xlabel('Itr')
-    # plt.ylabel(field) 
+    plt.xlabel('Itr')
+    plt.ylabel(field_name) 
 fig.savefig(plot_path+'/'+plot_name+'.pdf')
 plt.close(fig)

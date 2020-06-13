@@ -10,10 +10,15 @@ max_itr = 2e4
 
 fields = [
             'evaluation/Average Returns 0',
+            'evaluation/Average Returns 1',
+            ]
+field_names = [
+            'Average Return',
+            'Average Return',
             ]
 itr_name = 'epoch'
-min_loss = [-1000]
-max_loss = [0]
+min_loss = [-1000,-1000]
+max_loss = [1000,1000]
 exp_name = "simple_spread"
 
 prepath = "./Data/"+exp_name
@@ -21,30 +26,39 @@ plot_path = "./Data/"+exp_name
 
 policies = [
             'MADDPG',
+            'MADDPGonline_action',
             'MASAC',
-            'PRGk1',
+            'MASAConline_action',
             'PRGk1online_action',
-            # 'PRGk1target_action',
-            'PRGGaussiank1',
             'PRGGaussiank1online_action',
-            # 'PRGGaussiank1target_action'
         ]
+# policy_names = policies
+policy_names = [
+                'MADDPG',
+                'MADDPGonline',
+                'MASAC',
+                'MASAConline',
+                # 'PRGk1',
+                'PRGk1online',
+                # 'PRGGaussiank1',
+                'PRGGaussiank1online',
+                # 'PRGGaussiank1target'
+            ]
 seeds = [0,1,2,3,4]
-policy_names = policies
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = ''
+extra_names = ['r0','r1']
 
 pre_name = ''
 post_name = ''
 
-plot_name = extra_name
+plot_names = extra_names
 
 for fid,field in enumerate(fields):
     print(field)
-    fig = plt.figure(fid,figsize=(5,5))
+    fig = plt.figure(fid)
     legends = []
     plts = []
     for (policy_index,policy) in enumerate(policies):
@@ -101,6 +115,6 @@ for fid,field in enumerate(fields):
 
     plt.legend(plts,legends,loc='best')
     plt.xlabel('Itr')
-    plt.ylabel(field) 
-    fig.savefig(plot_path+'/'+plot_name+'_'+"_".join(field.split('/'))+'.pdf')
+    plt.ylabel(field_names[fid]) 
+    fig.savefig(plot_path+'/'+plot_names[fid]+'.pdf')
     plt.close(fig)
