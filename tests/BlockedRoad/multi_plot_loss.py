@@ -13,41 +13,43 @@ fields = [
             'exploration/Success Rate',
             'evaluation/Average Returns 0',
             'exploration/Average Returns 0',
-            "trainer/QF1 Gradient 0",
-            "trainer/Policy Gradient 0",
-            "trainer/QF1 Loss 0",
-            "trainer/QF2 Loss 0",
-            "trainer/Raw Policy Loss 0",
-            "trainer/Entropy Loss 0",
-            "trainer/Alpha 0",
+            # "trainer/QF1 Gradient 0",
+            # "trainer/Policy Gradient 0",
+            # "trainer/QF1 Loss 0",
+            # "trainer/QF2 Loss 0",
+            # "trainer/Raw Policy Loss 0",
+            # "trainer/Entropy Loss 0",
+            # "trainer/Alpha 0",
             ]
 itr_name = 'epoch'
 min_loss = [-100,0,-100,0,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]
 max_loss = [1,1,1,1,np.inf,np.inf,np.inf,np.inf,np.inf,np.inf,np.inf,np.inf]
-exp_name = "2pHard"
+exp_name = "3pHard"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
             # 'MASACDiscreters10.0',
-            # 'MASACDiscreters100.0',
-            # 'MASACDiscreteonline_actionrs100.0',
+            'MASACDiscreters100.0',
+            'MASACDiscreteonline_actionrs100.0',
             # 'MADDPGGumbelharddouble_q',
             # 'MADDPGGumbelharddouble_qonline_action',
             # 'PRGGumbelk1harddouble_q',
             # 'PRGGumbelk1harddouble_qonline_action',
             # 'PRGGumbelk1harddouble_qtarget_action',
             # 'PRGDiscretek0rs100.0',
-            'PRGDiscretek1rs100.0',
-            'PRGDiscretek1online_actionrs100.0',
-            'PRGDiscretek1target_actionrs100.0',
+            # 'PRGDiscretek1rs100.0',
+            # 'PRGDiscretek1online_actionrs100.0',
+            # 'PRGDiscretek1target_actionrs100.0',
             # 'PRGDiscretek1target_qrs100.0',
             # 'PRGDiscretek1online_actiontarget_qrs100.0',
             # 'PRGDiscretek1target_actiontarget_qrs100.0',
             # 'MASACDiscreteSimplifiedActionrs100.0',
+            'PRGDiscretek1online_actionhardrs100.0',
+            'PRGDiscretek1online_actionsoftrs100.0',
         ]
-seeds = [0]
+seeds = [0,1,2,3,4]
 policy_names = policies
 colors = []
 for pid in range(len(policies)):

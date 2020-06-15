@@ -33,6 +33,7 @@ policies = [
             'PRGk1online_action',
             'PRGGaussiank1',
             'PRGGaussiank1online_action',
+            'PRGGaussiank1online_actioncentropy'
         ]
 # policy_names = policies
 policy_names = [
@@ -44,6 +45,7 @@ policy_names = [
                 'PRGk1online',
                 'PRGGaussiank1',
                 'PRGGaussiank1online',
+                'PRGGaussiank1onlinecentropy'
             ]
 seeds = [0,1,2,3,4]
 colors = []

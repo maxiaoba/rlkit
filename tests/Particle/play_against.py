@@ -27,16 +27,18 @@ P_paths = [
             'PRGk1online_action',
             # 'PRGGaussiank1',
             'PRGGaussiank1online_action',
+            'PRGGaussiank1online_actioncentropy'
             ]
 policy_names = [
                 'MADDPG',
                 'MADDPGonline',
                 'MASAC',
                 'MASAConline',
-                'PRGk1',
+                # 'PRGk1',
                 'PRGk1online',
-                'PRGGaussiank1',
+                # 'PRGGaussiank1',
                 'PRGGaussiank1online',
+                'PRGGaussiank1onlinecentropy'
             ]
 
 extra_name = args.extra_name
