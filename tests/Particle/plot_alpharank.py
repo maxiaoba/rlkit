@@ -9,9 +9,9 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='simple_push')
 parser.add_argument('--sample_num', type=int, default=1000)
+parser.add_argument('--extra_name', type=str, default='')
 args = parser.parse_args()
 
-seeds = [0,1,2]
 P_paths = [
             'MADDPG',
             'MADDPGonline_action',
@@ -37,7 +37,7 @@ policy_names = [
                 # 'PRGGaussiank1target'
             ]
 
-extra_name = ''
+extra_name = args.extra_name
 
 pre_path = './Data/'+args.exp_name
 log_dir = pre_path+'/tests/'+extra_name+'_ss'+str(args.sample_num)

@@ -14,9 +14,10 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='simple_push')
 parser.add_argument('--sample_num', type=int, default=1000)
+parser.add_argument('--extra_name', type=str, default='')
 args = parser.parse_args()
 
-seeds = [0,1,2]
+seeds = [0,1,2,3,4]
 P_paths = [
             'MADDPG',
             'MADDPGonline_action',
@@ -24,25 +25,21 @@ P_paths = [
             'MASAConline_action',
             # 'PRGk1',
             'PRGk1online_action',
-            # 'PRGk1target_action',
             # 'PRGGaussiank1',
             'PRGGaussiank1online_action',
-            # 'PRGGaussiank1target_action'
             ]
 policy_names = [
                 'MADDPG',
                 'MADDPGonline',
                 'MASAC',
                 'MASAConline',
-                # 'PRGk1',
+                'PRGk1',
                 'PRGk1online',
-                # 'PRGk1target',
-                # 'PRGGaussiank1',
+                'PRGGaussiank1',
                 'PRGGaussiank1online',
-                # 'PRGGaussiank1target'
             ]
 
-extra_name = ''
+extra_name = args.extra_name
 
 pre_path = './Data/'+args.exp_name
 log_dir = pre_path+'/tests/'+extra_name+'_ss'+str(args.sample_num)
@@ -130,15 +127,6 @@ with open(log_dir+'/'+csv_name, mode='w') as csv_file:
                     print('p1'+str(p1id)+'p2'+str(p2id)+'_2',': ',p2_avg_reward)
                     row_content['p1'+str(p1id)+'p2'+str(p2id)+'_1'] = p1_avg_reward
                     row_content['p1'+str(p1id)+'p2'+str(p2id)+'_2'] = p2_avg_reward
-
-        # plot_name = 'payoff'+str(seed)+'_p1.pdf'
-        # fig = plot_matrix(mat1,policy_names)
-        # plt.savefig(log_dir+'/'+plot_name, bbox_inches='tight')
-        # plt.close()
-        # plot_name = 'payoff'+str(seed)+'_p2.pdf'
-        # fig = plot_matrix(mat2,policy_names)
-        # plt.savefig(log_dir+'/'+plot_name, bbox_inches='tight')
-        # plt.close()
 
         Mat1.append(mat1)
         Mat2.append(mat2)

@@ -19,7 +19,7 @@ field_names = [
 itr_name = 'epoch'
 min_loss = [-1000,-1000]
 max_loss = [1000,1000]
-exp_name = "simple_spread"
+exp_name = "simple_push"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
@@ -29,7 +29,9 @@ policies = [
             'MADDPGonline_action',
             'MASAC',
             'MASAConline_action',
+            'PRGk1',
             'PRGk1online_action',
+            'PRGGaussiank1',
             'PRGGaussiank1online_action',
         ]
 # policy_names = policies
@@ -38,11 +40,10 @@ policy_names = [
                 'MADDPGonline',
                 'MASAC',
                 'MASAConline',
-                # 'PRGk1',
+                'PRGk1',
                 'PRGk1online',
-                # 'PRGGaussiank1',
+                'PRGGaussiank1',
                 'PRGGaussiank1online',
-                # 'PRGGaussiank1target'
             ]
 seeds = [0,1,2,3,4]
 colors = []
