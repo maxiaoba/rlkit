@@ -102,6 +102,7 @@ if __name__ == "__main__":
     parser.add_argument('--k', type=int, default=1)
     parser.add_argument('--online_action', action='store_true', default=False)
     parser.add_argument('--target_action', action='store_true', default=False)
+    parser.add_argument('--centropy', action='store_true', default=False)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -115,6 +116,7 @@ if __name__ == "__main__":
                 +'k'+str(args.k)\
                 +('online_action' if args.online_action else '')\
                 +('target_action' if args.target_action else '')\
+                +('centropy' if args.centropy else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
@@ -138,6 +140,7 @@ if __name__ == "__main__":
             policy_learning_rate=(args.lr if args.lr else 1e-4),
             logit_level=args.k,
             use_entropy_loss=True,
+            use_cactor_entropy_loss=args.centropy,
             online_action=args.online_action,
             target_action=args.target_action,
         ),

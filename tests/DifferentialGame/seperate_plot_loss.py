@@ -10,11 +10,15 @@ max_itr = 100
 
 fields = [
             # 'evaluation/Actions 0 Mean',
-            'evaluation/Actions 1 Mean',
-            # 'evaluation/Average Returns 0',
+            # 'evaluation/Actions 1 Mean',
+            'trainer/Raw Cactor Loss 0',
+            'trainer/Raw Cactor Loss 1',
             ]
 field_names = [
-            'Average absolute action value'
+            # 'absa0',
+            # 'absa1',
+            'cactor0_loss',
+            'cactor1_loss',
             ]
 use_abs = True
 plot_err = False
@@ -24,28 +28,23 @@ max_loss = [np.inf,np.inf,np.inf,np.inf,np.inf]
 exp_name = "zero_sum"
 
 prepath = "./Data/"+exp_name
-plot_path = "./Data/"+exp_name
 
 policies = [
-            'MADDPG',
-            'MADDPGonline_action',
-            'MASAC',
-            'MASAConline_action',
-            'PRGk1online_action',
+            # 'MADDPG',
+            # 'MADDPGonline_action',
+            # 'MASAC',
+            # 'MASAConline_action',
+            # 'PRGk1online_action',
             'PRGGaussiank1online_action',
-            'PRGGaussiank1online_actioncentropy',
         ]
 # policy_names = policies
 policy_names = [
-                'MADDPG',
-                'MADDPGonline',
-                'MASAC',
-                'MASAConline',
-                # 'PRGk1',
-                'PRGk1online',
-                # 'PRGGaussiank1',
+                # 'MADDPG',
+                # 'MADDPGonline',
+                # 'MASAC',
+                # 'MASAConline',
+                # 'PRGk1online',
                 'PRGGaussiank1online',
-                'PRGGaussiank1onlinecentropy',
             ]
 seeds = [0,1,2,3,4]
 
@@ -53,24 +52,12 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'absa1'
-
 pre_name = ''
 post_name = ''
 
-plot_name = extra_name
-
-fig = plt.figure()
 for fid,(field,field_name) in enumerate(zip(fields,field_names)):
-    print(field)
-    plt.subplot(len(fields),1,fid+1)
-    legends = []
-    plts = []
     for (policy_index,policy) in enumerate(policies):
         policy_path = pre_name+policy+post_name
-        Itrs = []
-        Losses = []
-        min_itr = np.inf
         for trial in seeds:
             file_path = prepath+'/'+policy_path+'/'+'seed'+str(trial)+'/progress.csv'
             print(file_path)
@@ -103,32 +90,11 @@ for fid,(field,field_name) in enumerate(zip(fields,field_names)):
                                 loss = np.mean(loss)
                                 losses.append(loss)
                                 loss = []
-                    if len(losses) < min_itr:
-                        min_itr = len(losses)
-            Losses.append(losses)
-        Losses = [losses[:min_itr] for losses in Losses]
-        itrs = itrs[:min_itr]
-        Losses = np.array(Losses)
-        if use_abs:
-            Losses = np.abs(Losses)
-        print(Losses.shape)
-        y = np.mean(Losses,0)
-        yerr = np.std(Losses,0)
-        plot, = plt.plot(itrs,y,colors[policy_index])
-        if plot_err:
-            plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
-                                facecolor=colors[policy_index],alpha=0.3)
-        plts.append(plot)
-        legends.append(policy_names[policy_index])
-            # y = np.array(losses)
-            # if trial == 0:
-            #     plot, = plt.plot(itrs,y,colors[policy_index],label=policy_names[policy_index])
-            # else:
-            #     plot, = plt.plot(itrs,y,colors[policy_index])
-
-    plt.legend(plts,legends,loc='best')
-    # plt.legend()
-    plt.xlabel('Itr')
-    plt.ylabel(field_name) 
-fig.savefig(plot_path+'/'+plot_name+'.pdf')
-plt.close(fig)
+                y = np.array(losses)
+                fig = plt.figure()
+                plot, = plt.plot(itrs,y,colors[policy_index])
+                plt.xlabel('Itr')
+                plt.ylabel(field_name) 
+                plot_path = prepath+'/'+policy_path+'/'+'seed'+str(trial)
+                fig.savefig(plot_path+'/'+field_name+'.png')
+                plt.close(fig)

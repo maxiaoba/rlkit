@@ -27,6 +27,7 @@ class PRGTrainer(TorchTrainer):
             qf2_n,
             target_qf2_n,
             use_entropy_loss=False,
+            use_cactor_entropy_loss=False,
             use_automatic_entropy_tuning=True,
             target_entropy=None,
 
@@ -104,18 +105,28 @@ class PRGTrainer(TorchTrainer):
             ) for i in range(len(self.cactor_n))]
 
         self.use_entropy_loss = use_entropy_loss
+        self.use_cactor_entropy_loss = use_cactor_entropy_loss
         self.use_automatic_entropy_tuning = use_automatic_entropy_tuning
-        if self.use_entropy_loss and self.use_automatic_entropy_tuning:
+        if self.use_automatic_entropy_tuning:
             if target_entropy:
                 self.target_entropy = target_entropy
             else:
                 self.target_entropy = -np.prod(self.env.action_space.shape).item()  # heuristic value from Tuomas
-            self.log_alpha_n = [ptu.zeros(1, requires_grad=True) for i in range(len(self.policy_n))]
-            self.alpha_optimizer_n = [
-                optimizer_class(
-                    [self.log_alpha_n[i]],
-                    lr=self.policy_learning_rate,
-                ) for i in range(len(self.log_alpha_n))]
+            if self.use_entropy_loss:
+                self.log_alpha_n = [ptu.zeros(1, requires_grad=True) for i in range(len(self.policy_n))]
+                self.alpha_optimizer_n = [
+                    optimizer_class(
+                        [self.log_alpha_n[i]],
+                        lr=self.policy_learning_rate,
+                    ) for i in range(len(self.log_alpha_n))]
+
+            if self.use_cactor_entropy_loss:
+                self.log_calpha_n = [ptu.zeros(1, requires_grad=True) for i in range(len(self.policy_n))]
+                self.calpha_optimizer_n = [
+                    optimizer_class(
+                        [self.log_calpha_n[i]],
+                        lr=self.policy_learning_rate,
+                    ) for i in range(len(self.log_calpha_n))]
 
         self.eval_statistics = OrderedDict()
         self._n_train_steps_total = 0
@@ -273,6 +284,20 @@ class PRGTrainer(TorchTrainer):
                 )
             else:
                 pre_activation_cactor_loss = torch.tensor(0.).to(ptu.device)
+            if self.use_cactor_entropy_loss:
+                cactor_log_pi = cactor_info['log_prob']
+                if self.use_automatic_entropy_tuning:
+                    calpha_loss = -(self.log_calpha_n[agent].exp() * (cactor_log_pi + self.target_entropy).detach()).mean()
+                    self.calpha_optimizer_n[agent].zero_grad()
+                    calpha_loss.backward()
+                    self.calpha_optimizer_n[agent].step()
+                    calpha = self.log_calpha_n[agent].exp()
+                else:
+                    calpha_loss = torch.tensor(0.).to(ptu.device)
+                    calpha = torch.tensor(1.).to(ptu.device)
+                cactor_entropy_loss = (calpha*cactor_log_pi).mean()
+            else:
+                cactor_entropy_loss = torch.tensor(0.).to(ptu.device)
             current_actions = actions_n.clone()
             current_actions[:,agent,:] = cactor_actions 
             q1_output = self.qf1_n[agent](whole_obs, current_actions.view(batch_size, -1))
@@ -281,7 +306,8 @@ class PRGTrainer(TorchTrainer):
             raw_cactor_loss = - q_output.mean()
             cactor_loss = (
                     raw_cactor_loss +
-                    pre_activation_cactor_loss * self.pre_activation_weight
+                    pre_activation_cactor_loss * self.pre_activation_weight +
+                    cactor_entropy_loss
             )
 
             """
@@ -326,6 +352,10 @@ class PRGTrainer(TorchTrainer):
                     self.eval_statistics['Alpha {}'.format(agent)] = np.mean(ptu.get_numpy(
                         alpha
                     ))
+                if self.use_cactor_entropy_loss:
+                    self.eval_statistics['CAlpha {}'.format(agent)] = np.mean(ptu.get_numpy(
+                        calpha
+                    ))
                 self.eval_statistics['Cactor Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
                     cactor_loss
                 ))
@@ -334,6 +364,9 @@ class PRGTrainer(TorchTrainer):
                 ))
                 self.eval_statistics['Preactivation Cactor Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
                     pre_activation_cactor_loss
+                ))
+                self.eval_statistics['Entropy Cactor Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
+                    cactor_entropy_loss
                 ))
                 self.eval_statistics.update(create_stats_ordered_dict(
                     'Q1 Predictions {}'.format(agent),
