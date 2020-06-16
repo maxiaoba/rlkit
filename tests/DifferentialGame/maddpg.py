@@ -8,7 +8,8 @@ from rlkit.exploration_strategies.base import (
 from rlkit.exploration_strategies.ou_strategy import OUStrategy
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.samplers.data_collector.ma_path_collector import MAMdpPathCollector
-from rlkit.torch.networks import FlattenMlp, TanhMlpPolicy
+from rlkit.torch.networks import FlattenMlp
+from rlkit.torch.policies.deterministic_policies import TanhMlpPolicy
 from rlkit.torch.maddpg.maddpg import MADDPGTrainer
 import rlkit.torch.pytorch_util as ptu
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
@@ -77,6 +78,7 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='zero_sum')
     parser.add_argument('--log_dir', type=str, default='MADDPG')
     parser.add_argument('--online_action', action='store_true', default=False)
+    parser.add_argument('--double_q', action='store_true', default=False)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -88,6 +90,7 @@ if __name__ == "__main__":
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
                 +('online_action' if args.online_action else '')\
+                +('double_q' if args.double_q else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
@@ -110,6 +113,7 @@ if __name__ == "__main__":
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
             online_action=args.online_action,
+            double_q=args.double_q,
         ),
         qf_kwargs=dict(
             hidden_sizes=[64, 64],

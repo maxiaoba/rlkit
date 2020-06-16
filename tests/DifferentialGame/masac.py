@@ -9,7 +9,7 @@ from rlkit.exploration_strategies.ou_strategy import OUStrategy
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.samplers.data_collector.ma_path_collector import MAMdpPathCollector
 from rlkit.torch.networks import FlattenMlp
-from rlkit.torch.sac.policies import TanhGaussianPolicy, MakeDeterministic
+from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy, MakeDeterministic
 from rlkit.torch.masac.masac import MASACTrainer
 import rlkit.torch.pytorch_util as ptu
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
@@ -20,14 +20,12 @@ def experiment(variant):
     from differential_game import DifferentialGame
     expl_env = DifferentialGame(game_name=args.exp_name)
     eval_env = DifferentialGame(game_name=args.exp_name)
-    total_obs_dim = np.sum([eval_env.observation_space[j].low.size for j in range(num_agent)])
-    total_action_dim = np.sum([eval_env.action_space[j].low.size for j in range(num_agent)])
+    obs_dim = eval_env.observation_space.low.size
+    action_dim = eval_env.action_space.low.size
 
     policy_n, eval_policy_n, qf1_n, target_qf1_n, qf2_n, target_qf2_n = \
         [], [], [], [], [], []
     for i in range(num_agent):
-        obs_dim = eval_env.observation_space[i].low.size
-        action_dim = eval_env.action_space[i].low.size
         policy = TanhGaussianPolicy(
             obs_dim=obs_dim,
             action_dim=action_dim,
@@ -35,13 +33,13 @@ def experiment(variant):
         )
         eval_policy = MakeDeterministic(policy)
         qf1 = FlattenMlp(
-            input_size=(total_obs_dim+total_action_dim),
+            input_size=(obs_dim*num_agent+action_dim*num_agent),
             output_size=1,
             **variant['qf_kwargs']
         )
         target_qf1 = copy.deepcopy(qf1)
         qf2 = FlattenMlp(
-            input_size=(total_obs_dim+total_action_dim),
+            input_size=(obs_dim*num_agent+action_dim*num_agent),
             output_size=1,
             **variant['qf_kwargs']
         )
@@ -87,7 +85,6 @@ if __name__ == "__main__":
     parser.add_argument('--online_action', action='store_true', default=False)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
-    parser.add_argument('--ae', type=int, default=None) # auto entropy, 0=False
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--snapshot_mode', type=str, default="gap_and_last")

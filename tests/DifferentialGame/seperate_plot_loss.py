@@ -9,41 +9,45 @@ itr_interval = 1
 max_itr = 100
 
 fields = [
-            # 'evaluation/Actions 0 Mean',
-            # 'evaluation/Actions 1 Mean',
-            'trainer/Raw Cactor Loss 0',
-            'trainer/Raw Cactor Loss 1',
+            'evaluation/Actions 0 Mean',
+            'evaluation/Actions 1 Mean',
+            # 'trainer/Raw Cactor Loss 0',
+            # 'trainer/Raw Cactor Loss 1',
+            'evaluation/Average Returns 0',
+            'evaluation/Average Returns 1',
             ]
 field_names = [
-            # 'absa0',
-            # 'absa1',
-            'cactor0_loss',
-            'cactor1_loss',
+            'a0',
+            'a1',
+            # 'cactor0_loss',
+            # 'cactor1_loss',
+            'r0',
+            'r1',
             ]
 use_abs = True
 plot_err = False
 itr_name = 'epoch'
 min_loss = [-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]
 max_loss = [np.inf,np.inf,np.inf,np.inf,np.inf]
-exp_name = "zero_sum"
+exp_name = "cooperative"
 
 prepath = "./Data/"+exp_name
 
 policies = [
             # 'MADDPG',
-            # 'MADDPGonline_action',
+            'MADDPGonline_action',
             # 'MASAC',
-            # 'MASAConline_action',
-            # 'PRGk1online_action',
+            'MASAConline_action',
+            'PRGk1online_action',
             'PRGGaussiank1online_action',
         ]
 # policy_names = policies
 policy_names = [
                 # 'MADDPG',
-                # 'MADDPGonline',
+                'MADDPGonline',
                 # 'MASAC',
-                # 'MASAConline',
-                # 'PRGk1online',
+                'MASAConline',
+                'PRGk1online',
                 'PRGGaussiank1online',
             ]
 seeds = [0,1,2,3,4]
