@@ -24,7 +24,7 @@ fields = [
 itr_name = 'epoch'
 min_loss = [-100,0,-100,0,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]
 max_loss = [1,1,1,1,np.inf,np.inf,np.inf,np.inf,np.inf,np.inf,np.inf,np.inf]
-exp_name = "3pHard"
+exp_name = "2pHard"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
@@ -40,7 +40,7 @@ policies = [
             # 'PRGGumbelk1harddouble_qtarget_action',
             # 'PRGDiscretek0rs100.0',
             # 'PRGDiscretek1rs100.0',
-            # 'PRGDiscretek1online_actionrs100.0',
+            'PRGDiscretek1online_actionrs100.0',
             # 'PRGDiscretek1target_actionrs100.0',
             # 'PRGDiscretek1target_qrs100.0',
             # 'PRGDiscretek1online_actiontarget_qrs100.0',
@@ -104,6 +104,7 @@ for fid,field in enumerate(fields):
                                 loss = np.mean(loss)
                                 losses.append(loss)
                                 loss = []
+                    print(len(losses))
                     if len(losses) < min_itr:
                         min_itr = len(losses)
                 Losses.append(losses)

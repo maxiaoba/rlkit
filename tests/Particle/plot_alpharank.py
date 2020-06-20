@@ -19,10 +19,9 @@ P_paths = [
             'MASAConline_action',
             # 'PRGk1',
             'PRGk1online_action',
-            # 'PRGk1target_action',
             # 'PRGGaussiank1',
             'PRGGaussiank1online_action',
-            # 'PRGGaussiank1target_action'
+            'PRGGaussiank1online_actioncentropy'
             ]
 policy_names = [
                 'MADDPG',
@@ -31,10 +30,9 @@ policy_names = [
                 'MASAConline',
                 # 'PRGk1',
                 'PRGk1online',
-                # 'PRGk1target',
                 # 'PRGGaussiank1',
                 'PRGGaussiank1online',
-                # 'PRGGaussiank1target'
+                'PRGGaussiank1onlinecentropy'
             ]
 
 extra_name = args.extra_name
@@ -69,9 +67,9 @@ for trial,(mat1, mat2) in enumerate(zip(Mat1,Mat2)):
     pi, alpha, rank_fig = alpharank.sweep_pi_vs_alpha([mat1, mat2])
     plt.savefig(log_dir+'/'+'rank'+str(trial)+'.pdf', bbox_inches='tight')
     plt.close()
-    alpharank.compute_and_report_alpharank([mat1, mat2], alpha=alpha, verbose=True)
-    plt.savefig(log_dir+'/'+'net'+str(trial)+'.pdf', bbox_inches='tight')
-    plt.close()
+    # alpharank.compute_and_report_alpharank([mat1, mat2], alpha=alpha, verbose=True)
+    # plt.savefig(log_dir+'/'+'net'+str(trial)+'.pdf', bbox_inches='tight')
+    # plt.close()
 
 Mat1 = np.array(Mat1)
 Mat2 = np.array(Mat2)
@@ -82,7 +80,7 @@ Mat2 = np.mean(Mat2,axis=0)
 pi, alpha, rank_fig = alpharank.sweep_pi_vs_alpha([Mat1, Mat2])
 plt.savefig(log_dir+'/'+'rank.pdf', bbox_inches='tight')
 plt.close()
-net_fig = alpharank.compute_and_report_alpharank([Mat1, Mat2], alpha=alpha, verbose=True)
-plt.savefig(log_dir+'/'+'net.pdf', bbox_inches='tight')
-plt.close()
+# net_fig = alpharank.compute_and_report_alpharank([Mat1, Mat2], alpha=alpha, verbose=True)
+# plt.savefig(log_dir+'/'+'net.pdf', bbox_inches='tight')
+# plt.close()
 
