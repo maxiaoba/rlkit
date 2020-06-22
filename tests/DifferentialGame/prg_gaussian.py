@@ -122,7 +122,7 @@ if __name__ == "__main__":
         num_agent=2,
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 100),
-            num_eval_steps_per_epoch=500,
+            num_eval_steps_per_epoch=100,
             num_trains_per_train_loop=100,
             num_expl_steps_per_train_loop=100,
             min_num_steps_before_training=100,

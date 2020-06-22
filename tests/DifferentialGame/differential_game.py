@@ -13,8 +13,6 @@ class DifferentialGame(Serializable):
         self.agent_num = agent_num
         # self.action_num = action_num
         self.action_range = [action_low, action_high]
-        self.t = 0
-        self.numplots = 0
         self.payoff = {}
 
         if self.game == 'zero_sum':
@@ -69,7 +67,6 @@ class DifferentialGame(Serializable):
             self.payoff[1] = lambda a1, a2: max_f(a1, a2)
         else:
             raise NotImplementedError
-        self.rewards = np.zeros((self.agent_num,))
 
     @property
     def observation_space(self):
@@ -88,12 +85,10 @@ class DifferentialGame(Serializable):
         for i in range(self.agent_num):
             # print('actions', actions)
             reward_n[i] = self.payoff[i](*tuple(actions))
-        self.rewards = reward_n
         # print(reward_n)
         state_n = np.array([[1] for i in range(self.agent_num)])
         info = {}
         done_n = np.array([True] * self.agent_num)
-        self.t += 1
         return state_n, reward_n, done_n, info
 
     def reset(self):
