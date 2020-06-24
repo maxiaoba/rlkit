@@ -30,9 +30,10 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'MASACDiscreteUnsym2online_actionrs100.0',
-            'PRGDiscreteUnsym2k1online_actionhardrs100.0',
-            'PRGDiscreteUnsym2k1online_actionsoftrs100.0',
+            'MASACDiscreteUnsym1rs100.0',
+            'MASACDiscreteUnsym1online_actionrs100.0',
+            'PRGDiscreteUnsym1k1online_actionhardrs100.0',
+            'PRGDiscreteUnsym1k1online_actionsoftrs100.0',
         ]
 seeds = [0,1,2,3,4]
 policy_names = policies
@@ -40,7 +41,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'umsym2'
+extra_name = 'umsym1'
 
 pre_name = ''
 post_name = ''

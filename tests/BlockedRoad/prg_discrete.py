@@ -154,10 +154,12 @@ if __name__ == "__main__":
             target_q=args.target_q,
         ),
         qf_kwargs=dict(
-            hidden_sizes=[400, 300],
+            # hidden_sizes=[400, 300],
+            hidden_sizes=[32*args.num_agent],
         ),
         policy_kwargs=dict(
-            hidden_sizes=[400, 300],
+            # hidden_sizes=[400, 300],
+            hidden_sizes=[32],
             learn_temperature=args.learn_temperature,
         ),
         replay_buffer_size=int(1E6),
