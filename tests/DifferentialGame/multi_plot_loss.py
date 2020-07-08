@@ -27,24 +27,23 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'MADDPG',
+            # 'MADDPG',
             'MADDPGonline_action',
-            'MASAC',
+            # 'MASAC',
             'MASAConline_action',
-            'PRGk1online_action',
-            'PRGGaussiank1online_action',
+            # 'PRGk1online_action',
+            # 'PRGGaussiank1online_action',
             'PRGGaussiank1online_actioncentropy',
         ]
 # policy_names = policies
 policy_names = [
                 'MADDPG',
-                'MADDPGonline',
+                # 'MADDPGonline',
                 'MASAC',
-                'MASAConline',
-                # 'PRGk1',
-                'PRGk1online',
+                # 'MASAConline',
+                # 'PRGk1online',
                 # 'PRGGaussiank1',
-                'PRGGaussiank1online',
+                # 'PRGGaussiank1online',
                 'PRGGaussiank1onlinecentropy',
             ]
 seeds = [0,1,2,3,4]
