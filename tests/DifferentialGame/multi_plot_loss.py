@@ -9,8 +9,8 @@ itr_interval = 1
 max_itr = 100
 
 fields = [
-            # 'evaluation/Actions 0 Mean',
-            'evaluation/Actions 1 Mean',
+            'evaluation/Actions 0 Mean',
+            # 'evaluation/Actions 1 Mean',
             # 'evaluation/Average Returns 0',
             ]
 field_names = [
@@ -27,9 +27,9 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            # 'MADDPG',
+            'MADDPG',
             'MADDPGonline_action',
-            # 'MASAC',
+            'MASAC',
             'MASAConline_action',
             # 'PRGk1online_action',
             # 'PRGGaussiank1online_action',
@@ -38,13 +38,14 @@ policies = [
 # policy_names = policies
 policy_names = [
                 'MADDPG',
-                # 'MADDPGonline',
+                'MADDPGonline',
                 'MASAC',
-                # 'MASAConline',
+                'MASAConline',
+                'PRG'
                 # 'PRGk1online',
                 # 'PRGGaussiank1',
                 # 'PRGGaussiank1online',
-                'PRGGaussiank1onlinecentropy',
+                # 'PRGGaussiank1onlinecentropy',
             ]
 seeds = [0,1,2,3,4]
 
@@ -52,7 +53,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'absa1'
+extra_name = 'show'
 
 pre_name = ''
 post_name = ''
