@@ -17,7 +17,15 @@ parser.add_argument('--sample_num', type=int, default=1000)
 parser.add_argument('--extra_name', type=str, default='')
 args = parser.parse_args()
 
-seeds = [0,1,2,3,4]
+if args.exp_name == 'simple_adversary':
+    groups = [[0],[1,2]]
+elif args.exp_name == 'simple_tag':
+    groups = [[0,1,2],[3]]
+elif args.exp_name == 'simple_push':
+    groups = [[0],[1]]
+print('groups: ',groups)
+
+seeds = [0,1,2]
 P_paths = [
             'MADDPG',
             # 'MADDPGonline_action',
@@ -88,8 +96,9 @@ with open(log_dir+'/'+csv_name, mode='w') as csv_file:
             p_paths.append(P_paths[pid]+'/'+'seed'+str(seed))
 
         with torch.no_grad():
-            p1s = []
-            p2s = []
+            # p1s = []
+            # p2s = []
+            players = []
             for pid in range(len(P_paths)):
                 d_path = pre_path+'/'+P_paths[pid]+'/seed'+str(seed)\
                         +'/params.pkl'
@@ -99,24 +108,30 @@ with open(log_dir+'/'+csv_name, mode='w') as csv_file:
                     policy_n = [MakeDeterministic(policy) for policy in policy_n]
                 elif  isinstance(policy_n[0],GumbelSoftmaxMlpPolicy):
                     policy_n = [ArgmaxDiscretePolicy(policy,use_preactivation=True) for policy in policy_n]
-                p1 = policy_n[0]
-                p2 = policy_n[1]
-                p1s.append(p1)
-                p2s.append(p2)
+                # p1 = [policy_n[i] for i in groups[0]]
+                # p2 = [policy_n[i] for i in groups[1]]
+                # p1s.append(p1)
+                # p2s.append(p2)
+                players.append(policy_n)
 
             for p1id in range(len(P_paths)):
                 for p2id in range(len(P_paths)):
-                    player1 = p1s[p1id]
-                    player2 = p2s[p2id]
+                    player1 = players[p1id]
+                    player2 = players[p2id]
 
                     Cr1, Cr2 = [],[]
                     for i in range(sample_num):
                         o_n = env.reset()
                         cr1, cr2 = 0, 0
                         for step in range(max_path_length):
-                            a1,_ = player1.get_action(o_n[0])
-                            a2,_ = player2.get_action(o_n[1])
-                            o_n, r_n, done, _ = env.step([a1,a2])
+                            actions = []
+                            for sub_pid in groups[0]:
+                                a1,_ = player1[sub_pid].get_action(o_n[sub_pid])
+                                actions.append(a1)
+                            for sub_pid in groups[1]:
+                                a2,_ = player2[sub_pid].get_action(o_n[sub_pid])
+                                actions.append(a2)
+                            o_n, r_n, done, _ = env.step(actions)
                             cr1 += r_n[0]
                             cr2 += r_n[1]
                         Cr1.append(cr1)

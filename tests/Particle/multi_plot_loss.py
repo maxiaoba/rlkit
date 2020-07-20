@@ -11,40 +11,44 @@ max_itr = 2e4
 fields = [
             'evaluation/Average Returns 0',
             'evaluation/Average Returns 1',
+            'evaluation/Average Returns 2',
+            'evaluation/Average Returns 3'
             ]
 field_names = [
-            'Average Return',
-            'Average Return',
+            'Average Return 0',
+            'Average Return 1',
+            'Average Return 2',
+            'Average Return 3',
             ]
 itr_name = 'epoch'
-min_loss = [-1000,-1000]
-max_loss = [1000,1000]
-exp_name = "simple_push"
+min_loss = [-1000,-1000,-1000,-1000]
+max_loss = [1000,1000,1000,1000]
+exp_name = "simple_tag"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
             'MADDPG',
-            'MADDPGonline_action',
+            # 'MADDPGonline_action',
             'MASAC',
-            'MASAConline_action',
-            'PRGk1',
-            'PRGk1online_action',
-            'PRGGaussiank1',
-            'PRGGaussiank1online_action',
+            # 'MASAConline_action',
+            # 'PRGk1',
+            # 'PRGk1online_action',
+            # 'PRGGaussiank1',
+            # 'PRGGaussiank1online_action',
             'PRGGaussiank1online_actioncentropy'
         ]
 # policy_names = policies
 policy_names = [
                 'MADDPG',
-                'MADDPGonline',
+                # 'MADDPGonline',
                 'MASAC',
-                'MASAConline',
-                'PRGk1',
-                'PRGk1online',
-                'PRGGaussiank1',
-                'PRGGaussiank1online',
+                # 'MASAConline',
+                # 'PRGk1',
+                # 'PRGk1online',
+                # 'PRGGaussiank1',
+                # 'PRGGaussiank1online',
                 'PRGGaussiank1onlinecentropy'
             ]
 seeds = [0,1,2,3,4]
@@ -52,7 +56,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_names = ['r0','r1']
+extra_names = ['r0','r1','r2','r3']
 
 pre_name = ''
 post_name = ''

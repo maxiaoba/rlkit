@@ -12,24 +12,24 @@ args = parser.parse_args()
 
 P_paths = [
             'MADDPG',
-            'MADDPGonline_action',
+            # 'MADDPGonline_action',
             'MASAC',
-            'MASAConline_action',
+            # 'MASAConline_action',
             # 'PRGk1',
-            'PRGk1online_action',
+            # 'PRGk1online_action',
             # 'PRGGaussiank1',
-            'PRGGaussiank1online_action',
+            # 'PRGGaussiank1online_action',
             'PRGGaussiank1online_actioncentropy'
             ]
 policy_names = [
                 'MADDPG',
-                'MADDPGonline',
+                # 'MADDPGonline',
                 'MASAC',
-                'MASAConline',
+                # 'MASAConline',
                 # 'PRGk1',
-                'PRGk1online',
+                # 'PRGk1online',
                 # 'PRGGaussiank1',
-                'PRGGaussiank1online',
+                # 'PRGGaussiank1online',
                 'PRGGaussiank1onlinecentropy'
             ]
 
