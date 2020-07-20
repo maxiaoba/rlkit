@@ -132,8 +132,8 @@ with open(log_dir+'/'+csv_name, mode='w') as csv_file:
                                 a2,_ = player2[sub_pid].get_action(o_n[sub_pid])
                                 actions.append(a2)
                             o_n, r_n, done, _ = env.step(actions)
-                            cr1 += r_n[0]
-                            cr2 += r_n[1]
+                            cr1 += r_n[groups[0][0]]
+                            cr2 += r_n[groups[1][0]]
                         Cr1.append(cr1)
                         Cr2.append(cr2)
                     p1_avg_reward = np.mean(Cr1)
