@@ -32,7 +32,7 @@ class TIntersection(TrafficEnv):
                  control_cost=0.01,
                  collision_cost=1.,
                  outroad_cost=1.,
-                 goal_reward=1.,
+                 goal_reward=10.,
                  road=Road([RoadSegment([(-10.,0.),(10.,0.),(10.,6.),(-10.,6.)]),
                              RoadSegment([(-1.5,-10.),(1.5,-10.),(1.5,0.),(-1.5,0.)])]),
                  n_cars=3,
@@ -116,10 +116,12 @@ class TIntersection(TrafficEnv):
         if self._outroad:
             # print('outroad_cost: ',self.outroad_cost)
             reward -= self.outroad_cost
+            
 
         if self._goal:
             # print('goal_reward: ',self.goal_reward)
             reward += self.goal_reward
+            # print('success! ',reward)
 
         return np.array([reward])
 

@@ -9,59 +9,55 @@ itr_interval = 10
 max_itr = 2e4
 
 fields = [
-            # 'evaluation/Average Returns',
-            # 'exploration/Average Returns',
-            # 'exploration/Returns Max',
             'evaluation/Average Returns 0',
             'exploration/Average Returns 0',
             'exploration/Returns 0 Max',
+            'trainer/Policy Loss 0',
+            'trainer/QF Loss 0',
             ]
 field_names = [
             'Eval Average Return',
             'Expl Average Return',
             'Expl Max Return',
+            'Policy Loss',
+            'Q Loss',
             ]
 itr_name = 'epoch'
-min_loss = [-1000,-1000,-1000,-1000]
-max_loss = [1000,1000,1000,1000]
+min_loss = [-1000,-1000,-1000,-1000,-1000]
+max_loss = [1000,1000,1000,1000,1000]
 exp_name = "t_intersection"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            # 'DDPG',
-            # 'SAC'
             'MADDPG',
-            'MADDPGnew',
-            'MADDPGep1e3',
-            'MADDPGep5e3',
             'MASAC',
-            'MASACep5e3',
+            'MASACrs10',
+            'MASACrs100',
+            # 'MADDPGgoal10',
+            # 'MADDPGgoal10ep1e3',
         ]
 policy_names = policies
-# policy_names = [
-#                 'MADDPG',
-#                 'MASAC',
-            # ]
+
 seeds = [0,1,2,3,4]
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-# extra_names = ['SingleEvalAvgR','SingleExplAvgR','SingleExplMaxR']
-extra_names = ['EvalAvgR','ExplAvgR','ExplMaxR']
+extra_name = 'Goal1'
 
 pre_name = ''
 post_name = ''
 
-plot_names = extra_names
+plot_names = []
 
 for fid,field in enumerate(fields):
     print(field)
     fig = plt.figure(fid)
     legends = []
     plts = []
+    plot_names.append(extra_name+field_names[fid])
     for (policy_index,policy) in enumerate(policies):
         policy_path = pre_name+policy+post_name
         Itrs = []

@@ -87,6 +87,7 @@ if __name__ == "__main__":
     parser.add_argument('--log_dir', type=str, default='MASAC')
     parser.add_argument('--online_action', action='store_true', default=False)
     parser.add_argument('--lr', type=float, default=None)
+    parser.add_argument('--rs', type=int, default=None) # reward scale
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--ae', type=int, default=None) # auto entropy, 0=False
     parser.add_argument('--epoch', type=int, default=None)
@@ -99,6 +100,7 @@ if __name__ == "__main__":
     main_dir = args.log_dir\
                 +('online_action' if args.online_action else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
+                +(('rs'+str(args.rs)) if args.rs else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
@@ -116,6 +118,7 @@ if __name__ == "__main__":
             use_soft_update=True,
             tau=1e-2,
             discount=0.99,
+            reward_scale=(args.rs if args.rs else 1.),
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
             online_action=args.online_action,
