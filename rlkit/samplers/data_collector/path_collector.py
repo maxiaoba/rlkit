@@ -78,11 +78,11 @@ class MdpPathCollector(PathCollector):
         return stats
 
     def get_snapshot(self):
-        return dict(
-            env=self._env,
-            policy=self._policy,
-        )
-
+        # return dict(
+        #     env=self._env,
+        #     policy=self._policy,
+        # )
+        return {}
 
 class GoalConditionedPathCollector(PathCollector):
     def __init__(

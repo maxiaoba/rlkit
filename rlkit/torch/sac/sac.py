@@ -92,9 +92,11 @@ class SACTrainer(TorchTrainer):
         """
         Policy and Alpha Loss
         """
-        new_obs_actions, policy_mean, policy_log_std, log_pi, *_ = self.policy(
-            obs, reparameterize=True, return_log_prob=True,
-        )
+        # new_obs_actions, policy_mean, policy_log_std, log_pi, *_ = self.policy(
+        #     obs, reparameterize=True, return_log_prob=True,
+        # )
+        new_obs_actions, info = self.policy(obs, return_info=True)
+        log_pi = info['log_prob']
         if self.use_automatic_entropy_tuning:
             alpha_loss = -(self.log_alpha.exp() * (log_pi + self.target_entropy).detach()).mean()
             self.alpha_optimizer.zero_grad()
@@ -117,9 +119,11 @@ class SACTrainer(TorchTrainer):
         q1_pred = self.qf1(obs, actions)
         q2_pred = self.qf2(obs, actions)
         # Make sure policy accounts for squashing functions like tanh correctly!
-        new_next_actions, _, _, new_log_pi, *_ = self.policy(
-            next_obs, reparameterize=True, return_log_prob=True,
-        )
+        # new_next_actions, _, _, new_log_pi, *_ = self.policy(
+        #     next_obs, reparameterize=True, return_log_prob=True,
+        # )
+        new_next_actions, new_info = self.policy(next_obs, return_info=True)
+        new_log_pi = new_info['log_prob']
         target_q_values = torch.min(
             self.target_qf1(next_obs, new_next_actions),
             self.target_qf2(next_obs, new_next_actions),
@@ -187,14 +191,14 @@ class SACTrainer(TorchTrainer):
                 'Log Pis',
                 ptu.get_numpy(log_pi),
             ))
-            self.eval_statistics.update(create_stats_ordered_dict(
-                'Policy mu',
-                ptu.get_numpy(policy_mean),
-            ))
-            self.eval_statistics.update(create_stats_ordered_dict(
-                'Policy log std',
-                ptu.get_numpy(policy_log_std),
-            ))
+            # self.eval_statistics.update(create_stats_ordered_dict(
+            #     'Policy mu',
+            #     ptu.get_numpy(policy_mean),
+            # ))
+            # self.eval_statistics.update(create_stats_ordered_dict(
+            #     'Policy log std',
+            #     ptu.get_numpy(policy_log_std),
+            # ))
             if self.use_automatic_entropy_tuning:
                 self.eval_statistics['Alpha'] = alpha.item()
                 self.eval_statistics['Alpha Loss'] = alpha_loss.item()

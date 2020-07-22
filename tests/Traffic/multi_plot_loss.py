@@ -9,6 +9,9 @@ itr_interval = 10
 max_itr = 2e4
 
 fields = [
+            # 'evaluation/Average Returns',
+            # 'exploration/Average Returns',
+            # 'exploration/Returns Max',
             'evaluation/Average Returns 0',
             'exploration/Average Returns 0',
             'exploration/Returns 0 Max',
@@ -27,10 +30,14 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
+            # 'DDPG',
+            # 'SAC'
             'MADDPG',
             'MADDPGnew',
             'MADDPGep1e3',
+            'MADDPGep5e3',
             'MASAC',
+            'MASACep5e3',
         ]
 policy_names = policies
 # policy_names = [
@@ -42,6 +49,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
+# extra_names = ['SingleEvalAvgR','SingleExplAvgR','SingleExplMaxR']
 extra_names = ['EvalAvgR','ExplAvgR','ExplMaxR']
 
 pre_name = ''
