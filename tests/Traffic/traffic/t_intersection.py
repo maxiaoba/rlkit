@@ -1,5 +1,6 @@
 import random
 import numpy as np
+from gym import spaces
 
 from road import Road, RoadSegment
 from traffic import TrafficEnv, GREEN_COLORS, RED_COLORS
@@ -87,6 +88,10 @@ class TIntersection(TrafficEnv):
     @property
     def observation_space(self):
         return self._cars[0].observation_space(self._cars, self._road, include_x=True)
+
+    @property
+    def action_space(self):
+        return spaces.Box(low=-1., high=1., shape=(2,),dtype=np.float32)
 
     def get_reward(self):
         reward = 0.
