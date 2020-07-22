@@ -94,26 +94,26 @@ class TIntersection(TrafficEnv):
         ego_car = self._cars[0]
 
         vx = ego_car.velocity[0]
-        print('speed_cost: ',self.speed_cost*(np.abs(self.desire_speed-vx)/self.desire_speed) )
+        # print('speed_cost: ',self.speed_cost*(np.abs(self.desire_speed-vx)/self.desire_speed) )
         reward -= self.speed_cost*(np.abs(self.desire_speed-vx)/self.desire_speed)
 
         y = ego_car.position[1]
-        print('y_cost: ',self.y_cost*(np.abs(4.5-y)/4.5))
+        # print('y_cost: ',self.y_cost*(np.abs(4.5-y)/4.5))
         reward -= self.y_cost*(np.abs(4.5-y)/4.5)
 
-        print('control_cost: ',self.control_cost*np.sqrt(action[0]**2+action[1]**2))
+        # print('control_cost: ',self.control_cost*np.sqrt(action[0]**2+action[1]**2))
         reward -= self.control_cost*np.sqrt(action[0]**2+action[1]**2)
 
         if self._collision:
-            print('collision_cost: ',self.collision_cost)
+            # print('collision_cost: ',self.collision_cost)
             reward -= self.collision_cost
 
         if self._outroad:
-            print('outroad_cost: ',self.outroad_cost)
+            # print('outroad_cost: ',self.outroad_cost)
             reward -= self.outroad_cost
 
         if self._goal:
-            print('goal_reward: ',self.goal_reward)
+            # print('goal_reward: ',self.goal_reward)
             reward += self.goal_reward
 
         return np.array([reward])
