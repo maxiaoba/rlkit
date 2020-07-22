@@ -28,13 +28,15 @@ plot_path = "./Data/"+exp_name
 
 policies = [
             'MADDPG',
+            'MADDPGnew',
+            'MADDPGep1e3',
             'MASAC',
         ]
-# policy_names = policies
-policy_names = [
-                'MADDPG',
-                'MASAC',
-            ]
+policy_names = policies
+# policy_names = [
+#                 'MADDPG',
+#                 'MASAC',
+            # ]
 seeds = [0,1,2,3,4]
 colors = []
 for pid in range(len(policies)):

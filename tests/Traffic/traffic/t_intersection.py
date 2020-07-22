@@ -169,6 +169,7 @@ if __name__ == '__main__':
     done = False
     maximum_step = 50
     t = 0
+    cr = np.zeros(1)
     actions = [*[[0.,.8]]*12,
                 *[[.8,0.]]*15,
                 *[[0.5,-.8]]*12,
@@ -180,10 +181,13 @@ if __name__ == '__main__':
         print('obs: ', obs)
         print('reward: ', reward)
         print('info: ', info)
+        cr += reward
         env.render()
         time.sleep(0.1)
         if (t > maximum_step) or done.all():
+            print('cr: ',cr)
             pdb.set_trace()
             t = 0
+            cr = np.zeros(1)
             env.reset()
     env.close()
