@@ -13,7 +13,7 @@ fields = [
             'exploration/Average Returns 0',
             'exploration/Returns 0 Max',
             'trainer/Policy Loss 0',
-            'trainer/QF Loss 0',
+            # 'trainer/QF Loss 0',
             ]
 field_names = [
             'Eval Average Return',
@@ -31,12 +31,13 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'MADDPG',
-            'MASAC',
-            'MASACrs10',
-            'MASACrs100',
-            # 'MADDPGgoal10',
-            # 'MADDPGgoal10ep1e3',
+            # 'MADDPG',
+            # 'MASAC',
+            # 'MASACrs10',
+            # 'MASACrs100',
+            'MADDPGgoal10',
+            'MADDPGgoal10ep1e3',
+            'MASACgoal10'
         ]
 policy_names = policies
 
@@ -45,7 +46,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'Goal1'
+extra_name = 'Goal10'
 
 pre_name = ''
 post_name = ''
