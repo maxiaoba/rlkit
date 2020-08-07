@@ -9,7 +9,7 @@ itr_interval = 10
 max_itr = 2e4
 
 fields = [
-            'evaluation/Average Returns 1',
+            'evaluation/Average Returns',
             ]
 itr_name = 'epoch'
 min_loss = [-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]
@@ -20,17 +20,8 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            # 'DQN',
-            # 'DDPG',
-            # 'DDPG_Dist',
-            # 'MADDPG',
-            'MADDPGdoubleq',
-            'MASAC',
-            # 'PRG_k1',
-            # 'PRG_k2',
-            'PRGk1doubleq'
-            # 'PRGDiscretehardk1',
-            # 'PRGDiscretesoftk1',
+            # 'PPO',
+            'PPOCont'
         ]
 seeds = [0,1,2,3,4]
 policy_names = policies
@@ -38,7 +29,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'doubel_q'
+extra_name = 'ppo'
 
 pre_name = ''
 post_name = ''

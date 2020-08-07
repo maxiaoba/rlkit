@@ -75,3 +75,12 @@ class TanhNormal(Distribution):
             return torch.tanh(z), z
         else:
             return torch.tanh(z)
+
+    def entropy(self):
+        """Returns entropy of the underlying normal distribution.
+
+        Returns:
+            torch.Tensor: entropy of the underlying normal distribution.
+
+        """
+        return self.normal.entropy()

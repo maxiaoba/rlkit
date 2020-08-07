@@ -52,3 +52,21 @@ class TorchTrainer(Trainer, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def networks(self) -> Iterable[nn.Module]:
         pass
+
+class TorchOnlineTrainer(Trainer, metaclass=abc.ABCMeta):
+    def __init__(self):
+        self._num_train_steps = 0
+
+    def train(self, paths):
+        self._num_train_steps += 1
+        self.train_once(paths)
+
+    def get_diagnostics(self):
+        return OrderedDict([
+            ('num train calls', self._num_train_steps),
+        ])
+
+    @property
+    @abc.abstractmethod
+    def networks(self) -> Iterable[nn.Module]:
+        pass

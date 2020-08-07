@@ -1,0 +1,34 @@
+name: rlkit2
+channels:
+- kne  # for pybox2d
+- pytorch
+- anaconda  # for mkl
+dependencies:
+- python=3.7.4
+# - cython
+# - ipython  # technically unnecessary
+# - lockfile
+# - mako
+# - numba
+# - path.py
+# - pybox2d
+# - python-dateutil
+- pip:
+  - numpy
+  - joblib
+  - matplotlib
+  - scipy
+  - torch
+  - torchvision
+  - torch-scatter
+  - torch-sparse
+  - torch-cluster
+  - torch-geometric
+  - cloudpickle
+  - gym
+  - gitpython
+  - gtimer
+  - pygame
+  - ipdb  # technically unnecessary
+  - zmq
+  - shapely

@@ -29,7 +29,7 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
             evaluation_env,
             exploration_data_collector: DataCollector,
             evaluation_data_collector: DataCollector,
-            replay_buffer: ReplayBuffer,
+            replay_buffer,
             log_path_function = eval_util.get_generic_path_information,
     ):
         self.trainer = trainer
@@ -61,7 +61,8 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
 
         self.expl_data_collector.end_epoch(epoch)
         self.eval_data_collector.end_epoch(epoch)
-        self.replay_buffer.end_epoch(epoch)
+        if self.replay_buffer:
+            self.replay_buffer.end_epoch(epoch)
         self.trainer.end_epoch(epoch)
 
         for post_epoch_func in self.post_epoch_funcs:
@@ -75,8 +76,9 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
             snapshot['exploration/' + k] = v
         for k, v in self.eval_data_collector.get_snapshot().items():
             snapshot['evaluation/' + k] = v
-        for k, v in self.replay_buffer.get_snapshot().items():
-            snapshot['replay_buffer/' + k] = v
+        if self.replay_buffer:
+            for k, v in self.replay_buffer.get_snapshot().items():
+                snapshot['replay_buffer/' + k] = v
         return snapshot
 
     def _log_stats(self, epoch):
@@ -85,10 +87,11 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
         """
         Replay Buffer
         """
-        logger.record_dict(
-            self.replay_buffer.get_diagnostics(),
-            prefix='replay_buffer/'
-        )
+        if self.replay_buffer:
+            logger.record_dict(
+                self.replay_buffer.get_diagnostics(),
+                prefix='replay_buffer/'
+            )
 
         """
         Trainer

@@ -1,80 +1,67 @@
-import copy
+import gym
+from torch import nn as nn
 
+from rlkit.torch.vpg.ppo import PPOTrainer
+from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy, MakeDeterministic
+from rlkit.torch.networks import Mlp
+import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
-# from rlkit.envs.wrappers import NormalizedBoxEnv
-from rlkit.exploration_strategies.base import (
-    PolicyWrappedWithExplorationStrategy
-)
-from rlkit.exploration_strategies.ou_strategy import OUStrategy
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.samplers.data_collector import MdpPathCollector
-from rlkit.torch.networks import FlattenMlp
-from rlkit.torch.policies.deterministic_policies import TanhMlpPolicy
-from rlkit.torch.ddpg.ddpg import DDPGTrainer
-import rlkit.torch.pytorch_util as ptu
-from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
-from rlkit.core.ma_eval_util import get_generic_ma_path_information
+from rlkit.torch.torch_rl_algorithm import TorchOnlineRLAlgorithm
+
 
 def experiment(variant):
-    import sys
-    sys.path.append("./traffic")
-    from make_env import make_env
-    expl_env = make_env(args.exp_name)
-    eval_env = make_env(args.exp_name)
+    from cartpole import CartPoleEnv
+    expl_env = CartPoleEnv(mode=0)
+    eval_env = CartPoleEnv(mode=0)
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
-
-    qf = FlattenMlp(
-        input_size=(obs_dim+action_dim),
-        output_size=1,
-        **variant['qf_kwargs']
-    )
-    policy = TanhMlpPolicy(
+    policy = TanhGaussianPolicy(
+            obs_dim=obs_dim,
+            action_dim=action_dim,
+            **variant['policy_kwargs'],
+            )
+    vf = Mlp(
+        hidden_sizes=[32, 32],
         input_size=obs_dim,
-        output_size=action_dim,
-        **variant['policy_kwargs']
+        output_size=1,
     )
-    target_qf = copy.deepcopy(qf)
-    target_policy = copy.deepcopy(policy)
-    eval_policy = policy
-    expl_policy = PolicyWrappedWithExplorationStrategy(
-        exploration_strategy=OUStrategy(action_space=expl_env.action_space),
-        policy=policy,
-    )
+    vf_criterion = nn.MSELoss()
+    eval_policy = MakeDeterministic(policy)
+    expl_policy = policy
 
-    eval_path_collector = MdpPathCollector(eval_env, eval_policy)
-    expl_path_collector = MdpPathCollector(expl_env, expl_policy)
-    replay_buffer = EnvReplayBuffer(
-        variant['replay_buffer_size'],
-        expl_env,
+    eval_path_collector = MdpPathCollector(
+        eval_env,
+        eval_policy,
     )
-    trainer = DDPGTrainer(
-        qf=qf,
-        target_qf=target_qf,
+    expl_path_collector = MdpPathCollector(
+        expl_env,
+        expl_policy,
+    )
+    trainer = PPOTrainer(
         policy=policy,
-        target_policy=target_policy,
+        value_function=vf,
+        vf_criterion=vf_criterion,
         **variant['trainer_kwargs']
     )
-    algorithm = TorchBatchRLAlgorithm(
+    algorithm = TorchOnlineRLAlgorithm(
         trainer=trainer,
         exploration_env=expl_env,
         evaluation_env=eval_env,
         exploration_data_collector=expl_path_collector,
         evaluation_data_collector=eval_path_collector,
-        replay_buffer=replay_buffer,
         **variant['algorithm_kwargs']
     )
     algorithm.to(ptu.device)
     algorithm.train()
 
-
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp_name', type=str, default='t_intersection')
-    parser.add_argument('--gpu', action='store_true', default=False)
-    parser.add_argument('--log_dir', type=str, default='DDPG')
+    parser.add_argument('--exp_name', type=str, default='Cartpole')
+    parser.add_argument('--log_dir', type=str, default='PPOCont')
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -91,28 +78,22 @@ if __name__ == "__main__":
     # noinspection PyTypeChecker
     variant = dict(
         algorithm_kwargs=dict(
-            num_epochs=(args.epoch if args.epoch else 500),
+            num_epochs=(args.epoch if args.epoch else 200),
             num_eval_steps_per_epoch=500,
-            num_trains_per_train_loop=200,
-            num_expl_steps_per_train_loop=200,
-            min_num_steps_before_training=200,
+            num_train_loops_per_epoch=1,
+            num_trains_per_train_loop=1,
+            num_expl_steps_per_train_loop=(args.bs if args.bs else 500),
             max_path_length=100,
-            batch_size=(args.bs if args.bs else 256),
         ),
         trainer_kwargs=dict(
-            use_soft_update=True,
-            tau=1e-2,
             discount=0.99,
-            qf_learning_rate=(args.lr if args.lr else 1e-3),
-            policy_learning_rate=(args.lr if args.lr else 1e-4),
-        ),
-        qf_kwargs=dict(
-            hidden_sizes=[400, 300],
+            max_path_length=100,
+            policy_lr=(args.lr if args.lr else 1e-4),
+            vf_lr=(args.lr if args.lr else 1e-3),
         ),
         policy_kwargs=dict(
-            hidden_sizes=[400, 300],
+            hidden_sizes=[32,32],
         ),
-        replay_buffer_size=int(1E6),
     )
     import os
     if not os.path.isdir(log_dir):
@@ -131,6 +112,5 @@ if __name__ == "__main__":
     import torch
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    if args.gpu:
-        ptu.set_gpu_mode(True)
+    # ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
     experiment(variant)

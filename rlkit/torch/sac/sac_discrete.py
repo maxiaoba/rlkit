@@ -10,7 +10,7 @@ from rlkit.core.eval_util import create_stats_ordered_dict
 from rlkit.torch.torch_rl_algorithm import TorchTrainer
 
 
-class SACTrainer(TorchTrainer):
+class SACDiscreteTrainer(TorchTrainer):
     def __init__(
             self,
             env,
@@ -19,6 +19,7 @@ class SACTrainer(TorchTrainer):
             qf2,
             target_qf1,
             target_qf2,
+            qf_criterion=nn.MSELoss(),
 
             discount=0.99,
             reward_scale=1.0,
@@ -50,7 +51,7 @@ class SACTrainer(TorchTrainer):
             if target_entropy:
                 self.target_entropy = target_entropy
             else:
-                self.target_entropy = -np.prod(self.env.action_space.shape).item()  # heuristic value from Tuomas
+                self.target_entropy = -0.5*np.log(self.env.action_space.n)  # heuristic value from Tuomas
             self.log_alpha = ptu.zeros(1, requires_grad=True)
             self.alpha_optimizer = optimizer_class(
                 [self.log_alpha],
@@ -60,8 +61,7 @@ class SACTrainer(TorchTrainer):
         self.plotter = plotter
         self.render_eval_paths = render_eval_paths
 
-        self.qf_criterion = nn.MSELoss()
-        self.vf_criterion = nn.MSELoss()
+        self.qf_criterion = qf_criterion
 
         self.policy_optimizer = optimizer_class(
             self.policy.parameters(),
@@ -92,13 +92,9 @@ class SACTrainer(TorchTrainer):
         """
         Policy and Alpha Loss
         """
-        # new_obs_actions, policy_mean, policy_log_std, log_pi, *_ = self.policy(
-        #     obs, reparameterize=True, return_log_prob=True,
-        # )
-        new_obs_actions, info = self.policy(obs, return_info=True)
-        log_pi = info['log_prob']
+        pis = self.policy(obs)
         if self.use_automatic_entropy_tuning:
-            alpha_loss = -(self.log_alpha.exp() * (log_pi + self.target_entropy).detach()).mean()
+            alpha_loss = -(pis.detach() * self.log_alpha.exp() * (torch.log(pis+1e-3) + self.target_entropy).detach()).sum(-1).mean()
             self.alpha_optimizer.zero_grad()
             alpha_loss.backward()
             self.alpha_optimizer.step()
@@ -107,29 +103,22 @@ class SACTrainer(TorchTrainer):
             alpha_loss = 0
             alpha = 1
 
-        q_new_actions = torch.min(
-            self.qf1(obs, new_obs_actions),
-            self.qf2(obs, new_obs_actions),
-        )
-        policy_loss = (alpha*log_pi - q_new_actions).mean()
+        min_q = torch.min(self.qf1(obs), self.qf2(obs)).detach()
+        policy_loss = (pis*(alpha*torch.log(pis+1e-3) - min_q)).sum(-1).mean()
 
         """
         QF Loss
         """
-        q1_pred = self.qf1(obs, actions)
-        q2_pred = self.qf2(obs, actions)
-        # Make sure policy accounts for squashing functions like tanh correctly!
-        # new_next_actions, _, _, new_log_pi, *_ = self.policy(
-        #     next_obs, reparameterize=True, return_log_prob=True,
-        # )
-        new_next_actions, new_info = self.policy(next_obs, return_info=True)
-        new_log_pi = new_info['log_prob']
-        target_q_values = torch.min(
-            self.target_qf1(next_obs, new_next_actions),
-            self.target_qf2(next_obs, new_next_actions),
-        ) - alpha * new_log_pi
-
+        new_pis = self.policy(next_obs).detach()
+        target_min_q_values = torch.min(
+            self.target_qf1(next_obs),
+            self.target_qf2(next_obs),
+        )
+        target_q_values = (new_pis*(target_min_q_values - alpha * torch.log(new_pis+1e-3))).sum(-1,keepdim=True)
         q_target = self.reward_scale * rewards + (1. - terminals) * self.discount * target_q_values
+
+        q1_pred = torch.sum(self.qf1(obs)*actions.detach(),dim=-1,keepdim=True)
+        q2_pred = torch.sum(self.qf2(obs)*actions.detach(),dim=-1,keepdim=True)
         qf1_loss = self.qf_criterion(q1_pred, q_target.detach())
         qf2_loss = self.qf_criterion(q2_pred, q_target.detach())
 
@@ -168,7 +157,6 @@ class SACTrainer(TorchTrainer):
             Eval should set this to None.
             This way, these statistics are only computed for one batch.
             """
-            # policy_loss = (log_pi - q_new_actions).mean()
 
             self.eval_statistics['QF1 Loss'] = np.mean(ptu.get_numpy(qf1_loss))
             self.eval_statistics['QF2 Loss'] = np.mean(ptu.get_numpy(qf2_loss))
@@ -188,17 +176,9 @@ class SACTrainer(TorchTrainer):
                 ptu.get_numpy(q_target),
             ))
             self.eval_statistics.update(create_stats_ordered_dict(
-                'Log Pis',
-                ptu.get_numpy(log_pi),
+                'Pis',
+                ptu.get_numpy(pis),
             ))
-            # self.eval_statistics.update(create_stats_ordered_dict(
-            #     'Policy mu',
-            #     ptu.get_numpy(policy_mean),
-            # ))
-            # self.eval_statistics.update(create_stats_ordered_dict(
-            #     'Policy log std',
-            #     ptu.get_numpy(policy_log_std),
-            # ))
             if self.use_automatic_entropy_tuning:
                 self.eval_statistics['Alpha'] = alpha.item()
                 self.eval_statistics['Alpha Loss'] = alpha_loss.item()

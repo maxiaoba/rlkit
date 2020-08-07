@@ -1,14 +1,18 @@
 import numpy as np
 import scipy.spatial.distance as ssd
 from shapely.geometry.polygon import Polygon
+from shapely.ops import nearest_points
 
 import gym
 from gym import spaces
 from gym.utils import seeding
 
+from gym.envs.classic_control import rendering
+from traffic.constants import *
+
 class Car:
 
-    def __init__(self, idx, length, width, color, max_accel, max_speed, expose_level, order):
+    def __init__(self, idx, length, width, color, max_accel, max_speed, expose_level):
         self._idx = idx
         self._length = length
         self._width = width
@@ -16,10 +20,10 @@ class Car:
         self._max_accel = max_accel
         self._max_speed = max_speed
         self._expose_level = expose_level
-        self._order = order
 
         self._position = None
         self._velocity = None
+        self._rotation = None
         self._action = None
 
         self.seed()
@@ -50,12 +54,16 @@ class Car:
         return spaces.Box(low=low, high=high, dtype=np.float32)
 
     def action_space(self):
-        if self._order == 1:
-            return spaces.Box(low=-self._max_speed, high=self._max_speed, shape=(2,),
-                              dtype=np.float32)
-        elif self._order == 2:
-            return spaces.Box(low=-self._max_accel, high=self._max_accel, shape=(2,),
-                              dtype=np.float32)
+        return spaces.Box(low=-self._max_accel, high=self._max_accel, shape=(2,),
+                          dtype=np.float32)
+
+    @property
+    def length(self):
+        return self._length
+
+    @property
+    def width(self):
+        return self._width
 
     @property
     def position(self):
@@ -68,6 +76,11 @@ class Car:
         return self._velocity
 
     @property
+    def rotation(self):
+        assert self._rotation is not None
+        return self._rotation
+
+    @property
     def heading(self):
         assert self._velocity is not None
         return np.arctan2(self._velocity[1],self._velocity[0])
@@ -75,6 +88,7 @@ class Car:
     def set_position(self, x_2):
         assert x_2.shape == (2,)
         self._position = np.array(x_2)
+        return self._position
 
     def set_velocity(self, v_2):
         assert v_2.shape == (2,)
@@ -82,20 +96,11 @@ class Car:
         speed = np.linalg.norm(self._velocity)
         if speed > self._max_speed:
             self._velocity = self._velocity / speed * self._max_speed
+        return self._velocity
 
-    def step(self, action, road, dt):
-        self._action = action
-        if self._order == 2:
-            accel = action
-        elif self._order == 1:
-            accel = (action - self._velocity)/float(dt)
-
-        # accel = np.clip(accel,-self._max_accel,self._max_accel)
-        accel_mag = np.linalg.norm(action)
-        if accel_mag > self._max_accel:
-            accel = accel / accel_mag * self._max_accel
-        self.set_velocity(self._velocity + accel * dt)
-        self._position += self._velocity * dt
+    def set_rotation(self, rotation):
+        self._rotation = rotation
+        return self._rotation
 
     def observe(self, cars, road, include_x=False):
         if include_x:
@@ -121,7 +126,7 @@ class Car:
         l = np.sqrt(self._width**2+self._length**2)/2.
         x = self._position[0]
         y = self._position[1]
-        theta = self.heading
+        theta = self._rotation
         cxs = [x+l*np.cos(theta+phi),x+l*np.cos(theta-phi),x-l*np.cos(theta+phi),x-l*np.cos(theta-phi)]
         cys = [y+l*np.sin(theta+phi),y+l*np.sin(theta-phi),y-l*np.sin(theta+phi),y-l*np.sin(theta-phi)]
         return np.array(list(zip(cxs,cys)))
@@ -142,4 +147,45 @@ class Car:
         polygon1 = Polygon(self.get_vertices())
         polygon2 = Polygon(car.get_vertices())
         return polygon1.intersects(polygon2)
+
+    def get_3p(self):
+        l = np.sqrt(self._width**2+self._length**2)/2.
+        x = self._position[0]
+        y = self._position[1]
+        theta = self._rotation
+        return np.array([[x-l*np.cos(theta),y-l*np.sin(theta)],[x,y],[x+l*np.cos(theta),y+l*np.sin(theta)]])    
+
+    def get_closest_points(self, car):
+        polygon1 = Polygon(self.get_vertices())
+        polygon2 = Polygon(car.get_vertices())
+        p1, p2 = nearest_points(polygon1, polygon2)
+        return np.array([p1.x,p1.y]), np.array([p2.x,p2.y])
+
+    def setup_render(self, viewer):
+        car_poly = [[-self._length / 2.0, -self._width / 2.0],
+                    [self._length / 2.0, -self._width / 2.0],
+                    [self._length / 2.0, self._width / 2.0],
+                    [-self._length / 2.0, self._width / 2.0]]
+        arr_poly = [[-self._length / 8.0, -self._width / 4.0],
+                    [self._length / 2.0, -self._width / 4.0],
+                    [self._length / 2.0, self._width / 4.0],
+                    [-self._length / 8.0, self._width / 4.0]]
+        self.geom = rendering.make_polygon(car_poly)
+        self.xform = rendering.Transform()
+        self.geom.set_color(*self._color)
+        self.geom.add_attr(self.xform)
+        viewer.add_geom(self.geom)
+
+        self.arr_geom = rendering.make_polygon(arr_poly)
+        self.arr_xform = rendering.Transform()
+        self.arr_geom.set_color(0.8, 0.8, 0.8)
+        self.arr_geom.add_attr(self.arr_xform)
+        viewer.add_geom(self.arr_geom)
+
+    def update_render(self, camera_center):
+        self.xform.set_translation(*(self.position - camera_center))
+        self.xform.set_rotation(self._rotation)
+        self.geom.set_color(*self._color)
+        self.arr_xform.set_translation(*(self.position - camera_center))
+        self.arr_xform.set_rotation(self._rotation)
 

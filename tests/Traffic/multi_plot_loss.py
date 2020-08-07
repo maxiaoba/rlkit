@@ -9,44 +9,50 @@ itr_interval = 10
 max_itr = 2e4
 
 fields = [
-            'evaluation/Average Returns 0',
-            'exploration/Average Returns 0',
-            'exploration/Returns 0 Max',
-            'trainer/Policy Loss 0',
-            # 'trainer/QF Loss 0',
+            'evaluation/Average Returns',
+            'evaluation/Num Fail',
+            'exploration/Average Returns',
+            'exploration/Returns Max',
+            'exploration/Returns Min',
+            'exploration/Num Fail',
+            # 'trainer/SUP Loss 0',
+            # 'trainer/SUP Loss 1',
             ]
 field_names = [
             'Eval Average Return',
+            'Eval Fail',
             'Expl Average Return',
             'Expl Max Return',
-            'Policy Loss',
-            'Q Loss',
+            'Expl Min Return',
+            'Expl Fail',
+            'Sup Loss 0',
+            'Sup Loss 1',
             ]
 itr_name = 'epoch'
-min_loss = [-1000,-1000,-1000,-1000,-1000]
-max_loss = [1000,1000,1000,1000,1000]
+min_loss = [-1000]*100
+max_loss = [1000]*100
 exp_name = "t_intersection"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            # 'MADDPG',
-            # 'MASAC',
-            # 'MASACrs10',
-            # 'MASACrs100',
-            'MADDPGgoal10',
-            'MADDPGgoal10ep1e3',
-            'MASACgoal10'
+            'PPO',
+            'PPOSup',
+            'PPOSupeb0.1',
+            'PPOSupeb10.0',
+            'PPOSupng',
+            'PPOSupngeb0.1',
+            'PPOSupngeb10.0',
         ]
 policy_names = policies
 
-seeds = [0,1,2,3,4]
+seeds = [0]
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'Goal10'
+extra_name = '0'
 
 pre_name = ''
 post_name = ''

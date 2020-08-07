@@ -2,56 +2,69 @@ import torch
 import numpy as np
 import time
 import pdb
-from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy, MakeDeterministic
-from rlkit.torch.policies.gumbel_softmax_policy import GumbelSoftmaxMlpPolicy
+from rlkit.torch.policies.softmax_policy import SoftmaxPolicy
 from rlkit.policies.argmax import ArgmaxDiscretePolicy
+from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy, MakeDeterministic
+from rlkit.torch.core import eval_np, np_ify
 
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='t_intersection')
-parser.add_argument('--log_dir', type=str, default='MASAC')
+parser.add_argument('--yld', type=float, default=None)
+parser.add_argument('--log_dir', type=str, default='DQN')
+parser.add_argument('--file', type=str, default='params')
 parser.add_argument('--epoch', type=int, default=None)
 parser.add_argument('--seed', type=int, default=0)
 args = parser.parse_args()
 
-data_path = './Data/{}/{}/seed{}/params.pkl'.format(args.exp_name,args.log_dir,args.seed)
+pre_dir = './Data/'+args.exp_name+(('yld'+str(args.yld)) if args.yld else '')
+data_path = '{}/{}/seed{}/{}.pkl'.format(pre_dir,args.log_dir,args.seed,args.file)
 data = torch.load(data_path,map_location='cpu')
-policy_n = data['trainer/trained_policy_n']
-if isinstance(policy_n[0],TanhGaussianPolicy):
-	policy_n = [MakeDeterministic(policy) for policy in policy_n]
-elif  isinstance(policy_n[0],GumbelSoftmaxMlpPolicy):
-	policy_n = [ArgmaxDiscretePolicy(policy,use_preactivation=True) for policy in policy_n]
+if 'trainer/qf' in data.keys():
+	qf = data['trainer/qf']
+	policy = ArgmaxDiscretePolicy(qf)
+else:
+	policy = data['trainer/policy']
+	if isinstance(policy, SoftmaxPolicy):
+		policy = ArgmaxDiscretePolicy(policy,use_preactivation=True)
+	elif isinstance(policy, TanhGaussianPolicy):
+		policy = MakeDeterministic(policy)
+if 'trainer/sup_learners' in data.keys():
+	sup_learners = data['trainer/sup_learners']
+else:
+	sup_learners = None
 
 import sys
-sys.path.append("./traffic")
-from make_env import make_env
-env = make_env(args.exp_name)
-o_n = env.reset()
-num_agent = 1
+from traffic.make_env import make_env
+env = make_env(args.exp_name,yld=(args.yld if args.yld else 0.5))
+o = env.reset()
 
-max_path_length = 100
+max_path_length = 200
 path_length = 0
-done = np.array([False]*num_agent)
-c_r = np.zeros(num_agent)
+done = False
+c_r = 0.
 while True:
 	path_length += 1
-	a_n = []
-	for (policy,o) in zip(policy_n,o_n):
-		a, _ = policy.get_action(o)
-		a_n.append(a)
-	o_n, r_n, done, _ = env.step(a_n)
-	c_r += r_n
+	a, _ = policy.get_action(o)
+	o, r, done, _ = env.step(a)
+	if sup_learners:
+		intentions = [eval_np(sup_learner, o) for sup_learner in sup_learners]
+	else:
+		intentions = None
+	c_r += r
 	env.render()
 	print("step: ",path_length)
-	print("a: ",a_n)
-	print("o: ",o_n)
-	print('r: ',r_n)
+	print("intentions: ",intentions)
+	print("a: ",a)
+	print("o: ",o)
+	print('r: ',r)
 	print(done)
+	# pdb.set_trace()
 	time.sleep(0.1)
-	if path_length > max_path_length or done.all():
+	if path_length > max_path_length or done:
 		print('c_r: ',c_r)
 		path_length = 0
-		done = np.array([False]*num_agent)
-		c_r = np.zeros(num_agent)
-		o_n = env.reset()
+		done = False
+		c_r = 0.
+		o = env.reset()
 		pdb.set_trace()

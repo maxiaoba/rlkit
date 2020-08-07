@@ -87,7 +87,7 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
         """
         :param obs: Observation
         :param deterministic: If True, do not sample
-        :param return_log_prob: If True, return a sample and its log probability
+        :param return_info: If True, return info
         """
         h = obs
         for i, fc in enumerate(self.fcs):
@@ -125,16 +125,7 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
                     pre_tanh_value=pre_tanh_value
                 )
                 log_prob = log_prob.sum(dim=1, keepdim=True)
-            # else:
-            #     if reparameterize is True:
-            #         action = tanh_normal.rsample()
-            #     else:
-            #         action = tanh_normal.sample()
 
-        # return (
-        #     action, mean, log_std, log_prob, entropy, std,
-        #     mean_action_log_prob, pre_tanh_value,
-        # )
         info = dict(
             mean=mean,log_std=log_std,log_prob=log_prob,entropy=entropy,
             std=std,mean_action_log_prob=mean_action_log_prob,
@@ -177,6 +168,20 @@ class TanhGaussianPolicy(Mlp, ExplorationPolicy):
         log_prob = log_prob.sum(dim=1, keepdim=True)
 
         return log_prob
+
+    def get_distribution(self, obs):
+        h = obs
+        for i, fc in enumerate(self.fcs):
+            h = self.hidden_activation(fc(h))
+        mean = self.last_fc(h)
+        if self.std is None:
+            log_std = self.last_fc_log_std(h)
+            log_std = torch.clamp(log_std, LOG_SIG_MIN, LOG_SIG_MAX)
+            std = torch.exp(log_std)
+        else:
+            std = self.std
+            log_std = self.log_std
+        return TanhNormal(mean, std)
 
 class MakeDeterministic(nn.Module, Policy):
     def __init__(self, stochastic_policy):
