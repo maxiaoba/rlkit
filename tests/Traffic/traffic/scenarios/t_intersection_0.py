@@ -11,29 +11,19 @@ from traffic.drivers.oned_drivers import IDMDriver, PDDriver
 from traffic.actions.trajectory_accel_action import TrajectoryAccelAction
 from traffic.constants import *
 
-class TwoTDriver(XYSeperateDriver):
-    def __init__(self, t1, t2, v_normal=3., v_accel=6., v_avoid=0., **kwargs):
-        self.t1 = t1
-        self.t2 = t2
-        self.v_normal = v_normal
-        self.v_accel = v_accel
-        self.v_avoid = v_avoid
-        super(TwoTDriver, self).__init__(**kwargs)
+class YNYDriver(XYSeperateDriver):
+    def __init__(self, yld=True, **kwargs):
+        self.yld = yld
+        super(YNYDriver, self).__init__(**kwargs)
+
+    def set_yld(self, yld):
+        self.yld = yld
 
     def observe(self, cars, road):
-        s = self.cars[0].position[0] - self.car.position[0]
-        s = s * self.x_driver.direction
-        t = self.car.get_distance(cars[0],1)
-        if (s < 0.) or (t > t1): # ignore 
-            self.x_driver.set_v_des(self.v_normal)
-            self.x_driver.observe(cars[1:], road)
+        if self.yld:
+            self.x_driver.observe(cars, road)
         else:
-            if t < t2: # avoid
-                self.x_driver.set_v_des(self.v_avoid)
-                self.x_driver.observe(cars, road)
-            else: # accelerate
-                self.x_driver.set_v_des(self.v_accel)
-            
+            self.x_driver.observe(cars[1:], road)
         self.y_driver.observe(cars, road)
 
 class EgoTrajectory:

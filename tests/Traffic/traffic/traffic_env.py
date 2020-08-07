@@ -5,7 +5,6 @@ import scipy.spatial.distance as ssd
 import gym
 from gym import spaces
 from gym.utils import seeding
-from gym.envs.classic_control import rendering
 
 from traffic.road import Road, RoadSegment
 from traffic.car import Car
@@ -101,6 +100,7 @@ class TrafficEnv(gym.Env):
 
     def render(self, mode='human', screen_size=800, rate=10):
         if (not hasattr(self, 'viewer')) or (self.viewer is None):
+            from gym.envs.classic_control import rendering
             self.viewer = rendering.Viewer(screen_size, screen_size)
             self.viewer.set_bounds(-20.0, 20.0, -20.0, 20.0)
 
