@@ -1,4 +1,4 @@
-from traffic.scenarios.t_intersection import TIntersection
+from traffic.scenarios.t_intersection_0 import TIntersection
 from traffic.scenarios.t_intersection_continuous import TIntersectionContinuous
 
 def make_env(env_name, **kwargs):
