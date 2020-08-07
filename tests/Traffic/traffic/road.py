@@ -1,6 +1,5 @@
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
-from gym.envs.classic_control import rendering
 from traffic.constants import *
 
 class RoadSegment:
@@ -13,6 +12,7 @@ class RoadSegment:
         return self.polygon.contains(point)
 
     def setup_render(self, viewer):
+        from gym.envs.classic_control import rendering
         road_poly = self.vertices
         self.geom = rendering.make_polygon(road_poly)
         self.xform = rendering.Transform()

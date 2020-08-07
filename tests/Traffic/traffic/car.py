@@ -7,7 +7,6 @@ import gym
 from gym import spaces
 from gym.utils import seeding
 
-from gym.envs.classic_control import rendering
 from traffic.constants import *
 
 class Car:
@@ -162,6 +161,7 @@ class Car:
         return np.array([p1.x,p1.y]), np.array([p2.x,p2.y])
 
     def setup_render(self, viewer):
+        from gym.envs.classic_control import rendering
         car_poly = [[-self._length / 2.0, -self._width / 2.0],
                     [self._length / 2.0, -self._width / 2.0],
                     [self._length / 2.0, self._width / 2.0],
