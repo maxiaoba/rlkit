@@ -5,16 +5,16 @@ matplotlib.rcParams.update({'font.size': 10})
 from matplotlib import pyplot as plt
 import numpy as np
 
-itr_interval = 10
+itr_interval = 100
 max_itr = 2e4
 
 fields = [
             'evaluation/Average Returns',
-            'evaluation/Num Fail',
-            'exploration/Average Returns',
-            'exploration/Returns Max',
-            'exploration/Returns Min',
-            'exploration/Num Fail',
+            # 'evaluation/Num Fail',
+            # 'exploration/Average Returns',
+            # 'exploration/Returns Max',
+            # 'exploration/Returns Min',
+            # 'exploration/Num Fail',
             # 'trainer/SUP Loss 0',
             # 'trainer/SUP Loss 1',
             ]
@@ -40,19 +40,19 @@ policies = [
             'PPO',
             'PPOSup',
             'PPOSupeb0.1',
-            'PPOSupeb10.0',
+            # 'PPOSupeb10.0',
             'PPOSupng',
             'PPOSupngeb0.1',
-            'PPOSupngeb10.0',
+            # 'PPOSupngeb10.0',
         ]
 policy_names = policies
 
-seeds = [0]
+seeds = [0,1,2]
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = '0'
+extra_name = ''
 
 pre_name = ''
 post_name = ''
@@ -112,8 +112,8 @@ for fid,field in enumerate(fields):
         y = np.mean(Losses,0)
         yerr = np.std(Losses,0)
         plot, = plt.plot(itrs,y,colors[policy_index])
-        # plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
-        #                     facecolor=colors[policy_index],alpha=0.3)
+        plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
+                            facecolor=colors[policy_index],alpha=0.3)
         plts.append(plot)
         legends.append(policy_names[policy_index])
 

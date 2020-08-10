@@ -12,29 +12,74 @@ from traffic.actions.trajectory_accel_action import TrajectoryAccelAction
 from traffic.constants import *
 
 class TwoTDriver(XYSeperateDriver):
-    def __init__(self, t1, t2, v_normal=3., v_accel=6., v_avoid=0., **kwargs):
+    def __init__(self, t1=0., t2=0., v_normal=3., v_accel=6., **kwargs):
         self.t1 = t1
         self.t2 = t2
         self.v_normal = v_normal
         self.v_accel = v_accel
-        self.v_avoid = v_avoid
+        self.intention = 1
         super(TwoTDriver, self).__init__(**kwargs)
 
     def observe(self, cars, road):
-        s = self.cars[0].position[0] - self.car.position[0]
+        s = cars[0].position[0] - self.car.position[0]
         s = s * self.x_driver.direction
         t = self.car.get_distance(cars[0],1)
-        if (s < 0.) or (t > t1): # ignore 
+        # print("t: ",t, self.t1, self.t2)
+        if (s < 0.) or (t > self.t1): # ignore 
             self.x_driver.set_v_des(self.v_normal)
             self.x_driver.observe(cars[1:], road)
+            self.intention = 1
         else:
-            if t < t2: # avoid
-                self.x_driver.set_v_des(self.v_avoid)
+            if t < self.t2: # avoid
+                self.x_driver.min_overlap = self.t2
                 self.x_driver.observe(cars, road)
+                self.intention = 0
             else: # accelerate
                 self.x_driver.set_v_des(self.v_accel)
+                self.x_driver.observe(cars[1:], road)
+                self.intention = 1
             
         self.y_driver.observe(cars, road)
+
+    def setup_render(self, viewer):
+        from gym.envs.classic_control import rendering
+        t1_poly = [[-self.car.length/8.0, -(self.car.width/2.0+self.t1)],
+                    [self.car.length/8.0, -(self.car.width/2.0+self.t1)],
+                    [self.car.length/8.0, (self.car.width/2.0+self.t1)],
+                    [-self.car.length/8.0, (self.car.width/2.0+self.t1)]]
+        self.t1_geom = rendering.make_polygon(t1_poly)
+        self.t1_xform = rendering.Transform()
+        self.t1_geom.set_color(*(0., 1., 0.))
+        self.t1_geom.add_attr(self.t1_xform)
+        viewer.add_geom(self.t1_geom)
+
+        from gym.envs.classic_control import rendering
+        t2_poly = [[-self.car.length/8.0, -(self.car.width/2.0+self.t2)],
+                    [self.car.length/8.0, -(self.car.width/2.0+self.t2)],
+                    [self.car.length/8.0, (self.car.width/2.0+self.t2)],
+                    [-self.car.length/8.0, (self.car.width/2.0+self.t2)]]
+        self.t2_geom = rendering.make_polygon(t2_poly)
+        self.t2_xform = rendering.Transform()
+        self.t2_geom.set_color(*(1., 0., 0.))
+        self.t2_geom.add_attr(self.t2_xform)
+        viewer.add_geom(self.t2_geom)
+
+        if self.intention == 0:
+            self.car._color = GREEN_COLORS[0]
+        else:
+            self.car._color = RED_COLORS[0]
+
+    def update_render(self, camera_center):
+        t1_position = self.car.position - self.x_driver.direction*np.array([1.0,0.])
+        self.t1_xform.set_translation(*(t1_position - camera_center))
+
+        t2_position = self.car.position + self.x_driver.direction*np.array([1.0,0.])
+        self.t2_xform.set_translation(*(t2_position - camera_center))
+
+        if self.intention == 0:
+            self.car._color = GREEN_COLORS[0]
+        else:
+            self.car._color = RED_COLORS[0]
 
 class EgoTrajectory:
     def xy_to_traj(self, pos):
@@ -146,31 +191,13 @@ class EgoDriver(Driver):
                 if distance < self.concern_distance:
                     if distance < self.safe_distance:
                         unsafe = True
-                        # a = self.k_t_p*(self.safe_distance-distance)
-                        # a = self.k_d_safe*1./distance
-                        # if speed_rel < 0.:
-                        #     a -= self.k_v_safe*speed_rel
-                        # a_x_safe += a*direction[0]
-                        # a_y_safe += a*direction[1]
-                        # print('s0: ',cid, distance, speed_rel)
                     elif speed_rel < -self.safe_speed:
                         unsafe = True
-                    #     a = -self.k_v_safe*speed_rel
-                    #     a_x_safe += a*direction[0]
-                    #     a_y_safe += a*direction[1]
-                        # print('s1: ',cid, distance, speed_rel)
-                    # print('car: ',cid, a, direction)
         if unsafe:
-            # self.a_s += (a_x_safe*np.cos(theta) + a_y_safe*np.sin(theta))
-            # self.a_t += (-a_x_safe*np.sin(theta) + a_y_safe*np.cos(theta))
             self.a_s = -self.k_v_safe * v_s
             self.a_t = -self.k_v_safe * v_t
-            # print('unsafe: ', v_s, v_t,self.a_s, self.a_t)
             self.a_s = np.clip(self.a_s,-self.as_max_safe,self.as_max_safe)
             self.a_t = np.clip(self.a_t,-self.at_max_safe,self.at_max_safe)
-
-        # self.a_s = np.clip(self.a_s,-self.as_max,self.as_max)
-        # self.a_t = np.clip(self.a_t,-self.at_max,self.at_max)
 
     def get_action(self):
         return TrajectoryAccelAction(self.a_s, self.a_t, self.trajectory)
@@ -211,6 +238,7 @@ class TIntersection(TrafficEnv):
         self._collision = False
         self._outroad = False
         self._goal = False
+        self._intentions = []
 
         car_length=5.0
         car_width=2.0
@@ -228,7 +256,7 @@ class TIntersection(TrafficEnv):
         drivers = []
         drivers.append(EgoDriver(trajectory=EgoTrajectory(),idx=0,car=cars[0],dt=dt))
         for did in range(1,n_cars):
-            driver = YNYDriver(idx=did, car=cars[did], dt=dt,
+            driver = TwoTDriver(idx=did, car=cars[did], dt=dt,
                         x_driver=IDMDriver(idx=did, car=cars[did], sigma=driver_sigma, s_min=s_min, axis=0, min_overlap=min_overlap, dt=dt), 
                         y_driver=PDDriver(idx=did, car=cars[did], sigma=driver_sigma, axis=1, dt=dt)) 
             drivers.append(driver)
@@ -240,7 +268,15 @@ class TIntersection(TrafficEnv):
             dt=dt,
             **kwargs,)
 
+    def get_intentions(self):
+        for driver in self._drivers:
+            driver.observe(self._cars, self._road)
+        return [self._drivers[1].intention, self._drivers[2].intention]
+
     def update(self, action):
+        # recorder intentios at the begining
+        self._intentions = self.get_intentions()
+
         rl_action = self.rl_actions[action]
         self._drivers[0].v_des = rl_action[0]
         self._drivers[0].t_des = rl_action[1]
@@ -275,16 +311,7 @@ class TIntersection(TrafficEnv):
 
     def get_info(self):
         info = {}
-
-        if self._drivers[1].yld:
-            intention1 = 0
-        else:
-            intention1 = 1
-        if self._drivers[2].yld:
-            intention2 = 0
-        else:
-            intention2 = 1
-        info['sup_labels'] = [intention1, intention2]
+        info['sup_labels'] = self._intentions
 
         if self._collision:
             info['event']='collision'
@@ -358,32 +385,26 @@ class TIntersection(TrafficEnv):
         self._drivers[0].v_des = 0.
         self._drivers[0].t_des = 0.
 
-        if np.random.rand() < self.yld:
-            self._drivers[1].set_yld(True)
-            self._cars[1]._color = random.choice(GREEN_COLORS)
-        else:
-            self._drivers[1].set_yld(False)
-            self._cars[1]._color = random.choice(RED_COLORS)
         self._drivers[1].x_driver.set_v_des(self.desire_speed)
         self._drivers[1].x_driver.set_direction(1)
         self._drivers[1].y_driver.set_p_des(6.)
+        self._drivers[1].t1 = np.random.rand()+self._cars[1].width/2.
+        self._drivers[1].t2 = np.random.rand()*1.5 - 0.5
 
-        if np.random.rand() < self.yld:
-            self._drivers[2].set_yld(True)
-            self._cars[2]._color = random.choice(GREEN_COLORS)
-        else:
-            self._drivers[2].set_yld(False)
-            self._cars[2]._color = random.choice(RED_COLORS)
         self._drivers[2].x_driver.set_v_des(self.desire_speed)
         self._drivers[2].x_driver.set_direction(-1)
         self._drivers[2].y_driver.set_p_des(2.)
+        self._drivers[2].t1 = np.random.rand()
+        self._drivers[2].t2 = np.random.rand()*1.5 - 0.5
+
+        self._intentions = self.get_intentions()
         return None
 
 
 if __name__ == '__main__':
     import time
     import pdb
-    env = TIntersection(num_updates=1, yld=0.5)
+    env = TIntersection(num_updates=5, yld=0.5)
     obs = env.reset()
     img = env.render()
     done = False

@@ -26,6 +26,18 @@ class YNYDriver(XYSeperateDriver):
             self.x_driver.observe(cars[1:], road)
         self.y_driver.observe(cars, road)
 
+    def setup_render(self, viewer):
+        if self.yld:
+            self.car._color = GREEN_COLORS[0]
+        else:
+            self.car._color = RED_COLORS[0]
+
+    def update_render(self, camera_center):
+        if self.yld:
+            self.car._color = GREEN_COLORS[0]
+        else:
+            self.car._color = RED_COLORS[0]
+
 class EgoTrajectory:
     def xy_to_traj(self, pos):
         x, y = pos[0], pos[1]
@@ -265,7 +277,7 @@ class TIntersection(TrafficEnv):
 
     def get_info(self):
         info = {}
-
+        # since intention is fixed, it is fine to get infention after step
         if self._drivers[1].yld:
             intention1 = 0
         else:
@@ -350,20 +362,20 @@ class TIntersection(TrafficEnv):
 
         if np.random.rand() < self.yld:
             self._drivers[1].set_yld(True)
-            self._cars[1]._color = random.choice(GREEN_COLORS)
+            # self._cars[1]._color = random.choice(GREEN_COLORS)
         else:
             self._drivers[1].set_yld(False)
-            self._cars[1]._color = random.choice(RED_COLORS)
+            # self._cars[1]._color = random.choice(RED_COLORS)
         self._drivers[1].x_driver.set_v_des(self.desire_speed)
         self._drivers[1].x_driver.set_direction(1)
         self._drivers[1].y_driver.set_p_des(6.)
 
         if np.random.rand() < self.yld:
             self._drivers[2].set_yld(True)
-            self._cars[2]._color = random.choice(GREEN_COLORS)
+            # self._cars[2]._color = random.choice(GREEN_COLORS)
         else:
             self._drivers[2].set_yld(False)
-            self._cars[2]._color = random.choice(RED_COLORS)
+            # self._cars[2]._color = random.choice(RED_COLORS)
         self._drivers[2].x_driver.set_v_des(self.desire_speed)
         self._drivers[2].x_driver.set_direction(-1)
         self._drivers[2].y_driver.set_p_des(2.)

@@ -106,22 +106,22 @@ class TrafficEnv(gym.Env):
 
             self._road.setup_render(self.viewer)
 
-            for car in self._cars:
-                car.setup_render(self.viewer)
-
             for driver in self._drivers:
                 driver.setup_render(self.viewer)
+
+            for car in self._cars:
+                car.setup_render(self.viewer)
 
             self.setup_extra_render()
 
         camera_center = self.get_camera_center()
         self._road.update_render(camera_center)
 
+        for driver in self._drivers:
+            driver.update_render(camera_center)
+
         for cid, car in enumerate(self._cars):
             car.update_render(camera_center)
-
-        for driver in self._drivers:
-            driver.setup_render(camera_center)
 
         self.update_extra_render()
 
