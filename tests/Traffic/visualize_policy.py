@@ -66,5 +66,5 @@ while True:
 		path_length = 0
 		done = False
 		c_r = 0.
-		o = env.reset()
 		pdb.set_trace()
+		o = env.reset()

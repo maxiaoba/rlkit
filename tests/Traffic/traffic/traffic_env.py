@@ -90,6 +90,11 @@ class TrafficEnv(gym.Env):
     def is_terminal(self):
         return False
 
+    def setup_viewer(self):
+        from gym.envs.classic_control import rendering
+        self.viewer = rendering.Viewer(800, 800)
+        self.viewer.set_bounds(-20.0, 20.0, -20.0, 20.0)
+
     def setup_extra_render(self):
         pass
 
@@ -99,11 +104,9 @@ class TrafficEnv(gym.Env):
     def get_camera_center(self):
         return self._cars[0].position
 
-    def render(self, mode='human', screen_size=800, rate=10):
+    def render(self, mode='human', screen_size=800):
         if (not hasattr(self, 'viewer')) or (self.viewer is None):
-            from gym.envs.classic_control import rendering
-            self.viewer = rendering.Viewer(screen_size, screen_size)
-            self.viewer.set_bounds(-20.0, 20.0, -20.0, 20.0)
+            self.setup_viewer()
 
             self._road.setup_render(self.viewer)
 

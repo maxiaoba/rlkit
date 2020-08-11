@@ -189,3 +189,7 @@ class Car:
         self.arr_xform.set_translation(*(self.position - camera_center))
         self.arr_xform.set_rotation(self._rotation)
 
+    def remove_render(self, viewer):
+        viewer.geoms.remove(self.geom)
+        viewer.geoms.remove(self.arr_geom)
+

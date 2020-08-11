@@ -35,6 +35,9 @@ class Driver:
 	def update_render(self, camera_center):
 		pass
 
+	def remove_render(self, viewer):
+		pass
+
 class OneDDriver(Driver):
     def __init__(self, axis, direction=1, **kwargs):
         self.set_axis(axis)

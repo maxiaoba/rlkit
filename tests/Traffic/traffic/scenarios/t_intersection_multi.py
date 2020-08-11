@@ -18,7 +18,6 @@ class TwoTDriver(XYSeperateDriver):
         self.v_normal = v_normal
         self.v_accel = v_accel
         self.intention = 1
-        self.yld = None
         super(TwoTDriver, self).__init__(**kwargs)
 
     def observe(self, cars, road):
@@ -29,20 +28,16 @@ class TwoTDriver(XYSeperateDriver):
         if (s < 0.) or (t > self.t1): # ignore 
             self.x_driver.set_v_des(self.v_normal)
             self.x_driver.observe(cars[1:], road)
-            # self.intention = 1
+            self.intention = 1
         else:
-            if self.yld and (t < self.t2): # avoid
+            if self.t2 and (t < self.t2): # avoid
                 self.x_driver.min_overlap = self.t2
                 self.x_driver.observe(cars, road)
-                # self.intention = 0
+                self.intention = 0
             else: # accelerate
                 self.x_driver.set_v_des(self.v_accel)
                 self.x_driver.observe(cars[1:], road)
-                # self.intention = 1
-        if self.yld:
-            self.intention = 0
-        else:
-            self.intention = 1
+                self.intention = 1
             
         self.y_driver.observe(cars, road)
 
@@ -87,6 +82,11 @@ class TwoTDriver(XYSeperateDriver):
             self.car._color = GREEN_COLORS[0]
         else:
             self.car._color = RED_COLORS[2]
+
+    def remove_render(self, viewer):
+        viewer.geoms.remove(self.t1_geom)
+        if self.t2:
+            viewer.geoms.remove(self.t2_geom)
 
 class EgoTrajectory:
     def xy_to_traj(self, pos):
@@ -223,7 +223,11 @@ class TIntersection(TrafficEnv):
                  goal_reward=1.,
                  road=Road([RoadSegment([(-100.,0.),(100.,0.),(100.,8.),(-100.,8.)]),
                              RoadSegment([(-2,-10.),(2,-10.),(2,0.),(-2,0.)])]),
-                 n_cars=3,
+                 left_bound = -20.,
+                 right_bound = 20.,
+                 gap_min = 2.,
+                 gap_max = 10.,
+                 max_veh_num = 16,
                  num_updates=1,
                  dt=0.1,
                  **kwargs):
@@ -247,31 +251,24 @@ class TIntersection(TrafficEnv):
         self._goal = False
         self._intentions = []
 
-        car_length=5.0
-        car_width=2.0
-        car_max_accel=10.0
-        car_max_speed=40.0
-        car_expose_level=4
-        cars = [Car(idx=cid, length=car_length, width=car_width, color=random.choice(BLUE_COLORS),
-                          max_accel=car_max_accel, max_speed=car_max_speed,
-                          expose_level=car_expose_level) for cid in range(n_cars)
-                ]
-
-        driver_sigma = 0.0
-        s_min = 2.0
-        min_overlap = 1.0
-        drivers = []
-        drivers.append(EgoDriver(trajectory=EgoTrajectory(),idx=0,car=cars[0],dt=dt))
-        for did in range(1,n_cars):
-            driver = TwoTDriver(idx=did, car=cars[did], dt=dt,
-                        x_driver=IDMDriver(idx=did, car=cars[did], sigma=driver_sigma, s_min=s_min, axis=0, min_overlap=min_overlap, dt=dt), 
-                        y_driver=PDDriver(idx=did, car=cars[did], sigma=driver_sigma, axis=1, dt=dt)) 
-            drivers.append(driver)
+        self.left_bound = left_bound
+        self.right_bound = right_bound
+        self.gap_min = gap_min
+        self.gap_max = gap_max
+        self.max_veh_num = max_veh_num
+        self.car_length=5.0
+        self.car_width=2.0
+        self.car_max_accel=10.0
+        self.car_max_speed=40.0
+        self.car_expose_level=4
+        self.driver_sigma = 0.0
+        self.s_min = 2.0
+        self.min_overlap = 1.0
 
         super(TIntersection, self).__init__(
             road=road,
-            cars=cars,
-            drivers=drivers,
+            cars=[],
+            drivers=[],
             dt=dt,
             **kwargs,)
 
@@ -312,6 +309,40 @@ class TIntersection(TrafficEnv):
                 and (ego_car.position[1] < 7.):
                 self._goal = True
                 return
+
+            # remove cars that are out-of bound
+            for car, driver in zip(self._cars[1:],self._drivers[1:]):
+                if(car.position[1] < 4.) and (car.position[0] < self.left_bound):
+                    self.remove_car(car, driver)
+                elif(car.position[1] > 4.) and (car.position[0] > self.right_bound):
+                    self.remove_car(car, driver)
+
+            # add cars when there is enough space
+            min_upper_x = np.inf
+            max_lower_x = -np.inf
+            for car in self._cars[1:]:
+                if (car.position[1] < 4.) and (car.position[0] > max_lower_x):
+                    max_lower_x = car.position[0]
+                if (car.position[1] > 4.) and (car.position[0] < min_upper_x):
+                    min_upper_x = car.position[0]
+            if max_lower_x < (self.right_bound - np.random.rand()*(self.gap_max-self.gap_min) - self.gap_min - self.car_length):
+                v_des = self.desire_speed
+                p_des = 2.
+                direction = -1
+                x = self.right_bound
+                car, driver = self.add_car(0, x, 2., -self.desire_speed, 0., v_des, p_des, direction, np.pi)
+                if hasattr(self, 'viewer') and self.viewer:
+                    car.setup_render(self.viewer)
+                    driver.setup_render(self.viewer)
+            if min_upper_x > (self.left_bound + np.random.rand()*(self.gap_max-self.gap_min) + self.gap_min + self.car_length):
+                v_des = self.desire_speed
+                p_des = 6.
+                direction = 1
+                x = self.left_bound
+                car, driver = self.add_car(0, x, 6., self.desire_speed, 0., v_des, p_des, direction, 0.)
+                if hasattr(self, 'viewer') and self.viewer:
+                    car.setup_render(self.viewer)
+                    driver.setup_render(self.viewer)
 
     def is_terminal(self):
         return (self._collision or self._outroad or self._goal)
@@ -373,55 +404,85 @@ class TIntersection(TrafficEnv):
 
         return reward
 
+    def remove_car(self, car, driver):
+        self._cars.remove(car)
+        self._drivers.remove(driver)
+        if hasattr(self, 'viewer') and self.viewer:
+            car.remove_render(self.viewer)
+            driver.remove_render(self.viewer)
+
+    def add_car(self, idx, x, y, vx, vy, v_des, p_des, direction, theta):
+        car = Car(idx=idx, length=self.car_length, width=self.car_width, color=random.choice(RED_COLORS),
+                          max_accel=self.car_max_accel, max_speed=self.car_max_speed,
+                          expose_level=self.car_expose_level)
+        driver = TwoTDriver(idx=idx, car=car, dt=self.dt,
+                    x_driver=IDMDriver(idx=idx, car=car, sigma=self.driver_sigma, s_min=self.s_min, axis=0, min_overlap=self.min_overlap, dt=self.dt), 
+                    y_driver=PDDriver(idx=idx, car=car, sigma=self.driver_sigma, axis=1, dt=self.dt)) 
+        car.set_position(np.array([x, y]))
+        car.set_velocity(np.array([vx, vy]))
+        car.set_rotation(theta)
+        driver.x_driver.set_v_des(v_des)
+        driver.x_driver.set_direction(direction)
+        driver.y_driver.set_p_des(p_des)
+        driver.t1 = np.random.rand()
+        if np.random.rand() < self.yld:
+            driver.t2 = np.random.rand()*1.5 - 0.5
+        else:
+            driver.t2 = None
+        self._cars.append(car)
+        self._drivers.append(driver)
+        return car, driver
+
     def _reset(self):
         self._collision = False
         self._outroad = False
         self._goal = False
-        for i,driver in enumerate(self._drivers):
-            driver.reset()
-        self._cars[0].set_position(np.array([0., -2.5]))
-        self._cars[0].set_velocity(np.array([0., 0.]))
-        self._cars[0].set_rotation(np.pi/2.)
-        self._cars[1].set_position(np.array([-13., 6.]))
-        self._cars[1].set_velocity(np.array([self.desire_speed, 0.]))
-        self._cars[1].set_rotation(0.)
-        self._cars[2].set_position(np.array([13.0, 2.]))
-        self._cars[2].set_velocity(np.array([-self.desire_speed, 0.]))
-        self._cars[2].set_rotation(np.pi)
 
-        self._drivers[0].v_des = 0.
-        self._drivers[0].t_des = 0.
-
-        self._drivers[1].x_driver.set_v_des(self.desire_speed)
-        self._drivers[1].x_driver.set_direction(1)
-        self._drivers[1].y_driver.set_p_des(6.)
-        self._drivers[1].t1 = np.random.rand()+self._cars[1].width/2.
-        if np.random.rand() < self.yld:
-            self._drivers[1].yld = True
-            self._drivers[1].t2 = np.random.rand()*1.5 - 0.5
-        else:
-            self._drivers[1].yld = False
-            self._drivers[1].t2 = None
-
-        self._drivers[2].x_driver.set_v_des(self.desire_speed)
-        self._drivers[2].x_driver.set_direction(-1)
-        self._drivers[2].y_driver.set_p_des(2.)
-        self._drivers[2].t1 = np.random.rand()
-        if np.random.rand() < self.yld:
-            self._drivers[2].yld = True
-            self._drivers[2].t2 = np.random.rand()*1.5 - 0.5
-        else:
-            self._drivers[2].yld = False
-            self._drivers[2].t2 = None
+        self._cars, self._drivers = [], []
+        car = Car(idx=0, length=self.car_length, width=self.car_width, color=random.choice(BLUE_COLORS),
+                          max_accel=self.car_max_accel, max_speed=self.car_max_speed,
+                          expose_level=self.car_expose_level)
+        driver = EgoDriver(trajectory=EgoTrajectory(),idx=0,car=car,dt=self.dt)
+        car.set_position(np.array([0., -2.5]))
+        car.set_velocity(np.array([0., 0.]))
+        car.set_rotation(np.pi/2.)
+        driver.v_des = 0.
+        driver.t_des = 0.
+        self._cars.append(car)
+        self._drivers.append(driver)
+        # randomly generate surrounding cars and drivers
+        idx = 1
+        # upper lane
+        x = self.left_bound + np.random.rand()*(self.gap_max-self.gap_min)
+        while (x < self.right_bound) and (idx < self.max_veh_num):
+            v_des = self.desire_speed
+            p_des = 6.
+            direction = 1
+            self.add_car(idx, x, 6., self.desire_speed, 0., v_des, p_des, direction, 0.)
+            x += (np.random.rand()*(self.gap_max-self.gap_min) + self.gap_min + self.car_length)
+            idx += 1
+        # lower lane
+        x = self.right_bound - np.random.rand()*(self.gap_max-self.gap_min)
+        while (x > self.left_bound) and (idx < self.max_veh_num):
+            v_des = self.desire_speed
+            p_des = 2.
+            direction = -1
+            self.add_car(idx, x, 2., -self.desire_speed, 0., v_des, p_des, direction, np.pi)
+            x -= (np.random.rand()*(self.gap_max-self.gap_min) + self.gap_min + self.car_length)
+            idx += 1
 
         self._intentions = self.get_intentions()
         return None
 
+    def setup_viewer(self):
+        from gym.envs.classic_control import rendering
+        self.viewer = rendering.Viewer(1200, 800)
+        self.viewer.set_bounds(-30.0, 30.0, -20.0, 20.0)
 
 if __name__ == '__main__':
     import time
     import pdb
-    env = TIntersection(num_updates=5, yld=0.5)
+    env = TIntersection(num_updates=1, yld=0.5)
     obs = env.reset()
     img = env.render()
     done = False
@@ -429,7 +490,7 @@ if __name__ == '__main__':
     t = 0
     cr = 0.
     # actions = [*[8]*2,*[8]*4,*[7]*20]
-    actions = [*[7]*10,*[7]*20,*[7]*200]
+    actions = [*[1]*10,*[1]*20,*[1]*200]
     # actions = np.load('/Users/xiaobaima/Dropbox/SISL/rlkit/tests/Traffic/Data/t_intersection/MyDQNcg0.1expl0.2/seed0/failure1.npy')
     while True:  #not done: 
         # pdb.set_trace()
@@ -437,16 +498,16 @@ if __name__ == '__main__':
         #     action = 7
         # else:
         #     action = actions[t][0]
-        # action = actions[t]
+        action = actions[t]
         # action = np.random.randint(env.action_space.n)
-        action = input("Action\n")
-        action = int(action)
-        while action < 0:
-            t = 0
-            env.reset()
-            env.render()
-            action = input("Action\n")
-            action = int(action)
+        # action = input("Action\n")
+        # action = int(action)
+        # while action < 0:
+        #     t = 0
+        #     env.reset()
+        #     env.render()
+        #     action = input("Action\n")
+        #     action = int(action)
         t += 1
         obs, reward, done, info = env.step(action)
         print('t: ', t)
