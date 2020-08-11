@@ -52,6 +52,7 @@ class TrafficEnv(gym.Env):
 
     def reset(self):
         self._reset()
+        self.close()
         return self.observe()
 
     def _reset(self):
@@ -128,7 +129,7 @@ class TrafficEnv(gym.Env):
         return self.viewer.render(return_rgb_array=mode == 'rgb_array')
 
     def close(self):
-        if self.viewer:
+        if hasattr(self, 'viewer') and self.viewer:
             self.viewer.close()
             self.viewer = None
 

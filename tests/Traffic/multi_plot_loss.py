@@ -9,22 +9,22 @@ itr_interval = 100
 max_itr = 2e4
 
 fields = [
-            'evaluation/Average Returns',
+            # 'evaluation/Average Returns',
             # 'evaluation/Num Fail',
             # 'exploration/Average Returns',
             # 'exploration/Returns Max',
             # 'exploration/Returns Min',
             # 'exploration/Num Fail',
-            # 'trainer/SUP Loss 0',
-            # 'trainer/SUP Loss 1',
+            'trainer/SUP Loss 0',
+            'trainer/SUP Loss 1',
             ]
 field_names = [
-            'Eval Average Return',
-            'Eval Fail',
-            'Expl Average Return',
-            'Expl Max Return',
-            'Expl Min Return',
-            'Expl Fail',
+            # 'Eval Average Return',
+            # 'Eval Fail',
+            # 'Expl Average Return',
+            # 'Expl Max Return',
+            # 'Expl Min Return',
+            # 'Expl Fail',
             'Sup Loss 0',
             'Sup Loss 1',
             ]
@@ -37,13 +37,11 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'PPO',
+            # 'PPO',
             'PPOSup',
             'PPOSupeb0.1',
-            # 'PPOSupeb10.0',
             'PPOSupng',
             'PPOSupngeb0.1',
-            # 'PPOSupngeb10.0',
         ]
 policy_names = policies
 

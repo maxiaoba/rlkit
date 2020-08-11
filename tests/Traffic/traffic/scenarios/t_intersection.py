@@ -30,7 +30,7 @@ class TwoTDriver(XYSeperateDriver):
             self.x_driver.observe(cars[1:], road)
             self.intention = 1
         else:
-            if t < self.t2: # avoid
+            if self.t2 and (t < self.t2): # avoid
                 self.x_driver.min_overlap = self.t2
                 self.x_driver.observe(cars, road)
                 self.intention = 0
@@ -53,33 +53,35 @@ class TwoTDriver(XYSeperateDriver):
         self.t1_geom.add_attr(self.t1_xform)
         viewer.add_geom(self.t1_geom)
 
-        from gym.envs.classic_control import rendering
-        t2_poly = [[-self.car.length/8.0, -(self.car.width/2.0+self.t2)],
-                    [self.car.length/8.0, -(self.car.width/2.0+self.t2)],
-                    [self.car.length/8.0, (self.car.width/2.0+self.t2)],
-                    [-self.car.length/8.0, (self.car.width/2.0+self.t2)]]
-        self.t2_geom = rendering.make_polygon(t2_poly)
-        self.t2_xform = rendering.Transform()
-        self.t2_geom.set_color(*(1., 0., 0.))
-        self.t2_geom.add_attr(self.t2_xform)
-        viewer.add_geom(self.t2_geom)
+        if self.t2:
+            from gym.envs.classic_control import rendering
+            t2_poly = [[-self.car.length/8.0, -(self.car.width/2.0+self.t2)],
+                        [self.car.length/8.0, -(self.car.width/2.0+self.t2)],
+                        [self.car.length/8.0, (self.car.width/2.0+self.t2)],
+                        [-self.car.length/8.0, (self.car.width/2.0+self.t2)]]
+            self.t2_geom = rendering.make_polygon(t2_poly)
+            self.t2_xform = rendering.Transform()
+            self.t2_geom.set_color(*(1., 0., 0.))
+            self.t2_geom.add_attr(self.t2_xform)
+            viewer.add_geom(self.t2_geom)
 
         if self.intention == 0:
             self.car._color = GREEN_COLORS[0]
         else:
-            self.car._color = RED_COLORS[0]
+            self.car._color = RED_COLORS[2]
 
     def update_render(self, camera_center):
         t1_position = self.car.position - self.x_driver.direction*np.array([1.0,0.])
         self.t1_xform.set_translation(*(t1_position - camera_center))
 
-        t2_position = self.car.position + self.x_driver.direction*np.array([1.0,0.])
-        self.t2_xform.set_translation(*(t2_position - camera_center))
+        if self.t2:
+            t2_position = self.car.position + self.x_driver.direction*np.array([1.0,0.])
+            self.t2_xform.set_translation(*(t2_position - camera_center))
 
         if self.intention == 0:
             self.car._color = GREEN_COLORS[0]
         else:
-            self.car._color = RED_COLORS[0]
+            self.car._color = RED_COLORS[2]
 
 class EgoTrajectory:
     def xy_to_traj(self, pos):
@@ -204,7 +206,7 @@ class EgoDriver(Driver):
 
 class TIntersection(TrafficEnv):
     def __init__(self,
-                 yld=1.,
+                 yld=0.5,
                  vs_actions=[0.,0.5,3.],
                  t_actions=[-1.5,0.,1.5],
                  desire_speed=3.,
@@ -389,13 +391,19 @@ class TIntersection(TrafficEnv):
         self._drivers[1].x_driver.set_direction(1)
         self._drivers[1].y_driver.set_p_des(6.)
         self._drivers[1].t1 = np.random.rand()+self._cars[1].width/2.
-        self._drivers[1].t2 = np.random.rand()*1.5 - 0.5
+        if np.random.rand() < self.yld:
+            self._drivers[1].t2 = np.random.rand()*1.5 - 0.5
+        else:
+            self._drivers[1].t2 = None
 
         self._drivers[2].x_driver.set_v_des(self.desire_speed)
         self._drivers[2].x_driver.set_direction(-1)
         self._drivers[2].y_driver.set_p_des(2.)
         self._drivers[2].t1 = np.random.rand()
-        self._drivers[2].t2 = np.random.rand()*1.5 - 0.5
+        if np.random.rand() < self.yld:
+            self._drivers[2].t2 = np.random.rand()*1.5 - 0.5
+        else:
+            self._drivers[2].t2 = None
 
         self._intentions = self.get_intentions()
         return None
