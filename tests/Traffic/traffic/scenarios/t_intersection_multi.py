@@ -368,9 +368,20 @@ class TIntersectionMulti(TrafficEnv):
     def observe(self):
         if self.observe_mode == 'full':
             obs = np.zeros(int(4*self.max_veh_num+4))
+            obs[:2] = self._cars[0].position
+            obs[2:4] = self._cars[0].velocity
             upper_indices, lower_indices = self.get_sorted_indices()
-            effective_obs = self._cars[0].observe([self._cars[indx] for indx in [0,*upper_indices,*lower_indices]], self._road, include_x=True)
-            obs[:len(effective_obs)] = effective_obs
+            i = 4
+            for indx in lower_indices:
+                obs[i:i+2] = self._cars[indx].position - self._cars[0].position
+                obs[i+2:i+4] = self._cars[indx].velocity - self._cars[0].velocity
+                i += 4
+            i = int(4 + self.max_veh_num/2*4)
+            for indx in upper_indices:
+                obs[i:i+2] = self._cars[indx].position - self._cars[0].position
+                obs[i+2:i+4] = self._cars[indx].velocity - self._cars[0].velocity
+                i += 4
+            obs = np.copy(obs)
         elif self.observe_mode == 'important':
             obs = np.zeros(int(4*4+4))
             obs[:2] = self._cars[0].position
@@ -378,11 +389,11 @@ class TIntersectionMulti(TrafficEnv):
             important_indices = self.get_important_indices()
             i = 4
             for indx in important_indices:
-                if indx:
+                if indx is None:
+                    obs[i:i+4] = 0.
+                else:
                     obs[i:i+2] = self._cars[indx].position - self._cars[0].position
                     obs[i+2:i+4] = self._cars[indx].velocity - self._cars[0].velocity
-                else:
-                    obs[i:i+4] = 0.
                 i += 4
             obs = np.copy(obs)
         return obs
@@ -552,7 +563,9 @@ class TIntersectionMulti(TrafficEnv):
         if self.observe_mode == 'important':
             important_indices = self.get_important_indices()
             for ind in important_indices:
-                if ind:
+                if ind is None:
+                    pass
+                else:
                     self._cars[ind].geom.set_color(0,0,1,0.5)
 
 if __name__ == '__main__':
