@@ -47,7 +47,7 @@ class TwoTDriver(XYSeperateDriver):
         self.y_driver.observe(cars, road)
 
     def setup_render(self, viewer):
-        from gym.envs.classic_control import rendering
+        from traffic import rendering
         t1_poly = [[-self.car.length/8.0, -(self.car.width/2.0+self.t1)],
                     [self.car.length/8.0, -(self.car.width/2.0+self.t1)],
                     [self.car.length/8.0, (self.car.width/2.0+self.t1)],
@@ -59,7 +59,7 @@ class TwoTDriver(XYSeperateDriver):
         viewer.add_geom(self.t1_geom)
 
         if self.t2:
-            from gym.envs.classic_control import rendering
+            from traffic import rendering
             t2_poly = [[-self.car.length/8.0, -(self.car.width/2.0+self.t2)],
                         [self.car.length/8.0, -(self.car.width/2.0+self.t2)],
                         [self.car.length/8.0, (self.car.width/2.0+self.t2)],
@@ -84,9 +84,10 @@ class TwoTDriver(XYSeperateDriver):
             self.t2_xform.set_translation(*(t2_position - camera_center))
 
         if self.intention == 0:
-            self.car._color = GREEN_COLORS[0]
+            self.car._color = [*GREEN_COLORS[0],0.5]
         else:
-            self.car._color = RED_COLORS[2]
+            self.car._color = [*RED_COLORS[2],0.5]
+        self.car._arr_color = [0.8, 0.8, 0.8, 0.5]
 
 class EgoTrajectory:
     def xy_to_traj(self, pos):

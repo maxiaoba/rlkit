@@ -5,9 +5,9 @@ from rlkit.exploration_strategies.base import \
     PolicyWrappedWithExplorationStrategy
 from rlkit.exploration_strategies.epsilon_greedy import EpsilonGreedy
 from rlkit.policies.argmax import ArgmaxDiscretePolicy
+from rlkit.torch.vpg.ppo import PPOTrainer
 from rlkit.torch.policies.softmax_policy import SoftmaxPolicy
 from rlkit.torch.networks import Mlp
-from mlp_autoencoder import MLPAutoEncoder
 import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
 from rlkit.launchers.launcher_util import setup_logger
@@ -17,24 +17,45 @@ from rlkit.torch.torch_rl_algorithm import TorchOnlineRLAlgorithm
 from log_path import get_traffic_path_information
 
 def experiment(variant):
+    import sys
     from traffic.make_env import make_env
     expl_env = make_env(args.exp_name,**variant['env_kwargs'])
     eval_env = make_env(args.exp_name,**variant['env_kwargs'])
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
 
-    module = MLPAutoEncoder(
-                input_dim = obs_dim,
-                output_dim = action_dim,
-                latent_dims = [16, 2, 2],
-                encode_mlp_kwargs = dict(hidden_sizes=[32, 32]),
-                decode_mlp_kwargs = dict(hidden_sizes=[32, 32]),
-                no_gradient = variant['no_gradient'],
-            )
+    module = Mlp(
+        hidden_sizes=[32, 32],
+        input_size=obs_dim,
+        output_size=action_dim,
+    )
     policy = SoftmaxPolicy(module, **variant['policy_kwargs'])
-    sup_learners = []
-    for i in range(2):
-        sup_learners.append(SoftmaxPolicy(module.encode_mlps[i+1], learn_temperature=False))
+    # from combine_net import CombineNet
+    # encoders = nn.ModuleList()
+    # mlp = Mlp(input_size=obs_dim,
+    #           output_size=32,
+    #           hidden_sizes=[32,],
+    #         )
+    # encoders.append(mlp)
+    # sup_learners = []
+    # for i in range(2):
+    #     mlp = Mlp(input_size=obs_dim,
+    #           output_size=2,
+    #           hidden_sizes=[32,],
+    #         )
+    #     sup_learner = SoftmaxPolicy(mlp, learn_temperature=False)
+    #     sup_learners.append(sup_learner)
+    #     encoders.append(sup_learner)
+    # decoder = Mlp(input_size=int(32+2*2),
+    #           output_size=action_dim,
+    #           hidden_sizes=[],
+    #         )
+    # module = CombineNet(
+    #             encoders=encoders,
+    #             decoder=decoder,
+    #             no_gradient=False,
+    #         )
+    # policy = SoftmaxPolicy(module, **variant['policy_kwargs'])
 
     vf = Mlp(
         hidden_sizes=[32, 32],
@@ -53,20 +74,10 @@ def experiment(variant):
         expl_env,
         expl_policy,
     )
-    from sup_replay_buffer import SupReplayBuffer
-    replay_buffer = SupReplayBuffer(
-        observation_dim = obs_dim,
-        label_dims = [1,1],
-        max_replay_buffer_size = int(1e6),
-    )
-
-    from ppo_sup import PPOSupTrainer
-    trainer = PPOSupTrainer(
+    trainer = PPOTrainer(
         policy=policy,
         value_function=vf,
         vf_criterion=vf_criterion,
-        sup_learners=sup_learners,
-        replay_buffer=replay_buffer,
         **variant['trainer_kwargs']
     )
     algorithm = TorchOnlineRLAlgorithm(
@@ -84,12 +95,11 @@ def experiment(variant):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp_name', type=str, default='t_intersection')
-    parser.add_argument('--yld', type=float, default=None)
-    parser.add_argument('--log_dir', type=str, default='PPOSup')
-    parser.add_argument('--lt', action='store_true', default=False) # learn temperature
-    parser.add_argument('--ng', action='store_true', default=False) # no shared gradient
-    parser.add_argument('--eb', type=float, default=None)
+    parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
+    parser.add_argument('--yld', type=float, default=1.)
+    parser.add_argument('--obs_mode', type=str, default='full')
+    parser.add_argument('--log_dir', type=str, default='PPO')
+    parser.add_argument('--lt', action='store_true', default=False)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -98,20 +108,18 @@ if __name__ == "__main__":
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
-    pre_dir = './Data/'+args.exp_name+(('yld'+str(args.yld)) if args.yld else '')
+    pre_dir = './Data/'+args.exp_name+'yld'+str(args.yld)+args.obs_mode
     main_dir = args.log_dir\
                 +('lt' if args.lt else '')\
-                +('ng' if args.ng else '')\
-                +(('eb'+str(args.eb)) if args.eb else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     max_path_length = 200
     # noinspection PyTypeChecker
     variant = dict(
-        no_gradient=args.ng,
         env_kwargs=dict(
-            yld=(args.yld if args.yld else 0.5),
+            observe_mode=args.obs_mode,
+            yld=args.yld,
         ),
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 1000),
@@ -127,7 +135,6 @@ if __name__ == "__main__":
             max_path_length=max_path_length,
             policy_lr=(args.lr if args.lr else 1e-4),
             vf_lr=(args.lr if args.lr else 1e-3),
-            exploration_bonus=(args.eb if args.eb else 0.),
         ),
         policy_kwargs=dict(
             learn_temperature=args.lt,

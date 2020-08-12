@@ -42,7 +42,7 @@ class TwoTDriver(XYSeperateDriver):
         self.y_driver.observe(cars, road)
 
     def setup_render(self, viewer):
-        from gym.envs.classic_control import rendering
+        from traffic import rendering
         t1_poly = [[-self.car.length/8.0, -(self.car.width/2.0+self.t1)],
                     [self.car.length/8.0, -(self.car.width/2.0+self.t1)],
                     [self.car.length/8.0, (self.car.width/2.0+self.t1)],
@@ -54,7 +54,7 @@ class TwoTDriver(XYSeperateDriver):
         viewer.add_geom(self.t1_geom)
 
         if self.t2:
-            from gym.envs.classic_control import rendering
+            from traffic import rendering
             t2_poly = [[-self.car.length/8.0, -(self.car.width/2.0+self.t2)],
                         [self.car.length/8.0, -(self.car.width/2.0+self.t2)],
                         [self.car.length/8.0, (self.car.width/2.0+self.t2)],
@@ -79,9 +79,10 @@ class TwoTDriver(XYSeperateDriver):
             self.t2_xform.set_translation(*(t2_position - camera_center))
 
         if self.intention == 0:
-            self.car._color = GREEN_COLORS[0]
+            self.car._color = [*GREEN_COLORS[0],0.5]
         else:
-            self.car._color = RED_COLORS[2]
+            self.car._color = [*RED_COLORS[2],0.5]
+        self.car._arr_color = [0.8, 0.8, 0.8, 0.5]
 
     def remove_render(self, viewer):
         viewer.geoms.remove(self.t1_geom)
@@ -209,9 +210,10 @@ class EgoDriver(Driver):
     def get_action(self):
         return TrajectoryAccelAction(self.a_s, self.a_t, self.trajectory)
 
-class TIntersection(TrafficEnv):
+class TIntersectionMulti(TrafficEnv):
     def __init__(self,
-                 yld=0.5,
+                 yld=1.0,
+                 observe_mode='full',
                  vs_actions=[0.,0.5,3.],
                  t_actions=[-1.5,0.,1.5],
                  desire_speed=3.,
@@ -227,12 +229,13 @@ class TIntersection(TrafficEnv):
                  right_bound = 20.,
                  gap_min = 2.,
                  gap_max = 10.,
-                 max_veh_num = 16,
+                 max_veh_num = 12,
                  num_updates=1,
                  dt=0.1,
                  **kwargs):
 
         self.yld = yld
+        self.observe_mode = observe_mode
         self.vs_actions = vs_actions
         self.t_actions = t_actions
         # we use target value instead of target change so system is Markovian
@@ -265,7 +268,7 @@ class TIntersection(TrafficEnv):
         self.s_min = 2.0
         self.min_overlap = 1.0
 
-        super(TIntersection, self).__init__(
+        super(TIntersectionMulti, self).__init__(
             road=road,
             cars=[],
             drivers=[],
@@ -363,11 +366,36 @@ class TIntersection(TrafficEnv):
         return info
 
     def observe(self):
-        return self._cars[0].observe(self._cars, self._road, include_x=True)
+        if self.observe_mode == 'full':
+            obs = np.zeros(int(4*self.max_veh_num+4))
+            upper_indices, lower_indices = self.get_sorted_indices()
+            effective_obs = self._cars[0].observe([self._cars[indx] for indx in [0,*upper_indices,*lower_indices]], self._road, include_x=True)
+            obs[:len(effective_obs)] = effective_obs
+        elif self.observe_mode == 'important':
+            obs = np.zeros(int(4*4+4))
+            obs[:2] = self._cars[0].position
+            obs[2:4] = self._cars[0].velocity
+            important_indices = self.get_important_indices()
+            i = 4
+            for indx in important_indices:
+                if indx:
+                    obs[i:i+2] = self._cars[indx].position - self._cars[0].position
+                    obs[i+2:i+4] = self._cars[indx].velocity - self._cars[0].velocity
+                else:
+                    obs[i:i+4] = 0.
+                i += 4
+            obs = np.copy(obs)
+        return obs
 
     @property
     def observation_space(self):
-        return self._cars[0].observation_space(self._cars, self._road, include_x=True)
+        if self.observe_mode == 'full':
+            low = -np.ones(int(4*self.max_veh_num+4))
+            high = np.ones(int(4*self.max_veh_num+4))
+        elif self.observe_mode == 'important':
+            low = -np.ones(20)
+            high = np.ones(20)
+        return spaces.Box(low=low, high=high, dtype=np.float32)
 
     @property
     def action_space(self):
@@ -397,7 +425,6 @@ class TIntersection(TrafficEnv):
 
         if self._outroad:
             reward -= self.outroad_cost
-            
 
         if self._goal:
             reward += self.goal_reward
@@ -426,12 +453,54 @@ class TIntersection(TrafficEnv):
         driver.y_driver.set_p_des(p_des)
         driver.t1 = np.random.rand()
         if np.random.rand() < self.yld:
+            driver.yld = True
             driver.t2 = np.random.rand()*1.5 - 0.5
         else:
+            driver.yld = False
             driver.t2 = None
+
         self._cars.append(car)
         self._drivers.append(driver)
         return car, driver
+
+    def get_important_indices(self):
+        # return indices of 4 other vehicles that are closest to ego
+        # on 4 directions
+        ego_x = self._cars[0].position[0]
+        min_ll, min_lr, min_ul, min_ur = np.inf, np.inf, np.inf, np.inf
+        ind_ll, ind_lr, ind_ul, ind_ur = None, None, None, None
+        for idx,car in enumerate(self._cars[1:]):
+            x, y = car.position
+            if y < 4.:
+                if (x <= ego_x) and (ego_x - x < min_ll):
+                    min_ll = ego_x - x
+                    ind_ll = idx + 1
+                elif (x > ego_x) and (x - ego_x < min_lr):
+                    min_lr = x - ego_x
+                    ind_lr = idx + 1
+            else:
+                if (x < ego_x) and (ego_x - x < min_ul):
+                    min_ul = ego_x - x
+                    ind_ul = idx + 1
+                elif (x >= ego_x) and (x - ego_x < min_ur):
+                    min_ur = x - ego_x
+                    ind_ur = idx + 1
+        return [ind_ll, ind_lr, ind_ul, ind_ur]
+
+    def get_sorted_indices(self):
+        # return indices of all other vehicles from left to right
+        upper_indices, upper_xs = [], []
+        lower_indices, lower_xs = [], []
+        for indx,car in enumerate(self._cars[1:]):
+            if car.position[1] > 4.:
+                upper_indices.append(indx+1)
+                upper_xs.append(car.position[0])
+            else:
+                lower_indices.append(indx+1)
+                lower_xs.append(car.position[0])
+        upper_indices = np.array(upper_indices)[np.argsort(upper_xs)]
+        lower_indices = np.array(lower_indices)[np.argsort(lower_xs)]
+        return upper_indices, lower_indices
 
     def _reset(self):
         self._collision = False
@@ -454,7 +523,7 @@ class TIntersection(TrafficEnv):
         idx = 1
         # upper lane
         x = self.left_bound + np.random.rand()*(self.gap_max-self.gap_min)
-        while (x < self.right_bound) and (idx < self.max_veh_num):
+        while (x < self.right_bound):
             v_des = self.desire_speed
             p_des = 6.
             direction = 1
@@ -463,7 +532,7 @@ class TIntersection(TrafficEnv):
             idx += 1
         # lower lane
         x = self.right_bound - np.random.rand()*(self.gap_max-self.gap_min)
-        while (x > self.left_bound) and (idx < self.max_veh_num):
+        while (x > self.left_bound):
             v_des = self.desire_speed
             p_des = 2.
             direction = -1
@@ -475,14 +544,21 @@ class TIntersection(TrafficEnv):
         return None
 
     def setup_viewer(self):
-        from gym.envs.classic_control import rendering
+        from traffic import rendering
         self.viewer = rendering.Viewer(1200, 800)
         self.viewer.set_bounds(-30.0, 30.0, -20.0, 20.0)
+
+    def update_extra_render(self):
+        if self.observe_mode == 'important':
+            important_indices = self.get_important_indices()
+            for ind in important_indices:
+                if ind:
+                    self._cars[ind].geom.set_color(0,0,1,0.5)
 
 if __name__ == '__main__':
     import time
     import pdb
-    env = TIntersection(num_updates=1, yld=0.5)
+    env = TIntersectionMulti(num_updates=1, yld=1.0, observe_mode='important')
     obs = env.reset()
     img = env.render()
     done = False
@@ -498,16 +574,16 @@ if __name__ == '__main__':
         #     action = 7
         # else:
         #     action = actions[t][0]
-        action = actions[t]
+        # action = actions[t]
         # action = np.random.randint(env.action_space.n)
-        # action = input("Action\n")
-        # action = int(action)
-        # while action < 0:
-        #     t = 0
-        #     env.reset()
-        #     env.render()
-        #     action = input("Action\n")
-        #     action = int(action)
+        action = input("Action\n")
+        action = int(action)
+        while action < 0:
+            t = 0
+            env.reset()
+            env.render()
+            action = input("Action\n")
+            action = int(action)
         t += 1
         obs, reward, done, info = env.step(action)
         print('t: ', t)

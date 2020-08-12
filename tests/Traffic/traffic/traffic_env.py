@@ -91,7 +91,7 @@ class TrafficEnv(gym.Env):
         return False
 
     def setup_viewer(self):
-        from gym.envs.classic_control import rendering
+        from traffic import rendering
         self.viewer = rendering.Viewer(800, 800)
         self.viewer.set_bounds(-20.0, 20.0, -20.0, 20.0)
 

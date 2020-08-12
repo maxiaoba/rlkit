@@ -16,6 +16,7 @@ class Car:
         self._length = length
         self._width = width
         self._color = color
+        self._arr_color = (0.8, 0.8, 0.8)
         self._max_accel = max_accel
         self._max_speed = max_speed
         self._expose_level = expose_level
@@ -161,7 +162,7 @@ class Car:
         return np.array([p1.x,p1.y]), np.array([p2.x,p2.y])
 
     def setup_render(self, viewer):
-        from gym.envs.classic_control import rendering
+        from traffic import rendering
         car_poly = [[-self._length / 2.0, -self._width / 2.0],
                     [self._length / 2.0, -self._width / 2.0],
                     [self._length / 2.0, self._width / 2.0],
@@ -178,7 +179,7 @@ class Car:
 
         self.arr_geom = rendering.make_polygon(arr_poly)
         self.arr_xform = rendering.Transform()
-        self.arr_geom.set_color(0.8, 0.8, 0.8)
+        self.arr_geom.set_color(*self._arr_color)
         self.arr_geom.add_attr(self.arr_xform)
         viewer.add_geom(self.arr_geom)
 
@@ -188,6 +189,7 @@ class Car:
         self.geom.set_color(*self._color)
         self.arr_xform.set_translation(*(self.position - camera_center))
         self.arr_xform.set_rotation(self._rotation)
+        self.arr_geom.set_color(*self._arr_color)
 
     def remove_render(self, viewer):
         viewer.geoms.remove(self.geom)

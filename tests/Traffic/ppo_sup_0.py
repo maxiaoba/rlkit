@@ -7,7 +7,7 @@ from rlkit.exploration_strategies.epsilon_greedy import EpsilonGreedy
 from rlkit.policies.argmax import ArgmaxDiscretePolicy
 from rlkit.torch.policies.softmax_policy import SoftmaxPolicy
 from rlkit.torch.networks import Mlp
-from combine_net import CombineNet
+from mlp_autoencoder import MLPAutoEncoder
 import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
 from rlkit.launchers.launcher_util import setup_logger
@@ -23,31 +23,18 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
 
-    encoders = nn.ModuleList()
-    mlp = Mlp(input_size=obs_dim,
-              output_size=32,
-              hidden_sizes=[32,],
-            )
-    encoders.append(mlp)
-    sup_learners = []
-    for i in range(2):
-        mlp = Mlp(input_size=obs_dim,
-              output_size=2,
-              hidden_sizes=[32,],
-            )
-        sup_learner = SoftmaxPolicy(mlp, learn_temperature=False)
-        sup_learners.append(sup_learner)
-        encoders.append(sup_learner)
-    decoder = Mlp(input_size=int(32+2*2),
-              output_size=action_dim,
-              hidden_sizes=[],
-            )
-    module = CombineNet(
-                encoders=encoders,
-                decoder=decoder,
-                no_gradient=variant['no_gradient'],
+    module = MLPAutoEncoder(
+                input_dim = obs_dim,
+                output_dim = action_dim,
+                latent_dims = [16, 2, 2],
+                encode_mlp_kwargs = dict(hidden_sizes=[32, 32]),
+                decode_mlp_kwargs = dict(hidden_sizes=[32, 32]),
+                no_gradient = variant['no_gradient'],
             )
     policy = SoftmaxPolicy(module, **variant['policy_kwargs'])
+    sup_learners = []
+    for i in range(2):
+        sup_learners.append(SoftmaxPolicy(module.encode_mlps[i+1], learn_temperature=False))
 
     vf = Mlp(
         hidden_sizes=[32, 32],
@@ -73,7 +60,7 @@ def experiment(variant):
         max_replay_buffer_size = int(1e6),
     )
 
-    from ppo_sup import PPOSupTrainer
+    from rlkit.torch.vpg.ppo_sup import PPOSupTrainer
     trainer = PPOSupTrainer(
         policy=policy,
         value_function=vf,
