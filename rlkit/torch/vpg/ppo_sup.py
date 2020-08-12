@@ -227,7 +227,8 @@ class PPOSupTrainer(TorchOnlineTrainer):
         return sup_losses
 
     def _compute_sup_loss(self, learner, obs, labels):
-        lls = learner.log_prob(obs, labels)
+        valid_mask = ~torch.isnan(labels).squeeze(-1)
+        lls = learner.log_prob(obs[valid_mask], labels[valid_mask])
         return -lls.mean()
 
     def _train(self, obs, actions, rewards, returns, advs):

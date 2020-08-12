@@ -259,6 +259,11 @@ class TIntersectionMulti(TrafficEnv):
         self.gap_min = gap_min
         self.gap_max = gap_max
         self.max_veh_num = max_veh_num
+        if observe_mode == 'full':
+            self.label_num = self.max_veh_num
+        elif observe_mode == 'important':
+            self.label_num = 4
+
         self.car_length=5.0
         self.car_width=2.0
         self.car_max_accel=10.0
@@ -276,9 +281,26 @@ class TIntersectionMulti(TrafficEnv):
             **kwargs,)
 
     def get_intentions(self):
-        for driver in self._drivers:
-            driver.observe(self._cars, self._road)
-        return [self._drivers[1].intention, self._drivers[2].intention]
+        intentions = np.array([np.nan]*self.label_num)
+        i = 0
+        if self.observe_mode == 'full':
+            upper_indices, lower_indices = self.get_sorted_indices()
+            for indx in lower_indices:
+                intentions[i] = self._drivers[indx].intention
+                i += 1
+            i = int(self.max_veh_num/2)
+            for indx in upper_indices:
+                intentions[i] = self._drivers[indx].intention
+                i += 1
+        elif self.observe_mode == 'important':
+            important_indices = self.get_important_indices()
+            for indx in important_indices:
+                if indx is None:
+                    i += 1
+                else:
+                    intentions[i] = self._drivers[indx].intention
+                    i += 1
+        return intentions
 
     def update(self, action):
         # recorder intentios at the begining
