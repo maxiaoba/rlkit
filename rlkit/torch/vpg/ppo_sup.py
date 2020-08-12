@@ -459,11 +459,17 @@ class PPOSupTrainer(TorchOnlineTrainer):
             for path in paths:
                 for i in range(len(path['observations'])-1):
                     obs1 = path['observations'][i]
+                    labels1 = torch.tensor(path['env_infos'][i]['sup_labels'])
+                    valid_mask1 = ~torch.isnan(labels1)
                     entropy_1 = [sup_learner.get_distribution(torch_ify(obs1)).entropy() for sup_learner in self.sup_learners]
-                    entropy_1 = torch.sum(torch.stack(entropy_1))
+                    entropy_1 = torch.mean(torch.stack(entropy_1)[valid_mask1])
+
                     obs2 = path['observations'][i+1]
+                    labels2 = torch.tensor(path['env_infos'][i+1]['sup_labels'])
+                    valid_mask2 = ~torch.isnan(labels2)
                     entropy_2 = [sup_learner.get_distribution(torch_ify(obs2)).entropy() for sup_learner in self.sup_learners]
-                    entropy_2 = torch.sum(torch.stack(entropy_2))
+                    entropy_2 = torch.mean(torch.stack(entropy_2)[valid_mask2])
+
                     entropy_decrease = (entropy_1 - entropy_2).item()
                     entropy_decreases.append(entropy_decrease)
                     path['rewards'][i] += self.exploration_bonus*entropy_decrease
