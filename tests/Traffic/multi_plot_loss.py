@@ -9,48 +9,48 @@ itr_interval = 100
 max_itr = 2e4
 
 fields = [
-            # 'evaluation/Average Returns',
+            'evaluation/Average Returns',
             # 'evaluation/Num Fail',
             # 'exploration/Average Returns',
             # 'exploration/Returns Max',
             # 'exploration/Returns Min',
             # 'exploration/Num Fail',
-            'trainer/SUP Loss 0',
-            'trainer/SUP Loss 1',
+            # 'trainer/SUP Loss 0',
+            # 'trainer/SUP Loss 1',
             ]
 field_names = [
-            # 'Eval Average Return',
+            'Eval Average Return',
             # 'Eval Fail',
             # 'Expl Average Return',
             # 'Expl Max Return',
             # 'Expl Min Return',
             # 'Expl Fail',
-            'Sup Loss 0',
-            'Sup Loss 1',
+            # 'Sup Loss 0',
+            # 'Sup Loss 1',
             ]
 itr_name = 'epoch'
 min_loss = [-1000]*100
 max_loss = [1000]*100
-exp_name = "t_intersection"
+exp_name = "t_intersection_multiyld1.0full"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            # 'PPO',
+            'PPO',
             'PPOSup',
             'PPOSupeb0.1',
-            'PPOSupng',
-            'PPOSupngeb0.1',
+            # 'PPOSupng',
+            # 'PPOSupngeb0.1',
         ]
 policy_names = policies
 
-seeds = [0,1,2]
+seeds = [2]
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = ''
+extra_name = '2'
 
 pre_name = ''
 post_name = ''

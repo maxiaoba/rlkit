@@ -10,14 +10,14 @@ from rlkit.torch.core import eval_np, np_ify
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='t_intersection')
-parser.add_argument('--yld', type=float, default=None)
-parser.add_argument('--log_dir', type=str, default='DQN')
+parser.add_argument('--extra_name', type=str, default='')
+parser.add_argument('--log_dir', type=str, default='PPO')
 parser.add_argument('--file', type=str, default='params')
 parser.add_argument('--epoch', type=int, default=None)
 parser.add_argument('--seed', type=int, default=0)
 args = parser.parse_args()
 
-pre_dir = './Data/'+args.exp_name+(('yld'+str(args.yld)) if args.yld else '')
+pre_dir = './Data/'+args.exp_name+args.extra_name
 data_path = '{}/{}/seed{}/{}.pkl'.format(pre_dir,args.log_dir,args.seed,args.file)
 data = torch.load(data_path,map_location='cpu')
 if 'trainer/qf' in data.keys():
@@ -36,7 +36,10 @@ else:
 
 import sys
 from traffic.make_env import make_env
-env = make_env(args.exp_name,yld=(args.yld if args.yld else 0.5))
+import json
+with open('{}/{}/seed{}/variant.json'.format(pre_dir,args.log_dir,args.seed)) as f:
+  variant = json.load(f)
+env = make_env(args.exp_name,**variant['env_kwargs'])
 o = env.reset()
 
 max_path_length = 200

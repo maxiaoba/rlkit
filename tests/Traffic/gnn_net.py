@@ -62,9 +62,9 @@ class GNNNet(torch.nn.Module):
 
     def check_input(self, xs, edge_index):
         Os = {}
-        for indx in range(4):
-            i=edge_index[0,indx].detach().numpy()
-            j=edge_index[1,indx].detach().numpy()
+        for indx in range(edge_index.shape[1]):
+            i=edge_index[1,indx].detach().numpy()
+            j=edge_index[0,indx].detach().numpy()
             xi=xs[i].detach().numpy()
             xj=list(xs[j].detach().numpy())
             if str(i) not in Os.keys():
