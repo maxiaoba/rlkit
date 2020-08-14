@@ -30,13 +30,22 @@ def experiment(variant):
                             other_init=torch.tensor([1.,0.]),
                             )
     from gnn_net import GNNNet
-    module = GNNNet( 
+    gnn = GNNNet( 
                 pre_graph_builder = gb, 
                 node_dim = 16,
-                output_dim = action_dim,
-                post_mlp_kwargs = dict(hidden_sizes=[32]),
                 num_conv_layers=3)
-    policy = SoftmaxPolicy(module, **variant['policy_kwargs'])
+    mlp = Mlp(input_size=int(16*(expl_env.max_veh_num+1)),
+              output_size=action_dim,
+              hidden_sizes=[],
+            )
+    from layers import FlattenLayer
+    policy = nn.Sequential(
+                gnn,
+                FlattenLayer(),
+                nn.ReLU(),
+                mlp,
+            )
+    policy = SoftmaxPolicy(policy, learn_temperature=False)
 
     vf = Mlp(
         hidden_sizes=[32, 32],
@@ -80,7 +89,6 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
     parser.add_argument('--yld', type=float, default=1.)
     parser.add_argument('--log_dir', type=str, default='PPOGNN')
-    parser.add_argument('--lt', action='store_true', default=False)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -91,10 +99,10 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+'yld'+str(args.yld)+'full'
     main_dir = args.log_dir\
-                +('lt' if args.lt else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
+    max_path_length = 200
     # noinspection PyTypeChecker
     variant = dict(
         env_kwargs=dict(
@@ -103,24 +111,21 @@ if __name__ == "__main__":
         ),
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 1000),
-            num_eval_steps_per_epoch=500,
+            num_eval_steps_per_epoch=1000,
             num_train_loops_per_epoch=1,
             num_trains_per_train_loop=1,
-            num_expl_steps_per_train_loop=(args.bs if args.bs else 500),
-            max_path_length=100,
+            num_expl_steps_per_train_loop=(args.bs if args.bs else 1000),
+            max_path_length=max_path_length,
             save_best=True,
         ),
         trainer_kwargs=dict(
             discount=0.99,
-            max_path_length=100,
+            max_path_length=max_path_length,
             policy_lr=(args.lr if args.lr else 1e-4),
             vf_lr=(args.lr if args.lr else 1e-3),
         ),
         vf_kwargs=dict(
             hidden_sizes=[64],
-        ),
-        policy_kwargs=dict(
-            learn_temperature=args.lt,
         ),
     )
     import os

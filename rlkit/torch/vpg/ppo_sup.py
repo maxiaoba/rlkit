@@ -219,15 +219,18 @@ class PPOSupTrainer(TorchOnlineTrainer):
         observations = torch_ify(observations)
         for learner, labels, optimizer in zip(self.sup_learners, n_labels, self._sup_optimizers):
             labels = torch_ify(labels)
-            optimizer.zero_grad()
-            loss = self._compute_sup_loss(learner, observations, labels)
-            loss.backward()
-            optimizer.step()
-            sup_losses.append(loss.item())
+            valid_mask = ~torch.isnan(labels).squeeze(-1)
+            if torch.sum(valid_mask) > 0.:
+                optimizer.zero_grad()
+                loss = self._compute_sup_loss(learner, observations, labels, valid_mask)
+                loss.backward()
+                optimizer.step()
+                sup_losses.append(loss.item())
+            else:
+                sup_losses.append(0.)
         return sup_losses
 
-    def _compute_sup_loss(self, learner, obs, labels):
-        valid_mask = ~torch.isnan(labels).squeeze(-1)
+    def _compute_sup_loss(self, learner, obs, labels, valid_mask):        
         lls = learner.log_prob(obs[valid_mask], labels[valid_mask])
         return -lls.mean()
 
@@ -270,7 +273,13 @@ class PPOSupTrainer(TorchOnlineTrainer):
         """
         self._policy_optimizer.zero_grad()
         loss = self._compute_loss_with_adv(obs, actions, rewards, advantages)
-        loss.backward()
+        # loss.backward()
+        # grad_norm = torch.tensor(0.).to(ptu.device) 
+        # for p in self.sup_learners[0].parameters():
+        #     param_norm = p.grad.data.norm(2)
+        #     grad_norm += param_norm.item() ** 2
+        # grad_norm = grad_norm ** (1. / 2)
+        # print(grad_norm)
         self._policy_optimizer.step()
 
         return loss
@@ -461,13 +470,13 @@ class PPOSupTrainer(TorchOnlineTrainer):
                     obs1 = path['observations'][i]
                     labels1 = torch.tensor(path['env_infos'][i]['sup_labels'])
                     valid_mask1 = ~torch.isnan(labels1)
-                    entropy_1 = [sup_learner.get_distribution(torch_ify(obs1)).entropy() for sup_learner in self.sup_learners]
+                    entropy_1 = [sup_learner.get_distribution(torch_ify(obs1)[None,:]).entropy() for sup_learner in self.sup_learners]
                     entropy_1 = torch.mean(torch.stack(entropy_1)[valid_mask1])
 
                     obs2 = path['observations'][i+1]
                     labels2 = torch.tensor(path['env_infos'][i+1]['sup_labels'])
                     valid_mask2 = ~torch.isnan(labels2)
-                    entropy_2 = [sup_learner.get_distribution(torch_ify(obs2)).entropy() for sup_learner in self.sup_learners]
+                    entropy_2 = [sup_learner.get_distribution(torch_ify(obs2)[None,:]).entropy() for sup_learner in self.sup_learners]
                     entropy_2 = torch.mean(torch.stack(entropy_2)[valid_mask2])
 
                     entropy_decrease = (entropy_1 - entropy_2).item()

@@ -18,8 +18,8 @@ dependencies:
   - joblib
   - matplotlib
   - scipy
-  - torch
-  - torchvision
+  # - torch
+  # - torchvision
   - cloudpickle
   - gym
   - gitpython
@@ -28,6 +28,7 @@ dependencies:
   - ipdb  # technically unnecessary
   - zmq
   - shapely
+  # torch, torchvision
   # pip install --no-cache-dir torch-scatter
   # pip install --no-cache-dir torch-sparse
   # pip install --no-cache-dir torch-cluster

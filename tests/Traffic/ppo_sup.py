@@ -23,7 +23,7 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
 
-    encoders = nn.ModuleList()
+    encoders = []
     mlp = Mlp(input_size=obs_dim,
               output_size=32,
               hidden_sizes=[32,],

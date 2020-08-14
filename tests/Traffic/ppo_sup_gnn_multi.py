@@ -7,48 +7,61 @@ from rlkit.exploration_strategies.epsilon_greedy import EpsilonGreedy
 from rlkit.policies.argmax import ArgmaxDiscretePolicy
 from rlkit.torch.policies.softmax_policy import SoftmaxPolicy
 from rlkit.torch.networks import Mlp
-from combine_net import CombineNet
 import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.samplers.data_collector import MdpPathCollector
 from rlkit.torch.torch_rl_algorithm import TorchOnlineRLAlgorithm
 
-from log_path import get_traffic_path_information
+from log_path import get_traffic_path_information 
 
 def experiment(variant):
+    import sys
     from traffic.make_env import make_env
     expl_env = make_env(args.exp_name,**variant['env_kwargs'])
     eval_env = make_env(args.exp_name,**variant['env_kwargs'])
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
-    label_num = expl_env.label_num
 
+    from graph_builder_multi import MultiTrafficGraphBuilder
+    gb = MultiTrafficGraphBuilder(input_dim=4, node_num=expl_env.max_veh_num+1,
+                            ego_init=torch.tensor([0.,1.]),
+                            other_init=torch.tensor([1.,0.]),
+                            )
+    from gnn_net import GNNNet
+    gnn = GNNNet( 
+                pre_graph_builder = gb, 
+                node_dim = 16,
+                num_conv_layers=3)
+
+    from layers import SelectLayer
     encoders = []
-    mlp = Mlp(input_size=obs_dim,
-              output_size=32,
-              hidden_sizes=[32,],
-            )
-    encoders.append(mlp)
+    encoders.append(nn.Sequential(gnn,SelectLayer(1,0),nn.ReLU()))
     sup_learners = []
-    for i in range(label_num):
-        mlp = Mlp(input_size=obs_dim,
-              output_size=2,
-              hidden_sizes=[32,],
-            )
-        sup_learner = SoftmaxPolicy(mlp, learn_temperature=False)
+    for i in range(expl_env.max_veh_num):
+        sup_learner = nn.Sequential(
+                gnn,
+                SelectLayer(1,i+1),
+                nn.ReLU(),
+                nn.Linear(16, 2),
+                )
+        sup_learner = SoftmaxPolicy(sup_learner, learn_temperature=False)
         sup_learners.append(sup_learner)
         encoders.append(sup_learner)
-    decoder = Mlp(input_size=int(32+2*label_num),
+
+    decoder = Mlp(input_size=int(16+2*expl_env.max_veh_num),
               output_size=action_dim,
               hidden_sizes=[],
             )
-    module = CombineNet(
-                encoders=encoders,
-                decoder=decoder,
-                no_gradient=variant['no_gradient'],
+    from layers import ConcatLayer
+    need_gradients = np.array([True]*len(encoders))
+    if variant['no_gradient']:
+        need_gradients[1:] = False
+    policy = nn.Sequential(
+            ConcatLayer(encoders, need_gradients=list(need_gradients), dim=1),
+            decoder,
             )
-    policy = SoftmaxPolicy(module, **variant['policy_kwargs'])
+    policy = SoftmaxPolicy(policy, learn_temperature=False)
 
     vf = Mlp(
         hidden_sizes=[32, 32],
@@ -70,7 +83,7 @@ def experiment(variant):
     from sup_replay_buffer import SupReplayBuffer
     replay_buffer = SupReplayBuffer(
         observation_dim = obs_dim,
-        label_dims = [1]*label_num,
+        label_dims = [1]*expl_env.max_veh_num,
         max_replay_buffer_size = int(1e6),
     )
 
@@ -98,11 +111,10 @@ def experiment(variant):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
     parser.add_argument('--yld', type=float, default=1.)
-    parser.add_argument('--obs_mode', type=str, default='full')
-    parser.add_argument('--log_dir', type=str, default='PPOSup')
-    parser.add_argument('--lt', action='store_true', default=False) # learn temperature
+    parser.add_argument('--log_dir', type=str, default='PPOSupGNN')
     parser.add_argument('--ng', action='store_true', default=False) # no shared gradient
     parser.add_argument('--eb', type=float, default=None)
     parser.add_argument('--lr', type=float, default=None)
@@ -113,9 +125,8 @@ if __name__ == "__main__":
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
-    pre_dir = './Data/'+args.exp_name+'yld'+str(args.yld)+args.obs_mode
+    pre_dir = './Data/'+args.exp_name+'yld'+str(args.yld)+'full'
     main_dir = args.log_dir\
-                +('lt' if args.lt else '')\
                 +('ng' if args.ng else '')\
                 +(('eb'+str(args.eb)) if args.eb else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
@@ -126,7 +137,7 @@ if __name__ == "__main__":
     variant = dict(
         no_gradient=args.ng,
         env_kwargs=dict(
-            observe_mode=args.obs_mode,
+            observe_mode='full',
             yld=args.yld,
         ),
         algorithm_kwargs=dict(
@@ -145,8 +156,8 @@ if __name__ == "__main__":
             vf_lr=(args.lr if args.lr else 1e-3),
             exploration_bonus=(args.eb if args.eb else 0.),
         ),
-        policy_kwargs=dict(
-            learn_temperature=args.lt,
+        vf_kwargs=dict(
+            hidden_sizes=[64],
         ),
     )
     import os

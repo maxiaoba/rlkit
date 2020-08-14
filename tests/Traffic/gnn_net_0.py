@@ -12,6 +12,8 @@ class GNNNet(torch.nn.Module):
     def __init__(self, 
                 pre_graph_builder, 
                 node_dim,
+                output_dim,
+                post_mlp_kwargs,
                 num_conv_layers=3,
                 ):
         super(GNNNet, self).__init__()
@@ -24,6 +26,15 @@ class GNNNet(torch.nn.Module):
         self.node_dim = node_dim
         self.num_conv_layers = num_conv_layers
         self.convs = self.build_convs(self.node_input_dim, self.node_dim, self.num_conv_layers)
+
+        # post qf
+        self.output_dim = output_dim
+        self.post_mlp_kwargs = post_mlp_kwargs
+        self.post_mlp = Mlp(
+                        input_size=self.node_dim,
+                        output_size=self.output_dim,
+                        **self.post_mlp_kwargs
+                        )
 
     def build_convs(self, node_input_dim, node_dim, num_conv_layers):
         convs = nn.ModuleList()
@@ -43,7 +54,10 @@ class GNNNet(torch.nn.Module):
         for l, conv in enumerate(self.convs):
             # self.check_input(x, edge_index)
             x = conv(x, edge_index)
+
         x = x.reshape(batch_size,-1,self.node_dim)
+        x = x[:,0,:] # only the embedding of the ego
+        x = self.post_mlp(x, **kwargs)
         return x
 
     def check_input(self, xs, edge_index):

@@ -9,11 +9,11 @@ class CombineNet(torch.nn.Module):
     def __init__(self, 
                 encoders,
                 decoder,
-                no_gradient,
+                no_gradient=False,
                 ):
         super(CombineNet, self).__init__()
 
-        self.encoders = encoders
+        self.encoders = nn.ModuleList(encoders)
         self.decoder = decoder
         self.no_gradient = no_gradient
 
