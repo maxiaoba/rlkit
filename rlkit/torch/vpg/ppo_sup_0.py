@@ -55,7 +55,7 @@ class PPOSupTrainer(TorchOnlineTrainer):
     def __init__(self,
                  policy,
                  value_function,
-                 sup_learner,
+                 sup_learners,
                  replay_buffer,
                  exploration_bonus,
                  policy_lr=2.5e-4,
@@ -78,7 +78,7 @@ class PPOSupTrainer(TorchOnlineTrainer):
         super().__init__()
         self.discount = discount
         self.policy = policy
-        self.sup_learner = sup_learner
+        self.sup_learners = sup_learners
         self.replay_buffer = replay_buffer
         self.sup_batch_size = sup_batch_size
         self.sup_train_num = sup_train_num
@@ -116,9 +116,12 @@ class PPOSupTrainer(TorchOnlineTrainer):
             max_optimization_epochs=10,
             minibatch_size=64)
 
-        self._sup_optimizer = torch.optim.Adam(
-                                self.sup_learner.parameters(),
+        self._sup_optimizers = []
+        for sup_learner in self.sup_learners:
+            self._sup_optimizers.append(
+                torch.optim.Adam(sup_learner.parameters(),
                                 lr=sup_lr)
+                )
 
         self._old_policy = copy.deepcopy(self.policy)
 
@@ -154,7 +157,7 @@ class PPOSupTrainer(TorchOnlineTrainer):
             numpy.float64: Calculated mean value of undiscounted returns.
 
         """
-        obs, actions, rewards, returns, valids, baselines, labels = \
+        obs, actions, rewards, returns, valids, baselines, n_labels = \
             self.process_samples(paths)
 
         if self._maximum_entropy:
@@ -166,7 +169,12 @@ class PPOSupTrainer(TorchOnlineTrainer):
         rewards_flat = torch.cat(filter_valids(rewards, valids))
         returns_flat = torch.cat(filter_valids(returns, valids))
         advs_flat = self._compute_advantage(rewards, valids, baselines)
-        labels_flat = torch.cat(filter_valids(labels, valids))
+        n_labels_flat = [torch.cat(filter_valids(labels, valids)) for labels in n_labels]
+
+        self.replay_buffer.add_batch(obs_flat, n_labels_flat)
+        for _ in range(self.sup_train_num):
+            batch = self.replay_buffer.random_batch(self.sup_batch_size)
+            sup_losses = self._train_sup_learners(batch['observations'],batch['n_labels'])
 
         with torch.no_grad():
             policy_loss_before = self._compute_loss_with_adv(
@@ -178,11 +186,6 @@ class PPOSupTrainer(TorchOnlineTrainer):
 
         self._train(obs_flat, actions_flat, rewards_flat, returns_flat,
                     advs_flat)
-
-        self.replay_buffer.add_batch(obs_flat, labels_flat)
-        for _ in range(self.sup_train_num):
-            batch = self.replay_buffer.random_batch(self.sup_batch_size)
-            sup_loss = self._train_sup_learner(batch['observations'],batch['labels'])
 
         with torch.no_grad():
             policy_loss_after = self._compute_loss_with_adv(
@@ -206,24 +209,30 @@ class PPOSupTrainer(TorchOnlineTrainer):
             self.eval_statistics['VF LossBefore'] = vf_loss_before.item()
             self.eval_statistics['VF LossAfter'] = vf_loss_after.item()
             self.eval_statistics['VF dLoss'] = (vf_loss_before - vf_loss_after).item()
-            self.eval_statistics['SUP Loss'] = sup_loss.item()
+            for i in range(len(sup_losses)):
+                self.eval_statistics['SUP Loss {}'.format(i)] = sup_losses[i]
 
         self._old_policy = copy.deepcopy(self.policy)
 
-    def _train_sup_learner(self, observations, labels):
+    def _train_sup_learners(self, observations, n_labels):
+        sup_losses = []
         observations = torch_ify(observations)
-        labels = torch_ify(labels)
-        self._sup_optimizer.zero_grad()
-        sup_loss = self._compute_sup_loss(observations, labels)
-        sup_loss.backward()
-        self._sup_optimizer.step()
-        return sup_loss
+        for learner, labels, optimizer in zip(self.sup_learners, n_labels, self._sup_optimizers):
+            labels = torch_ify(labels)
+            valid_mask = ~torch.isnan(labels).squeeze(-1)
+            if torch.sum(valid_mask) > 0.:
+                optimizer.zero_grad()
+                loss = self._compute_sup_loss(learner, observations, labels, valid_mask)
+                loss.backward()
+                optimizer.step()
+                sup_losses.append(loss.item())
+            else:
+                sup_losses.append(0.)
+        return sup_losses
 
-    def _compute_sup_loss(self, obs, labels):
-        valid_mask = ~torch.isnan(labels) # replay buffer!
-        labels[~valid_mask] = 0     
-        lls = self.sup_learner.log_prob(obs, labels)
-        return -lls[valid_mask].mean()
+    def _compute_sup_loss(self, learner, obs, labels, valid_mask):        
+        lls = learner.log_prob(obs[valid_mask], labels[valid_mask])
+        return -lls.mean()
 
     def _train(self, obs, actions, rewards, returns, advs):
         r"""Train the policy and value function with minibatch.
@@ -459,16 +468,16 @@ class PPOSupTrainer(TorchOnlineTrainer):
             for path in paths:
                 for i in range(len(path['observations'])-1):
                     obs1 = path['observations'][i]
-                    labels1 = torch.tensor(path['env_infos']['sup_labels'][i])
-                    valid_mask1 = ~torch.isnan(labels1)[None,:]
-                    entropy_1 = self.sup_learner.get_distribution(torch_ify(obs1)[None,:]).entropy()
-                    entropy_1 = torch.mean(entropy_1[valid_mask1])
+                    labels1 = torch.tensor(path['env_infos'][i]['sup_labels'])
+                    valid_mask1 = ~torch.isnan(labels1)
+                    entropy_1 = [sup_learner.get_distribution(torch_ify(obs1)[None,:]).entropy() for sup_learner in self.sup_learners]
+                    entropy_1 = torch.mean(torch.stack(entropy_1)[valid_mask1])
 
                     obs2 = path['observations'][i+1]
-                    labels2 = torch.tensor(path['env_infos']['sup_labels'][i+1])
-                    valid_mask2 = ~torch.isnan(labels2)[None,:]
-                    entropy_2 = self.sup_learner.get_distribution(torch_ify(obs2)[None,:]).entropy()
-                    entropy_2 = torch.mean(entropy_2[valid_mask2])
+                    labels2 = torch.tensor(path['env_infos'][i+1]['sup_labels'])
+                    valid_mask2 = ~torch.isnan(labels2)
+                    entropy_2 = [sup_learner.get_distribution(torch_ify(obs2)[None,:]).entropy() for sup_learner in self.sup_learners]
+                    entropy_2 = torch.mean(torch.stack(entropy_2)[valid_mask2])
 
                     entropy_decrease = (entropy_1 - entropy_2).item()
                     entropy_decreases.append(entropy_decrease)
@@ -525,16 +534,25 @@ class PPOSupTrainer(TorchOnlineTrainer):
                         total_length=self.max_path_length) for path in paths
         ])
         # batch x label_num x label_dim
-        labels = torch.stack([
-            pad_to_last(path['env_infos']['sup_labels'],
-                        total_length=self.max_path_length,
-                        axis=0) for path in paths
-        ])
+        n_labels = []
+        for lid in range(len(paths[0]['env_infos'][0]['sup_labels'])):
+            labels = []
+            for path in paths:
+                path_labels = []
+                for info in path['env_infos']:
+                    path_labels.append(info['sup_labels'][lid])
+                labels.append(path_labels)
+            labels = torch.stack([
+                pad_to_last(path_labels,
+                            total_length=self.max_path_length,
+                            axis=0) for path_labels in labels
+            ])
+            n_labels.append(labels)
 
         with torch.no_grad():
             baselines = self._value_function(obs).squeeze(-1)
 
-        return obs, actions, rewards, returns, valids, baselines, labels
+        return obs, actions, rewards, returns, valids, baselines, n_labels
 
     def get_diagnostics(self):
         return self.eval_statistics
@@ -548,7 +566,7 @@ class PPOSupTrainer(TorchOnlineTrainer):
             self._value_function,
             self._old_policy,
             self.policy,
-            self.sup_learner,
+            *self.sup_learners,
         ]
 
     def get_snapshot(self):
@@ -556,5 +574,5 @@ class PPOSupTrainer(TorchOnlineTrainer):
             policy=self.policy,
             old_policy=self._old_policy,
             value_function=self._value_function,
-            sup_learner=self.sup_learner,
+            sup_learners=self.sup_learners,
         )

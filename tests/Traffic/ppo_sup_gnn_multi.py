@@ -30,38 +30,30 @@ def experiment(variant):
                             )
     from gnn_net import GNNNet
     gnn = GNNNet( 
-                pre_graph_builder = gb, 
-                node_dim = 16,
+                pre_graph_builder=gb, 
+                node_dim=16,
                 num_conv_layers=3)
-
-    from layers import SelectLayer
-    encoders = []
-    encoders.append(nn.Sequential(gnn,SelectLayer(1,0),nn.ReLU()))
-    sup_learners = []
-    for i in range(expl_env.max_veh_num):
-        sup_learner = nn.Sequential(
-                gnn,
-                SelectLayer(1,i+1),
-                nn.ReLU(),
-                nn.Linear(16, 2),
-                )
-        sup_learner = SoftmaxPolicy(sup_learner, learn_temperature=False)
-        sup_learners.append(sup_learner)
-        encoders.append(sup_learner)
-
-    decoder = Mlp(input_size=int(16+2*expl_env.max_veh_num),
+    mlp = Mlp(input_size=16,
               output_size=action_dim,
               hidden_sizes=[],
             )
-    from layers import ConcatLayer
-    need_gradients = np.array([True]*len(encoders))
-    if variant['no_gradient']:
-        need_gradients[1:] = False
+    from layers import FlattenLayer, SelectLayer
     policy = nn.Sequential(
-            ConcatLayer(encoders, need_gradients=list(need_gradients), dim=1),
-            decoder,
+                gnn,
+                SelectLayer(1,0),
+                FlattenLayer(),
+                nn.ReLU(),
+                mlp,
             )
     policy = SoftmaxPolicy(policy, learn_temperature=False)
+
+    sup_learner = nn.Sequential(
+            gnn,
+            SelectLayer(1,np.arange(1,expl_env.max_veh_num+1)),
+            nn.ReLU(),
+            nn.Linear(16, 2),
+            )
+    sup_learner = SoftmaxPolicy(sup_learner, learn_temperature=False)
 
     vf = Mlp(
         hidden_sizes=[32, 32],
@@ -83,7 +75,7 @@ def experiment(variant):
     from sup_replay_buffer import SupReplayBuffer
     replay_buffer = SupReplayBuffer(
         observation_dim = obs_dim,
-        label_dims = [1]*expl_env.max_veh_num,
+        label_dim = expl_env.max_veh_num,
         max_replay_buffer_size = int(1e6),
     )
 
@@ -92,7 +84,7 @@ def experiment(variant):
         policy=policy,
         value_function=vf,
         vf_criterion=vf_criterion,
-        sup_learners=sup_learners,
+        sup_learner=sup_learner,
         replay_buffer=replay_buffer,
         **variant['trainer_kwargs']
     )
@@ -115,7 +107,6 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
     parser.add_argument('--yld', type=float, default=1.)
     parser.add_argument('--log_dir', type=str, default='PPOSupGNN')
-    parser.add_argument('--ng', action='store_true', default=False) # no shared gradient
     parser.add_argument('--eb', type=float, default=None)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
@@ -127,7 +118,6 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+'yld'+str(args.yld)+'full'
     main_dir = args.log_dir\
-                +('ng' if args.ng else '')\
                 +(('eb'+str(args.eb)) if args.eb else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
@@ -135,7 +125,6 @@ if __name__ == "__main__":
     max_path_length = 200
     # noinspection PyTypeChecker
     variant = dict(
-        no_gradient=args.ng,
         env_kwargs=dict(
             observe_mode='full',
             yld=args.yld,

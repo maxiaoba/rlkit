@@ -101,7 +101,8 @@ def rollout(
     rewards = []
     terminals = []
     agent_infos = []
-    env_infos = []
+    # env_infos = []
+    env_infos = dict()
     o = env.reset()
     agent.reset()
     next_o = None
@@ -116,7 +117,12 @@ def rollout(
         terminals.append(d)
         actions.append(a)
         agent_infos.append(agent_info)
-        env_infos.append(env_info)
+        # env_infos.append(env_info)
+        for key in env_info.keys():
+            if key in env_infos.keys():
+                env_infos[key].append(env_info[key])
+            else:
+                env_infos[key] = [env_info[key]]
         path_length += 1
         if d:
             break

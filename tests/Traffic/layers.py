@@ -16,10 +16,10 @@ class SelectLayer(torch.nn.Module):
     def __init__(self, dim, index):
         super(SelectLayer, self).__init__()
         self.dim = dim
-        self.index = index
+        self.index = torch.tensor(index)
 
     def forward(self, x):
-    	return torch.select(x, self.dim, self.index)
+    	return torch.index_select(x, self.dim, self.index)
 
 class ConcatLayer(torch.nn.Module):
 	def __init__(self, layers, need_gradients=True, dim=1):

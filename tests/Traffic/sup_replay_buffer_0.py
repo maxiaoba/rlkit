@@ -9,28 +9,29 @@ class SupReplayBuffer:
         self,
         max_replay_buffer_size,
         observation_dim,
-        label_dim,
+        label_dims,
     ):
         self._observation_dim = observation_dim
-        self._label_dim = label_dim
+        self._label_dims = label_dims
         self._max_replay_buffer_size = max_replay_buffer_size
         self._observations = np.zeros((max_replay_buffer_size, observation_dim))
-        self._labels = np.zeros((max_replay_buffer_size, label_dim))
+        self._n_labels = [np.zeros((max_replay_buffer_size, label_dim)) for label_dim in label_dims]
 
         self._top = 0
         self._size = 0
 
-    def add_sample(self, observation, label):
+    def add_sample(self, observation, labels):
         # labes: label_num x label_dim
         self._observations[self._top] = observation
-        self._labels[self._top] = label
+        for i, label in enumerate(labels):
+            self._n_labels[i][self._top] = label
         self._advance()
 
-    def add_batch(self, batch_obs, batch_label):
+    def add_batch(self, batch_obs, batch_labels):
         # batch_obs: batch x obs_dim
-        # batch_labels: batch x label_dim
-        for obs, label in zip(batch_obs, batch_label):
-            self.add_sample(obs, label)
+        # batch_labels: label_num x batch x label_dim
+        for obs, labels in zip(batch_obs, zip(*batch_labels)):
+            self.add_sample(obs, labels)
 
     def _advance(self):
         self._top = (self._top + 1) % self._max_replay_buffer_size
@@ -41,7 +42,7 @@ class SupReplayBuffer:
         indices = np.random.randint(0, self._size, batch_size)
         batch = dict(
             observations=self._observations[indices],
-            labels=self._labels[indices],
+            n_labels=[labels[indices] for labels in self._n_labels],
         )
         return batch
 
