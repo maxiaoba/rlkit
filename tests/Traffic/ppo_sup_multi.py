@@ -24,31 +24,28 @@ def experiment(variant):
     action_dim = eval_env.action_space.n
     label_num = expl_env.label_num
 
-    encoders = []
-    mlp = Mlp(input_size=obs_dim,
+    encoder = Mlp(input_size=obs_dim,
               output_size=32,
               hidden_sizes=[32,],
             )
-    encoders.append(mlp)
-    sup_learners = []
-    for i in range(label_num):
-        mlp = Mlp(input_size=obs_dim,
-              output_size=2,
-              hidden_sizes=[32,],
-            )
-        sup_learner = SoftmaxPolicy(mlp, learn_temperature=False)
-        sup_learners.append(sup_learner)
-        encoders.append(sup_learner)
-    decoder = Mlp(input_size=int(32+2*label_num),
+    decoder = Mlp(input_size=32,
               output_size=action_dim,
               hidden_sizes=[],
             )
-    module = CombineNet(
-                encoders=encoders,
-                decoder=decoder,
-                no_gradient=variant['no_gradient'],
+    module = nn.Sequential(
+            encoder,
+            nn.ReLU(),
+            decoder,
             )
-    policy = SoftmaxPolicy(module, **variant['policy_kwargs'])
+    policy = SoftmaxPolicy(module, learn_temperature=False)
+    from layers import ReshapeLayer
+    sup_learner = nn.Sequential(
+            encoder,
+            nn.ReLU(),
+            nn.Linear(32, 2*expl_env.max_veh_num),
+            ReshapeLayer(shape=(expl_env.max_veh_num, 2)),
+        )
+    sup_learner = SoftmaxPolicy(sup_learner, learn_temperature=False)
 
     vf = Mlp(
         hidden_sizes=[32, 32],
@@ -70,7 +67,7 @@ def experiment(variant):
     from sup_replay_buffer import SupReplayBuffer
     replay_buffer = SupReplayBuffer(
         observation_dim = obs_dim,
-        label_dims = [1]*label_num,
+        label_dim = label_num,
         max_replay_buffer_size = int(1e6),
     )
 
@@ -79,7 +76,7 @@ def experiment(variant):
         policy=policy,
         value_function=vf,
         vf_criterion=vf_criterion,
-        sup_learners=sup_learners,
+        sup_learner=sup_learner,
         replay_buffer=replay_buffer,
         **variant['trainer_kwargs']
     )
@@ -102,8 +99,6 @@ if __name__ == "__main__":
     parser.add_argument('--yld', type=float, default=1.)
     parser.add_argument('--obs_mode', type=str, default='full')
     parser.add_argument('--log_dir', type=str, default='PPOSup')
-    parser.add_argument('--lt', action='store_true', default=False) # learn temperature
-    parser.add_argument('--ng', action='store_true', default=False) # no shared gradient
     parser.add_argument('--eb', type=float, default=None)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
@@ -115,8 +110,6 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+'yld'+str(args.yld)+args.obs_mode
     main_dir = args.log_dir\
-                +('lt' if args.lt else '')\
-                +('ng' if args.ng else '')\
                 +(('eb'+str(args.eb)) if args.eb else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
@@ -124,7 +117,6 @@ if __name__ == "__main__":
     max_path_length = 200
     # noinspection PyTypeChecker
     variant = dict(
-        no_gradient=args.ng,
         env_kwargs=dict(
             observe_mode=args.obs_mode,
             yld=args.yld,
@@ -144,9 +136,6 @@ if __name__ == "__main__":
             policy_lr=(args.lr if args.lr else 1e-4),
             vf_lr=(args.lr if args.lr else 1e-3),
             exploration_bonus=(args.eb if args.eb else 0.),
-        ),
-        policy_kwargs=dict(
-            learn_temperature=args.lt,
         ),
     )
     import os

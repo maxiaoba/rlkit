@@ -1,6 +1,18 @@
 import torch
 from torch import nn as nn
 
+class ReshapeLayer(torch.nn.Module):
+    def __init__(self, shape):
+        super(ReshapeLayer, self).__init__()
+        self.shape = shape
+
+    def forward(self, x):
+    	if len(x.shape) > 1:
+    		batch_size = x.shape[0]
+    		return x.reshape(batch_size,*self.shape)
+    	else:
+	    	return x.reshape(*self.shape)
+
 class FlattenLayer(torch.nn.Module):
     def __init__(self):
         super(FlattenLayer, self).__init__()

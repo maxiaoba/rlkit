@@ -264,11 +264,12 @@ class PPOSupTrainer(TorchOnlineTrainer):
         """
         self._policy_optimizer.zero_grad()
         loss = self._compute_loss_with_adv(obs, actions, rewards, advantages)
-        # loss.backward()
+        loss.backward()
         # grad_norm = torch.tensor(0.).to(ptu.device) 
-        # for p in self.sup_learners[0].parameters():
-        #     param_norm = p.grad.data.norm(2)
-        #     grad_norm += param_norm.item() ** 2
+        # for p in self.sup_learner.parameters():
+        #     if not (p.grad is None):
+        #         param_norm = p.grad.data.norm(2)
+        #         grad_norm += param_norm.item() ** 2
         # grad_norm = grad_norm ** (1. / 2)
         # print(grad_norm)
         self._policy_optimizer.step()
