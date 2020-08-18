@@ -145,7 +145,7 @@ class TRPOSupTrainer(TRPOTrainer):
                     obs2 = path['observations'][i+1]
                     labels2 = torch.tensor(path['env_infos']['sup_labels'][i+1])
                     valid_mask2 = ~torch.isnan(labels2)[None,:]
-                    entropy_2 = self.sup_learner.get_sup_distribution(torch_ify(obs2)[None,:]).entropy()
+                    entropy_2 = self.policy.get_sup_distribution(torch_ify(obs2)[None,:]).entropy()
                     entropy_2 = torch.mean(entropy_2[valid_mask2])
 
                     entropy_decrease = (entropy_1 - entropy_2).item()
