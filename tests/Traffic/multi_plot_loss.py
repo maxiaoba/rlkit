@@ -17,11 +17,11 @@ fields = [
             # 'exploration/Returns Max',
             # 'exploration/Returns Min',
             # 'exploration/Num Fail',
-            'trainer/SUP Loss',
+            # 'trainer/SUP LossAfter',
             # 'trainer/LossBefore',
             # 'trainer/LossAfter',
-            # 'trainer/KLBefore',
-            # 'trainer/KL'
+            'trainer/KLBefore',
+            'trainer/KL'
             ]
 field_names = [
             # 'Eval Average Return',
@@ -32,11 +32,11 @@ field_names = [
             # 'Expl Max Return',
             # 'Expl Min Return',
             # 'Expl Fail',
-            'Sup Loss',
+            # 'Sup LossAfter',
             # 'LossBefore',
             # 'LossAfter',
-            # 'KLBefore',
-            # 'KL',
+            'KLBefore',
+            'KL',
             ]
 itr_name = 'epoch'
 min_loss = [-1000]*100
@@ -48,12 +48,17 @@ plot_path = "./Data/"+exp_name
 
 policies = [
             # 'PPO',
-            'PPOSup',
-            'PPOSupeb0.1',
+            # 'PPOSup',
+            # 'PPOSupeb0.1',
             # 'PPOGNN',
-            'PPOSupGNN',
-            'PPOSupGNNeb0.1',
-
+            # 'PPOSupGNN',
+            # 'PPOSupGNNeb0.1',
+            'TRPO',
+            'TRPOSup',
+            'TRPOSupeb0.1',
+            'TRPOGNN',
+            'TRPOSupGNN',
+            'TRPOSupGNNeb0.1',
         ]
 policy_names = policies
 
