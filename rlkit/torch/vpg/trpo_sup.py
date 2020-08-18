@@ -1,10 +1,12 @@
 import copy
 import torch
+from collections import OrderedDict
 
 from rlkit.util import tensor_util as tu
 from rlkit.torch.vpg.trpo import TRPOTrainer
 from rlkit.torch.vpg.util import compute_advantages, filter_valids, pad_to_last
 from rlkit.torch.core import torch_ify
+from rlkit.core.eval_util import create_stats_ordered_dict
 
 class TRPOSupTrainer(TRPOTrainer):
     """TRPO + supervised learning.
