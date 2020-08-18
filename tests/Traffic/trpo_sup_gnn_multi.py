@@ -103,7 +103,7 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
     parser.add_argument('--yld', type=float, default=1.)
     parser.add_argument('--obs_mode', type=str, default='full')
-    parser.add_argument('--log_dir', type=str, default='TRPOSup')
+    parser.add_argument('--log_dir', type=str, default='TRPOSupGNN')
     parser.add_argument('--sw', type=float, default=None)
     parser.add_argument('--eb', type=float, default=None)
     parser.add_argument('--lr', type=float, default=None)
