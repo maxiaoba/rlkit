@@ -33,7 +33,8 @@ def _build_hessian_vector_product(func, params, reg_coeff=1e-5):
     """
     param_shapes = [p.shape or torch.Size([1]) for p in params]
     f = func()
-    f_grads = torch.autograd.grad(f, params, create_graph=True)
+    # f_grads = torch.autograd.grad(f, params, create_graph=True)
+    f_grads = torch.autograd.grad(f, params, create_graph=True, allow_unused=True)
 
     def _eval(vector):
         """The evaluation function.
@@ -49,13 +50,19 @@ def _build_hessian_vector_product(func, params, reg_coeff=1e-5):
         unflatten_vector = unflatten_tensors(vector, param_shapes)
 
         assert len(f_grads) == len(unflatten_vector)
+        # grad_vector_product = torch.sum(
+        #     torch.stack(
+        #         [torch.sum(g * x) for g, x in zip(f_grads, unflatten_vector)]))
         grad_vector_product = torch.sum(
             torch.stack(
-                [torch.sum(g * x) for g, x in zip(f_grads, unflatten_vector)]))
+                [(torch.tensor(0.) if (g is None) else torch.sum(g * x)) for g, x in zip(f_grads, unflatten_vector)]))
 
+        # hvp = list(
+        #     torch.autograd.grad(grad_vector_product, params,
+        #                         retain_graph=True))
         hvp = list(
             torch.autograd.grad(grad_vector_product, params,
-                                retain_graph=True))
+                                retain_graph=True, allow_unused=True))
         for i, (hx, p) in enumerate(zip(hvp, params)):
             if hx is None:
                 hvp[i] = torch.zeros_like(p)

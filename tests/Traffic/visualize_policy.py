@@ -29,10 +29,10 @@ else:
 		policy = ArgmaxDiscretePolicy(policy,use_preactivation=True)
 	elif isinstance(policy, TanhGaussianPolicy):
 		policy = MakeDeterministic(policy)
-if 'trainer/sup_learners' in data.keys():
-	sup_learners = data['trainer/sup_learners']
+if 'trainer/sup_learner' in data.keys():
+	sup_learner = data['trainer/sup_learner']
 else:
-	sup_learners = None
+	sup_learner = None
 
 import sys
 from traffic.make_env import make_env
@@ -50,19 +50,19 @@ while True:
 	path_length += 1
 	a, _ = policy.get_action(o)
 	o, r, done, _ = env.step(a)
-	if sup_learners:
-		intentions = [eval_np(sup_learner, o) for sup_learner in sup_learners]
+	if sup_learner:
+		intentions = eval_np(sup_learner, o[None,:])
 	else:
 		intentions = None
 	c_r += r
 	env.render()
 	print("step: ",path_length)
 	print("intentions: ",intentions)
-	print("a: ",a)
-	print("o: ",o)
-	print('r: ',r)
+	# print("a: ",a)
+	# print("o: ",o)
+	# print('r: ',r)
 	print(done)
-	# pdb.set_trace()
+	pdb.set_trace()
 	time.sleep(0.1)
 	if path_length > max_path_length or done:
 		print('c_r: ',c_r)

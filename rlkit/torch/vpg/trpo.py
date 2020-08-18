@@ -1,14 +1,16 @@
-"""Proximal Policy Optimization (PPO)."""
+"""Trust Region Policy Optimization."""
 import torch
 
 from rlkit.torch.vpg.vpg import VPGTrainer
-from rlkit.torch.optimizers import OptimizerWrapper
+from rlkit.torch.optimizers import (ConjugateGradientOptimizer,
+                                     OptimizerWrapper)
 
 
-class PPOTrainer(VPGTrainer):
-    """Proximal Policy Optimization (PPO).
+class TRPOTrainer(VPGTrainer):
+    """Trust Region Policy Optimization (TRPO).
 
     Args:
+        env_spec (garage.envs.EnvSpec): Environment specification.
         policy (garage.torch.policies.Policy): Policy.
         value_function (garage.torch.value_functions.ValueFunction): The value
             function.
@@ -17,8 +19,6 @@ class PPOTrainer(VPGTrainer):
         vf_optimizer (garage.torch.optimizer.OptimizerWrapper): Optimizer for
             value function.
         max_episode_length (int): Maximum length of a single rollout.
-        lr_clip_range (float): The limit on the likelihood ratio between
-            policies.
         num_train_per_epoch (int): Number of train_once calls per epoch.
         discount (float): Discount.
         gae_lambda (float): Lambda used for generalized advantage
@@ -46,13 +46,12 @@ class PPOTrainer(VPGTrainer):
     def __init__(self,
                  policy,
                  value_function,
-                 policy_lr=2.5e-4,
+                 policy_lr=0.01,
                  vf_lr=2.5e-4,
                  policy_optimizer=None,
                  vf_optimizer=None,
-                 lr_clip_range=2e-1,
                  discount=0.99,
-                 gae_lambda=0.97,
+                 gae_lambda=0.98,
                  center_adv=True,
                  positive_adv=False,
                  policy_ent_coeff=0.0,
@@ -63,14 +62,12 @@ class PPOTrainer(VPGTrainer):
 
         if policy_optimizer is None:
             policy_optimizer = OptimizerWrapper(
-                torch.optim.Adam, 
-                dict(lr=policy_lr),
-                policy,
-                max_optimization_epochs=10,
-                minibatch_size=64)
+                ConjugateGradientOptimizer, 
+                dict(max_constraint_value=policy_lr),
+                policy)
         if vf_optimizer is None:
             vf_optimizer = OptimizerWrapper(
-                torch.optim.Adam,
+                torch.optim.Adam, 
                 dict(lr=vf_lr),
                 value_function,
                 max_optimization_epochs=10,
@@ -90,8 +87,6 @@ class PPOTrainer(VPGTrainer):
                          entropy_method=entropy_method,
                          **kwargs)
 
-        self._lr_clip_range = lr_clip_range
-
     def _compute_objective(self, advantages, obs, actions, rewards):
         r"""Compute objective value.
 
@@ -110,22 +105,40 @@ class PPOTrainer(VPGTrainer):
                 with shape :math:`(N \dot [T], )`.
 
         """
-        # Compute constraint
         with torch.no_grad():
             old_ll = self._old_policy.log_prob(obs, actions)
-        new_ll = self.policy.log_prob(obs, actions)
 
+        new_ll = self.policy.log_prob(obs, actions)
         likelihood_ratio = (new_ll - old_ll).exp()
 
         # Calculate surrogate
         surrogate = likelihood_ratio * advantages
 
-        # Clipping the constraint
-        likelihood_ratio_clip = torch.clamp(likelihood_ratio,
-                                            min=1 - self._lr_clip_range,
-                                            max=1 + self._lr_clip_range)
+        return surrogate
 
-        # Calculate surrotate clip
-        surrogate_clip = likelihood_ratio_clip * advantages
+    def _train_policy(self, obs, actions, rewards, advantages):
+        r"""Train the policy.
 
-        return torch.min(surrogate, surrogate_clip)
+        Args:
+            obs (torch.Tensor): Observation from the environment
+                with shape :math:`(N, O*)`.
+            actions (torch.Tensor): Actions fed to the environment
+                with shape :math:`(N, A*)`.
+            rewards (torch.Tensor): Acquired rewards
+                with shape :math:`(N, )`.
+            advantages (torch.Tensor): Advantage value at each step
+                with shape :math:`(N, )`.
+
+        Returns:
+            torch.Tensor: Calculated mean scalar value of policy loss (float).
+
+        """
+        self._policy_optimizer.zero_grad()
+        loss = self._compute_loss_with_adv(obs, actions, rewards, advantages)
+        loss.backward()
+        self._policy_optimizer.step(
+            f_loss=lambda: self._compute_loss_with_adv(obs, actions, rewards,
+                                                       advantages),
+            f_constraint=lambda: self._compute_kl_constraint(obs))
+
+        return loss
