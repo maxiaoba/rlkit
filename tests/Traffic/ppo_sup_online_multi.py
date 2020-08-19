@@ -80,6 +80,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
     parser.add_argument('--yld', type=float, default=1.)
+    parser.add_argument('--ds', type=float, default=0.1)
     parser.add_argument('--obs_mode', type=str, default='full')
     parser.add_argument('--log_dir', type=str, default='PPOSupOnline')
     parser.add_argument('--sw', type=float, default=None)
@@ -92,7 +93,7 @@ if __name__ == "__main__":
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
-    pre_dir = './Data/'+args.exp_name+'yld'+str(args.yld)+args.obs_mode
+    pre_dir = './Data/'+args.exp_name+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs_mode
     main_dir = args.log_dir\
                 +(('sw'+str(args.sw)) if args.sw else '')\
                 +(('eb'+str(args.eb)) if args.eb else '')\
@@ -105,6 +106,7 @@ if __name__ == "__main__":
         env_kwargs=dict(
             observe_mode=args.obs_mode,
             yld=args.yld,
+            driver_sigma=args.ds,
         ),
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 1000),

@@ -179,6 +179,7 @@ class TIntersectionMulti(TrafficEnv):
                  vs_actions=[0.,0.5,3.],
                  t_actions=[-1.5,0.,1.5],
                  desire_speed=3.,
+                 driver_sigma = 0.,
                  speed_cost=0.01,
                  t_cost=0.01,
                  control_cost=0.01,
@@ -231,7 +232,7 @@ class TIntersectionMulti(TrafficEnv):
         self.car_max_accel=10.0
         self.car_max_speed=40.0
         self.car_expose_level=4
-        self.driver_sigma = 0.0
+        self.driver_sigma = driver_sigma
         self.s_min = 2.0
         self.min_overlap = 0.5
 
@@ -439,7 +440,7 @@ class TIntersectionMulti(TrafficEnv):
                           expose_level=self.car_expose_level)
         driver = YNYDriver(idx=idx, car=car, dt=self.dt,
                     x_driver=IDMDriver(idx=idx, car=car, sigma=self.driver_sigma, s_min=self.s_min, axis=0, min_overlap=self.min_overlap, dt=self.dt), 
-                    y_driver=PDDriver(idx=idx, car=car, sigma=self.driver_sigma, axis=1, dt=self.dt)) 
+                    y_driver=PDDriver(idx=idx, car=car, sigma=0., axis=1, dt=self.dt)) 
         car.set_position(np.array([x, y]))
         car.set_velocity(np.array([vx, vy]))
         car.set_rotation(theta)
@@ -552,7 +553,7 @@ class TIntersectionMulti(TrafficEnv):
 if __name__ == '__main__':
     import time
     import pdb
-    env = TIntersectionMulti(num_updates=1, yld=1., observe_mode='full')
+    env = TIntersectionMulti(num_updates=1, yld=0.5, driver_sigma=0.1, observe_mode='full')
     obs = env.reset()
     img = env.render()
     done = False
