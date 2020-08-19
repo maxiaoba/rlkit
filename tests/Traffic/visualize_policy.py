@@ -10,7 +10,7 @@ from rlkit.torch.core import eval_np, np_ify
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
-parser.add_argument('--extra_name', type=str, default='')
+parser.add_argument('--extra_name', type=str, default='yld1.0full')
 parser.add_argument('--log_dir', type=str, default='PPO')
 parser.add_argument('--file', type=str, default='params')
 parser.add_argument('--epoch', type=int, default=None)
@@ -52,6 +52,8 @@ while True:
 	o, r, done, _ = env.step(a)
 	if sup_learner:
 		intentions = eval_np(sup_learner, o[None,:])
+	elif hasattr(policy, 'sup_probs'):
+		intentions = eval_np(policy.sup_probs, o[None,:])
 	else:
 		intentions = None
 	c_r += r
@@ -62,7 +64,7 @@ while True:
 	# print("o: ",o)
 	# print('r: ',r)
 	print(done)
-	pdb.set_trace()
+	# pdb.set_trace()
 	time.sleep(0.1)
 	if path_length > max_path_length or done:
 		print('c_r: ',c_r)

@@ -9,7 +9,7 @@ itr_interval = 100
 max_itr = 2e4
 
 fields = [
-            # 'evaluation/Average Returns',
+            'evaluation/Average Returns',
             # 'evaluation/Actions Max',
             # 'evaluation/Actions Min',
             # 'evaluation/Num Fail',
@@ -20,11 +20,11 @@ fields = [
             # 'trainer/SUP LossAfter',
             # 'trainer/LossBefore',
             # 'trainer/LossAfter',
-            'trainer/KLBefore',
-            'trainer/KL'
+            # 'trainer/KLBefore',
+            # 'trainer/KL'
             ]
 field_names = [
-            # 'Eval Average Return',
+            'Eval Average Return',
             # 'Eval Action Max',
             # 'Eval Action Min',
             # 'Eval Fail',
@@ -35,8 +35,8 @@ field_names = [
             # 'Sup LossAfter',
             # 'LossBefore',
             # 'LossAfter',
-            'KLBefore',
-            'KL',
+            # 'KLBefore',
+            # 'KL',
             ]
 itr_name = 'epoch'
 min_loss = [-1000]*100
@@ -53,6 +53,10 @@ policies = [
             # 'PPOGNN',
             # 'PPOSupGNN',
             # 'PPOSupGNNeb0.1',
+            'PPOSupOnline',
+            'PPOSupOnlineeb0.1',
+            'PPOSupOnlineGNN',
+            'PPOSupOnlineGNNeb0.1',
             'TRPO',
             'TRPOSup',
             'TRPOSupeb0.1',
@@ -62,12 +66,12 @@ policies = [
         ]
 policy_names = policies
 
-seeds = [0,1,2]
+seeds = [2]
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = ''
+extra_name = '2'
 
 pre_name = ''
 post_name = ''
