@@ -10,7 +10,6 @@ from traffic.drivers.driver import Driver, XYSeperateDriver
 from traffic.drivers.oned_drivers import IDMDriver, PDDriver
 from traffic.actions.trajectory_accel_action import TrajectoryAccelAction
 from traffic.constants import *
-from traffic.rendering import make_circle, _add_attrs
 
 class YNYDriver(XYSeperateDriver):
     def __init__(self, yld=True, **kwargs):
@@ -572,7 +571,7 @@ class TIntersectionMulti(TrafficEnv):
                         end = self._cars[car_j].position - self.get_camera_center()
                         attrs = {"color":(1.,0.,1.),"linewidth":10.*attention}
                         if car_i is car_j:
-                            # circle = self.viewer.draw_circle(radius=1., res=15, filled=False, **attrs)
+                            from traffic.rendering import make_circle, _add_attrs
                             circle = make_circle(radius=1., res=15, filled=False, center=start)
                             _add_attrs(circle, attrs)
                             self.viewer.add_onetime(circle)
