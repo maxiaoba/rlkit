@@ -8,6 +8,9 @@ def make_env(env_name, **kwargs):
 	elif env_name == 't_intersection_multi':
 		from traffic.scenarios.t_intersection_multi import TIntersectionMulti
 		env = TIntersectionMulti(**kwargs)
+	elif env_name == 't_intersection_multi0':
+		from traffic.scenarios.t_intersection_multi_0 import TIntersectionMulti
+		env = TIntersectionMulti(**kwargs)
 	else:
 		raise NotImplementedError
 	return env

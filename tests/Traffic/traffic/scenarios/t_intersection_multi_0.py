@@ -217,6 +217,7 @@ class TIntersectionMulti(TrafficEnv):
                  vs_actions=[0.,0.5,3.],
                  t_actions=[-1.5,0.,1.5],
                  desire_speed=3.,
+                 driver_sigma=0.,
                  speed_cost=0.01,
                  t_cost=0.01,
                  control_cost=0.01,
@@ -269,7 +270,7 @@ class TIntersectionMulti(TrafficEnv):
         self.car_max_accel=10.0
         self.car_max_speed=40.0
         self.car_expose_level=4
-        self.driver_sigma = 0.0
+        self.driver_sigma = driver_sigma
         self.s_min = 2.0
         self.min_overlap = 1.0
 
@@ -477,7 +478,7 @@ class TIntersectionMulti(TrafficEnv):
                           expose_level=self.car_expose_level)
         driver = TwoTDriver(idx=idx, car=car, dt=self.dt,
                     x_driver=IDMDriver(idx=idx, car=car, sigma=self.driver_sigma, s_min=self.s_min, axis=0, min_overlap=self.min_overlap, dt=self.dt), 
-                    y_driver=PDDriver(idx=idx, car=car, sigma=self.driver_sigma, axis=1, dt=self.dt)) 
+                    y_driver=PDDriver(idx=idx, car=car, sigma=0., axis=1, dt=self.dt)) 
         car.set_position(np.array([x, y]))
         car.set_velocity(np.array([vx, vy]))
         car.set_rotation(theta)
@@ -581,7 +582,7 @@ class TIntersectionMulti(TrafficEnv):
         self.viewer = rendering.Viewer(1200, 800)
         self.viewer.set_bounds(-30.0, 30.0, -20.0, 20.0)
 
-    def update_extra_render(self):
+    def update_extra_render(self, extra_input):
         if self.observe_mode == 'important':
             important_indices = self.get_important_indices()
             for ind in important_indices:
@@ -589,6 +590,34 @@ class TIntersectionMulti(TrafficEnv):
                     pass
                 else:
                     self._cars[ind].geom.set_color(0,0,1,0.5)
+        if extra_input:
+            if ('attention_weight' in extra_input.keys()) and extra_input['attention_weight']:
+                edge_index = extra_input['attention_weight'][0]
+                attention_weight = extra_input['attention_weight'][1]
+                upper_indices, lower_indices = self.get_sorted_indices()
+                car_indices = [np.nan]*(1+self.max_veh_num)
+                car_indices[0] = 0
+                car_indices[1:len(lower_indices)+1] = lower_indices[:]
+                car_indices[int(self.max_veh_num/2)+1:int(self.max_veh_num/2)+1+len(upper_indices)] = upper_indices[:]
+                attentions = []
+                for i in range(edge_index.shape[1]):
+                    if np.isnan(car_indices[edge_index[0,i]]) or np.isnan(car_indices[edge_index[1,i]]):
+                        pass
+                    elif car_indices[edge_index[1,i]] == 0:
+                        attention = attention_weight[i].item()
+                        attentions.append(attention)
+                        car_i = car_indices[edge_index[0,i]]
+                        car_j = car_indices[edge_index[1,i]]
+                        start = self._cars[car_i].position - self.get_camera_center()
+                        end = self._cars[car_j].position - self.get_camera_center()
+                        attrs = {"color":(1.,0.,1.),"linewidth":10.*attention}
+                        if car_i is car_j:
+                            from traffic.rendering import make_circle, _add_attrs
+                            circle = make_circle(radius=1., res=15, filled=False, center=start)
+                            _add_attrs(circle, attrs)
+                            self.viewer.add_onetime(circle)
+                        else:
+                            self.viewer.draw_line(start, end, **attrs)
 
 if __name__ == '__main__':
     import time
