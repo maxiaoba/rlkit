@@ -250,11 +250,12 @@ class FilledPolygon(Geom):
             glVertex3f(p[0], p[1],0)  # draw each vertex
         glEnd()
 
-def make_circle(radius=10, res=30, filled=True):
+def make_circle(radius=10, res=30, filled=True, center=(0,0)):
     points = []
     for i in range(res):
         ang = 2*math.pi*i / res
-        points.append((math.cos(ang)*radius, math.sin(ang)*radius))
+        points.append((math.cos(ang)*radius+center[0],
+                         math.sin(ang)*radius+center[1]))
     if filled:
         return FilledPolygon(points)
     else:
@@ -308,6 +309,9 @@ class Line(Geom):
         self.end = end
         self.linewidth = LineWidth(1)
         self.add_attr(self.linewidth)
+
+    def set_linewidth(self, x):
+        self.linewidth.stroke = x
 
     def render1(self):
         glBegin(GL_LINES)

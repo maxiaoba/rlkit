@@ -29,14 +29,17 @@ def experiment(variant):
                             other_init=torch.tensor([1.,0.]),
                             )
     from gnn_net import GNNNet
+    if variant['attention']:
+        import torch_geometric.nn as pyg_nn
+        attentioner = pyg_nn.GATConv(16,16)
+    else:
+        attentioner = None
     gnn = GNNNet( 
                 pre_graph_builder=gb, 
                 node_dim=16,
-                num_conv_layers=3)
-    encoder = nn.Sequential(
-             gnn,
-             nn.ReLU(),
-            )
+                num_conv_layers=3,
+                attentioner=attentioner)
+    encoder = gnn
     from layers import FlattenLayer, SelectLayer
     decoder = nn.Sequential(
                 SelectLayer(1,0),
@@ -98,6 +101,7 @@ if __name__ == "__main__":
     parser.add_argument('--ds', type=float, default=0.1)
     parser.add_argument('--obs_mode', type=str, default='full')
     parser.add_argument('--log_dir', type=str, default='PPOSupOnlineGNN')
+    parser.add_argument('--attention', action='store_true', default=False)
     parser.add_argument('--sw', type=float, default=None)
     parser.add_argument('--eb', type=float, default=None)
     parser.add_argument('--lr', type=float, default=None)
@@ -110,6 +114,7 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs_mode
     main_dir = args.log_dir\
+                +('attention' if args.attention else '')\
                 +(('sw'+str(args.sw)) if args.sw else '')\
                 +(('eb'+str(args.eb)) if args.eb else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
@@ -118,6 +123,7 @@ if __name__ == "__main__":
     max_path_length = 200
     # noinspection PyTypeChecker
     variant = dict(
+        attention=args.attention,
         env_kwargs=dict(
             observe_mode=args.obs_mode,
             yld=args.yld,

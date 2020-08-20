@@ -49,6 +49,14 @@ class SupSoftmaxPolicy(Policy, nn.Module):
         action = np.random.choice(np.arange(pis.shape[0]),p=pis)
         return action, {}
 
+    def get_attention_weight(self, obs):
+        if hasattr(self.encoder, 'attentioner') and self.encoder.attentioner:
+            with torch.no_grad():
+                x, attention_weight = eval_np(self.encoder, obs[None], return_attention_weights=True)
+            return attention_weight
+        else:
+            return None
+
     def get_sup_distribution(self, obs):
         logits = self.sup_learner(self.encoder(obs))
         return Categorical(logits=logits)

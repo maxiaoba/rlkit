@@ -95,16 +95,16 @@ class TrafficEnv(gym.Env):
         self.viewer = rendering.Viewer(800, 800)
         self.viewer.set_bounds(-20.0, 20.0, -20.0, 20.0)
 
-    def setup_extra_render(self):
+    def setup_extra_render(self, extra_input):
         pass
 
-    def update_extra_render(self):
+    def update_extra_render(self, extra_input):
         pass
 
     def get_camera_center(self):
         return self._cars[0].position
 
-    def render(self, mode='human', screen_size=800):
+    def render(self, mode='human', screen_size=800, extra_input=None):
         if (not hasattr(self, 'viewer')) or (self.viewer is None):
             self.setup_viewer()
 
@@ -116,7 +116,7 @@ class TrafficEnv(gym.Env):
             for car in self._cars:
                 car.setup_render(self.viewer)
 
-            self.setup_extra_render()
+            self.setup_extra_render(extra_input)
 
         camera_center = self.get_camera_center()
         self._road.update_render(camera_center)
@@ -127,7 +127,7 @@ class TrafficEnv(gym.Env):
         for cid, car in enumerate(self._cars):
             car.update_render(camera_center)
 
-        self.update_extra_render()
+        self.update_extra_render(extra_input)
 
         return self.viewer.render(return_rgb_array=mode == 'rgb_array')
 

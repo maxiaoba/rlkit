@@ -10,6 +10,7 @@ from traffic.drivers.driver import Driver, XYSeperateDriver
 from traffic.drivers.oned_drivers import IDMDriver, PDDriver
 from traffic.actions.trajectory_accel_action import TrajectoryAccelAction
 from traffic.constants import *
+from traffic.rendering import make_circle, _add_attrs
 
 class YNYDriver(XYSeperateDriver):
     def __init__(self, yld=True, **kwargs):
@@ -541,7 +542,7 @@ class TIntersectionMulti(TrafficEnv):
         self.viewer = rendering.Viewer(1200, 800)
         self.viewer.set_bounds(-30.0, 30.0, -20.0, 20.0)
 
-    def update_extra_render(self):
+    def update_extra_render(self, extra_input):
         if self.observe_mode == 'important':
             important_indices = self.get_important_indices()
             for ind in important_indices:
@@ -549,6 +550,34 @@ class TIntersectionMulti(TrafficEnv):
                     pass
                 else:
                     self._cars[ind].geom.set_color(0,0,1,0.5)
+        if extra_input:
+            if ('attention_weight' in extra_input.keys()) and extra_input['attention_weight']:
+                edge_index = extra_input['attention_weight'][0]
+                attention_weight = extra_input['attention_weight'][1]
+                upper_indices, lower_indices = self.get_sorted_indices()
+                car_indices = [np.nan]*(1+self.max_veh_num)
+                car_indices[0] = 0
+                car_indices[1:len(lower_indices)+1] = lower_indices[:]
+                car_indices[int(self.max_veh_num/2)+1:int(self.max_veh_num/2)+1+len(upper_indices)] = upper_indices[:]
+                attentions = []
+                for i in range(edge_index.shape[1]):
+                    if np.isnan(car_indices[edge_index[0,i]]) or np.isnan(car_indices[edge_index[1,i]]):
+                        pass
+                    elif car_indices[edge_index[1,i]] == 0:
+                        attention = attention_weight[i].item()
+                        attentions.append(attention)
+                        car_i = car_indices[edge_index[0,i]]
+                        car_j = car_indices[edge_index[1,i]]
+                        start = self._cars[car_i].position - self.get_camera_center()
+                        end = self._cars[car_j].position - self.get_camera_center()
+                        attrs = {"color":(1.,0.,1.),"linewidth":10.*attention}
+                        if car_i is car_j:
+                            # circle = self.viewer.draw_circle(radius=1., res=15, filled=False, **attrs)
+                            circle = make_circle(radius=1., res=15, filled=False, center=start)
+                            _add_attrs(circle, attrs)
+                            self.viewer.add_onetime(circle)
+                        else:
+                            self.viewer.draw_line(start, end, **attrs)
 
 if __name__ == '__main__':
     import time

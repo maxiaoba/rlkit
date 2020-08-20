@@ -30,23 +30,32 @@ def experiment(variant):
                             other_init=torch.tensor([1.,0.]),
                             )
     from gnn_net import GNNNet
+    if variant['attention']:
+        import torch_geometric.nn as pyg_nn
+        attentioner = pyg_nn.GATConv(16,16)
+    else:
+        attentioner = None
     gnn = GNNNet( 
                 pre_graph_builder=gb, 
                 node_dim=16,
-                num_conv_layers=3)
-    mlp = Mlp(input_size=16,
-              output_size=action_dim,
-              hidden_sizes=[],
-            )
+                num_conv_layers=3,
+                attentioner=attentioner)
+    encoder = gnn
     from layers import FlattenLayer, SelectLayer
-    policy = nn.Sequential(
-                gnn,
+    decoder = nn.Sequential(
                 SelectLayer(1,0),
                 FlattenLayer(),
                 nn.ReLU(),
-                mlp,
+                nn.Linear(16,action_dim)
             )
-    policy = SoftmaxPolicy(policy, learn_temperature=False)
+    from layers import ReshapeLayer
+    sup_learner = nn.Sequential(
+            SelectLayer(1,np.arange(1,expl_env.max_veh_num+1)),
+            nn.ReLU(),
+            nn.Linear(16, 2),
+        )
+    from sup_softmax_policy import SupSoftmaxPolicy
+    policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
 
     vf = Mlp(
         hidden_sizes=[32, 32],
@@ -91,7 +100,7 @@ if __name__ == "__main__":
     parser.add_argument('--ds', type=float, default=0.1)
     parser.add_argument('--obs_mode', type=str, default='full')
     parser.add_argument('--log_dir', type=str, default='TRPOGNN')
-    parser.add_argument('--lt', action='store_true', default=False)
+    parser.add_argument('--attention', action='store_true', default=False)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -102,13 +111,14 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs_mode
     main_dir = args.log_dir\
-                +('lt' if args.lt else '')\
+                +('attention' if args.attention else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     max_path_length = 200
     # noinspection PyTypeChecker
     variant = dict(
+        attention=args.attention,
         env_kwargs=dict(
             observe_mode=args.obs_mode,
             yld=args.yld,
@@ -128,9 +138,6 @@ if __name__ == "__main__":
             max_path_length=max_path_length,
             policy_lr=(args.lr if args.lr else 1e-2),
             vf_lr=(args.lr if args.lr else 1e-3),
-        ),
-        policy_kwargs=dict(
-            learn_temperature=args.lt,
         ),
     )
     import os

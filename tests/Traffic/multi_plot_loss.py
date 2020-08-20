@@ -9,7 +9,7 @@ itr_interval = 100
 max_itr = 2e4
 
 fields = [
-            'evaluation/Average Returns',
+            # 'evaluation/Average Returns',
             # 'evaluation/Actions Max',
             # 'evaluation/Actions Min',
             # 'evaluation/Num Fail',
@@ -17,14 +17,14 @@ fields = [
             # 'exploration/Returns Max',
             # 'exploration/Returns Min',
             # 'exploration/Num Fail',
-            # 'trainer/SUP LossAfter',
+            'trainer/SUP LossAfter',
             # 'trainer/LossBefore',
             # 'trainer/LossAfter',
             # 'trainer/KLBefore',
             # 'trainer/KL'
             ]
 field_names = [
-            'Eval Average Return',
+            # 'Eval Average Return',
             # 'Eval Action Max',
             # 'Eval Action Min',
             # 'Eval Fail',
@@ -32,7 +32,7 @@ field_names = [
             # 'Expl Max Return',
             # 'Expl Min Return',
             # 'Expl Fail',
-            # 'Sup LossAfter',
+            'Sup LossAfter',
             # 'LossBefore',
             # 'LossAfter',
             # 'KLBefore',
@@ -41,7 +41,7 @@ field_names = [
 itr_name = 'epoch'
 min_loss = [-1000]*100
 max_loss = [1000]*100
-exp_name = "t_intersection_multiyld1.0full"
+exp_name = "t_intersection_multiyld0.5ds0.1full"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
@@ -53,25 +53,25 @@ policies = [
             # 'PPOGNN',
             # 'PPOSupGNN',
             # 'PPOSupGNNeb0.1',
-            'PPOSupOnline',
-            'PPOSupOnlineeb0.1',
-            'PPOSupOnlineGNN',
-            'PPOSupOnlineGNNeb0.1',
-            'TRPO',
+            # 'PPOSupOnline',
+            # 'PPOSupOnlineeb0.1',
+            # 'PPOSupOnlineGNN',
+            # 'PPOSupOnlineGNNeb0.1',
+            # 'TRPO',
             'TRPOSup',
             'TRPOSupeb0.1',
-            'TRPOGNN',
+            # 'TRPOGNN',
             'TRPOSupGNN',
             'TRPOSupGNNeb0.1',
         ]
 policy_names = policies
 
-seeds = [2]
+seeds = [0,1,2]
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = '2'
+extra_name = ''
 
 pre_name = ''
 post_name = ''

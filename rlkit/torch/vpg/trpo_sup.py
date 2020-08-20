@@ -16,6 +16,7 @@ class TRPOSupTrainer(TRPOTrainer):
                  sup_weight,
                  replay_buffer,
                  exploration_bonus,
+                 attention_eb=False, # use attention to scale exploration bonus
                  sup_batch_size=64,
                  **kwargs):
         super().__init__(**kwargs)
@@ -23,6 +24,7 @@ class TRPOSupTrainer(TRPOTrainer):
         self.replay_buffer = replay_buffer
         self.sup_batch_size = sup_batch_size
         self.exploration_bonus = exploration_bonus
+        self.attention_eb = attention_eb
 
     def train_once(self, paths):
         """Train the algorithm once.
@@ -142,6 +144,7 @@ class TRPOSupTrainer(TRPOTrainer):
                     labels1 = torch.tensor(path['env_infos']['sup_labels'][i])
                     valid_mask1 = ~torch.isnan(labels1)[None,:]
                     entropy_1 = self.policy.get_sup_distribution(torch_ify(obs1)[None,:]).entropy()
+                    # if self.attention_eb: # todo
                     entropy_1 = torch.mean(entropy_1[valid_mask1])
 
                     obs2 = path['observations'][i+1]
