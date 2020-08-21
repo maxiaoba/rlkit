@@ -43,10 +43,10 @@ class TwoTDriver(XYSeperateDriver):
 
     def setup_render(self, viewer):
         from traffic import rendering
-        t1_poly = [[-self.car.length/8.0, -(self.car.width/2.0+self.t1)],
-                    [self.car.length/8.0, -(self.car.width/2.0+self.t1)],
-                    [self.car.length/8.0, (self.car.width/2.0+self.t1)],
-                    [-self.car.length/8.0, (self.car.width/2.0+self.t1)]]
+        t1_poly = [[-self.car.length/16.0, -(self.car.width/2.0+self.t1)],
+                    [self.car.length/16.0, -(self.car.width/2.0+self.t1)],
+                    [self.car.length/16.0, (self.car.width/2.0+self.t1)],
+                    [-self.car.length/16.0, (self.car.width/2.0+self.t1)]]
         self.t1_geom = rendering.make_polygon(t1_poly)
         self.t1_xform = rendering.Transform()
         self.t1_geom.set_color(*(0., 1., 0.))
@@ -591,7 +591,7 @@ class TIntersectionMulti(TrafficEnv):
                 else:
                     self._cars[ind].geom.set_color(0,0,1,0.5)
         if extra_input:
-            if ('attention_weight' in extra_input.keys()) and extra_input['attention_weight']:
+            if ('attention_weight' in extra_input.keys()) and (extra_input['attention_weight'] is not None):
                 edge_index = extra_input['attention_weight'][0]
                 attention_weight = extra_input['attention_weight'][1]
                 upper_indices, lower_indices = self.get_sorted_indices()
@@ -599,7 +599,7 @@ class TIntersectionMulti(TrafficEnv):
                 car_indices[0] = 0
                 car_indices[1:len(lower_indices)+1] = lower_indices[:]
                 car_indices[int(self.max_veh_num/2)+1:int(self.max_veh_num/2)+1+len(upper_indices)] = upper_indices[:]
-                attentions = []
+                starts, ends, attentions = [], [], []
                 for i in range(edge_index.shape[1]):
                     if np.isnan(car_indices[edge_index[0,i]]) or np.isnan(car_indices[edge_index[1,i]]):
                         pass
@@ -610,14 +610,34 @@ class TIntersectionMulti(TrafficEnv):
                         car_j = car_indices[edge_index[1,i]]
                         start = self._cars[car_i].position - self.get_camera_center()
                         end = self._cars[car_j].position - self.get_camera_center()
-                        attrs = {"color":(1.,0.,1.),"linewidth":10.*attention}
-                        if car_i is car_j:
-                            from traffic.rendering import make_circle, _add_attrs
-                            circle = make_circle(radius=1., res=15, filled=False, center=start)
-                            _add_attrs(circle, attrs)
-                            self.viewer.add_onetime(circle)
-                        else:
-                            self.viewer.draw_line(start, end, **attrs)
+                        starts.append(start)
+                        ends.append(end)
+                rank_index = np.argsort(attentions)
+                starts = np.array(starts)[rank_index]
+                ends = np.array(ends)[rank_index]
+                attentions = np.array(attentions)[rank_index]
+                for start, end, attention in zip(starts[-3:],ends[-3:],attentions[-3:]):
+                    attrs = {"color":(1.,0.,1.),"linewidth":10.*attention}
+                    if (start == end).all():
+                        from traffic.rendering import make_circle, _add_attrs
+                        circle = make_circle(radius=1., res=15, filled=False, center=start)
+                        _add_attrs(circle, attrs)
+                        self.viewer.add_onetime(circle)
+                    else:
+                        self.viewer.draw_line(start, end, **attrs)
+            if ('intention' in extra_input.keys()) and (extra_input['intention'] is not None):
+                upper_indices, lower_indices = self.get_sorted_indices()
+                car_indices = [np.nan]*self.max_veh_num
+                car_indices[0:len(lower_indices)] = lower_indices[:]
+                car_indices[int(self.max_veh_num/2):int(self.max_veh_num/2)+len(upper_indices)] = upper_indices[:]
+                for car_ind,intention in zip(car_indices,extra_input['intention']):
+                    if not np.isnan(car_ind):
+                        from traffic.rendering import make_circle, _add_attrs
+                        start = self._cars[car_ind].position - self.get_camera_center()
+                        attrs = {"color":(intention[1],intention[0],0.)}
+                        circle = make_circle(radius=0.5, res=15, filled=True, center=start)
+                        _add_attrs(circle, attrs)
+                        self.viewer.add_onetime(circle) 
 
 if __name__ == '__main__':
     import time
