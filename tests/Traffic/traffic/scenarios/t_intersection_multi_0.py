@@ -375,7 +375,7 @@ class TIntersectionMulti(TrafficEnv):
 
     def get_info(self):
         info = {}
-        info['sup_labels'] = self._intentions
+        info['sup_labels'] = np.copy(self._intentions)
 
         if self._collision:
             info['event']='collision'

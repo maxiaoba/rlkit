@@ -30,8 +30,8 @@ def marollout(
     rewards = []
     terminals = []
     agent_infos = []
-    # env_infos = []
-    env_infos = dict()
+    env_infos = []
+    # env_infos = dict()
     o_n = env.reset()
     [agent.reset() for agent in agent_n]
     next_o = None
@@ -51,12 +51,12 @@ def marollout(
         terminals.append(d_n)
         actions.append(a_n)
         agent_infos.append(agent_info_n)
-        # env_infos.append(env_info)
-        for key in env_info.keys():
-            if key in env_infos.keys():
-                env_infos[key].append(env_info[key])
-            else:
-                env_infos[key] = [env_info[key]]
+        env_infos.append(env_info)
+        # for key in env_info.keys():
+        #     if key in env_infos.keys():
+        #         env_infos[key].append(env_info[key])
+        #     else:
+        #         env_infos[key] = [env_info[key]]
         path_length += 1
         if d_n.all():
             break

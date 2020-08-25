@@ -7,6 +7,7 @@ from rlkit.torch.vpg.trpo import TRPOTrainer
 from rlkit.torch.vpg.util import compute_advantages, filter_valids, pad_to_last
 from rlkit.torch.core import torch_ify
 from rlkit.core.eval_util import create_stats_ordered_dict
+import rlkit.pythonplusplus as ppp
 
 class TRPOSupTrainer(TRPOTrainer):
     """TRPO + supervised learning.
@@ -208,10 +209,11 @@ class TRPOSupTrainer(TRPOTrainer):
                         total_length=self.max_path_length) for path in paths
         ])
         # batch x label_num x label_dim
+        env_infos = [ppp.list_of_dicts__to__dict_of_lists(p['env_infos']) for p in paths]
         labels = torch.stack([
-            pad_to_last(path['env_infos']['sup_labels'],
+            pad_to_last(env_info['sup_labels'],
                         total_length=self.max_path_length,
-                        axis=0) for path in paths
+                        axis=0) for env_info in env_infos
         ])
 
         with torch.no_grad():

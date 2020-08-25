@@ -38,7 +38,7 @@ def get_traffic_path_information(paths, stat_prefix=''):
     num_fail, num_outroad, num_success, num_timeout = 0, 0, 0, 0
     log_path = logger.get_snapshot_dir()
     for pid,path in enumerate(paths):
-        event = path["env_infos"]['event'][-1]
+        event = path["env_infos"][-1]['event']
         if event == 'collision':
             num_fail += 1
             # np.save(osp.join(log_path,'failure'+'{}.npy'.format(num_fail)),path["actions"])

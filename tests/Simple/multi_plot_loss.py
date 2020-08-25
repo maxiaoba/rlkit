@@ -12,11 +12,9 @@ fields = [
             'evaluation/Average Returns',
             # 'evaluation/Actions Max',
             # 'evaluation/Actions Min',
-            # 'evaluation/Num Fail',
             # 'exploration/Average Returns',
             # 'exploration/Returns Max',
             # 'exploration/Returns Min',
-            # 'exploration/Num Fail',
             # 'trainer/SUP LossAfter',
             # 'trainer/LossBefore',
             # 'trainer/LossAfter',
@@ -27,11 +25,9 @@ field_names = [
             'Eval Average Return',
             # 'Eval Action Max',
             # 'Eval Action Min',
-            # 'Eval Fail',
             # 'Expl Average Return',
             # 'Expl Max Return',
             # 'Expl Min Return',
-            # 'Expl Fail',
             # 'Sup LossAfter',
             # 'LossBefore',
             # 'LossAfter',
@@ -41,29 +37,26 @@ field_names = [
 itr_name = 'epoch'
 min_loss = [-1000]*100
 max_loss = [1000]*100
-exp_name = "t_intersection_multiyld0.5ds0.0full"
+exp_name = "SimpleSupobs1"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'PPO',
-            'PPOSupOnline',
-            # 'PPOSupOnlineeb0.1',
-            'PPOGNN',
-            'PPOSupOnlineGNN',
-            # 'PPOSupOnlineGNNeb0.1',
-            'PPOGNNattention',
-            'PPOSupOnlineGNNattention',
-            # 'TRPO',
-            # 'TRPOSup',
-            # 'TRPOSupeb0.1',
-            # 'TRPOGNN',
-            # 'TRPOSupGNN',
-            # 'TRPOSupGNNeb0.1',
-            # 'TRPOGNNattention',
-            # 'TRPOSupGNNattention',
-            # 'TRPOSupGNNattentioneb0.1',
+            # 'PPO',
+            # 'PPOSupOnlinesw0.1',
+            # 'PPOSupOnlinesw0.3',
+            # 'PPOSupOnlinesw0.5',
+            # 'PPOSupOnlinesw1.0',
+            # 'SupOnline',
+            'TRPO',
+            'TRPOSupsw0.1',
+            'TRPOSupsw1.0',
+            'TRPOSup2sw0.1',
+            'TRPOSup2sw1.0',
+            # 'TRPOSup3sw0.1',
+            # 'TRPOSup3ngsw0.1',
+            'Sup',
         ]
 policy_names = policies
 
@@ -72,7 +65,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'ppo'
+extra_name = 'trpo'
 
 pre_name = ''
 post_name = ''

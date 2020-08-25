@@ -24,20 +24,20 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
 
-    encoder = Mlp(input_size=obs_dim,
-              output_size=32,
-              hidden_sizes=[32,],
+    encoder = nn.Sequential(
+             nn.Linear(obs_dim,32),
+             nn.ReLU(),
+             nn.Linear(32,32),
+             nn.ReLU(),
             )
-    decoder = Mlp(input_size=32,
-              output_size=action_dim,
-              hidden_sizes=[],
-            )
-    module = nn.Sequential(
-            encoder,
-            nn.ReLU(),
-            decoder,
-            )
-    policy = SoftmaxPolicy(module, **variant['policy_kwargs'])
+    decoder = nn.Linear(32, action_dim)
+    from layers import ReshapeLayer
+    sup_learner = nn.Sequential(
+            nn.Linear(32, 2*expl_env.max_veh_num),
+            ReshapeLayer(shape=(expl_env.max_veh_num, 2)),
+        )
+    from sup_softmax_policy import SupSoftmaxPolicy
+    policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
 
     vf = Mlp(
         hidden_sizes=[32, 32],
@@ -82,7 +82,6 @@ if __name__ == "__main__":
     parser.add_argument('--ds', type=float, default=0.1)
     parser.add_argument('--obs_mode', type=str, default='full')
     parser.add_argument('--log_dir', type=str, default='TRPO')
-    parser.add_argument('--lt', action='store_true', default=False)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -93,7 +92,6 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs_mode
     main_dir = args.log_dir\
-                +('lt' if args.lt else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
@@ -117,11 +115,8 @@ if __name__ == "__main__":
         trainer_kwargs=dict(
             discount=0.99,
             max_path_length=max_path_length,
-            policy_lr=(args.lr if args.lr else 1e-2),
+            policy_lr=(args.lr if args.lr else 1e-4),
             vf_lr=(args.lr if args.lr else 1e-3),
-        ),
-        policy_kwargs=dict(
-            learn_temperature=args.lt,
         ),
     )
     import os

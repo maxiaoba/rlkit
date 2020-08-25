@@ -6,58 +6,34 @@ from rlkit.exploration_strategies.base import \
 from rlkit.exploration_strategies.epsilon_greedy import EpsilonGreedy
 from rlkit.policies.argmax import ArgmaxDiscretePolicy
 from rlkit.torch.networks import Mlp
-from combine_net import CombineNet
 import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.samplers.data_collector import MdpPathCollector
 from rlkit.torch.torch_rl_algorithm import TorchOnlineRLAlgorithm
 
-from log_path import get_traffic_path_information
-
 def experiment(variant):
-    from traffic.make_env import make_env
-    expl_env = make_env(args.exp_name,**variant['env_kwargs'])
-    eval_env = make_env(args.exp_name,**variant['env_kwargs'])
+    from simple_sup import SimpleSupEnv
+    expl_env = SimpleSupEnv(**variant['env_kwars'])
+    eval_env = SimpleSupEnv(**variant['env_kwars'])
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
-    label_num = expl_env.label_num
 
-    from graph_builder_multi import MultiTrafficGraphBuilder
-    gb = MultiTrafficGraphBuilder(input_dim=4, node_num=expl_env.max_veh_num+1,
-                            ego_init=torch.tensor([0.,1.]),
-                            other_init=torch.tensor([1.,0.]),
-                            )
-    from gnn_net import GNNNet
-    if variant['attention']:
-        import torch_geometric.nn as pyg_nn
-        attentioner = pyg_nn.GATConv(16,16)
-    else:
-        attentioner = None
-    gnn = GNNNet( 
-                pre_graph_builder=gb, 
-                node_dim=16,
-                num_conv_layers=3,
-                attentioner=attentioner)
-    encoder = gnn
-    from layers import FlattenLayer, SelectLayer
-    decoder = nn.Sequential(
-                SelectLayer(1,0),
-                FlattenLayer(),
-                nn.ReLU(),
-                nn.Linear(16,action_dim)
+    encoder = nn.Sequential(
+             nn.Linear(obs_dim,16),
+             nn.ReLU(),
             )
+    decoder = nn.Linear(16, action_dim)
     from layers import ReshapeLayer
     sup_learner = nn.Sequential(
-            SelectLayer(1,np.arange(1,expl_env.max_veh_num+1)),
-            nn.ReLU(),
-            nn.Linear(16, 2),
+            nn.Linear(16, action_dim),
+            ReshapeLayer(shape=(1, action_dim)),
         )
     from sup_softmax_policy import SupSoftmaxPolicy
     policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
 
     vf = Mlp(
-        hidden_sizes=[32, 32],
+        hidden_sizes=[32],
         input_size=obs_dim,
         output_size=1,
     )
@@ -76,7 +52,7 @@ def experiment(variant):
     from sup_replay_buffer import SupReplayBuffer
     replay_buffer = SupReplayBuffer(
         observation_dim = obs_dim,
-        label_dim = label_num,
+        label_dim = 1,
         max_replay_buffer_size = int(1e6),
     )
 
@@ -94,7 +70,6 @@ def experiment(variant):
         evaluation_env=eval_env,
         exploration_data_collector=expl_path_collector,
         evaluation_data_collector=eval_path_collector,
-        log_path_function = get_traffic_path_information,
         **variant['algorithm_kwargs']
     )
     algorithm.to(ptu.device)
@@ -103,12 +78,9 @@ def experiment(variant):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
-    parser.add_argument('--yld', type=float, default=0.5)
-    parser.add_argument('--ds', type=float, default=0.1)
-    parser.add_argument('--obs_mode', type=str, default='full')
-    parser.add_argument('--log_dir', type=str, default='TRPOSupGNN')
-    parser.add_argument('--attention', action='store_true', default=False)
+    parser.add_argument('--exp_name', type=str, default='SimpleSup')
+    parser.add_argument('--obs', type=int, default=1)
+    parser.add_argument('--log_dir', type=str, default='TRPOSup')
     parser.add_argument('--sw', type=float, default=None)
     parser.add_argument('--eb', type=float, default=None)
     parser.add_argument('--lr', type=float, default=None)
@@ -119,31 +91,27 @@ if __name__ == "__main__":
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
-    pre_dir = './Data/'+args.exp_name+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs_mode
+    pre_dir = './Data/'+args.exp_name+'obs'+str(args.obs)
     main_dir = args.log_dir\
-                +('attention' if args.attention else '')\
                 +(('sw'+str(args.sw)) if args.sw else '')\
                 +(('eb'+str(args.eb)) if args.eb else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
-    max_path_length = 200
+    max_path_length = 2
     # noinspection PyTypeChecker
     variant = dict(
-        attention=args.attention,
-        env_kwargs=dict(
-            observe_mode=args.obs_mode,
-            yld=args.yld,
-            driver_sigma=args.ds,
+        env_kwars=dict(
+            num_obs=args.obs
         ),
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 1000),
             num_eval_steps_per_epoch=1000,
             num_train_loops_per_epoch=1,
             num_trains_per_train_loop=1,
-            num_expl_steps_per_train_loop=(args.bs if args.bs else 1000),
+            num_expl_steps_per_train_loop=(args.bs if args.bs else 10),
             max_path_length=max_path_length,
-            save_best=True,
+            save_best=False,
         ),
         trainer_kwargs=dict(
             discount=0.99,
@@ -152,6 +120,7 @@ if __name__ == "__main__":
             vf_lr=(args.lr if args.lr else 1e-3),
             exploration_bonus=(args.eb if args.eb else 0.),
             sup_weight=(args.sw if args.sw else 0.1),
+            sup_batch_size=(args.bs if args.bs else 10),
         ),
     )
     import os

@@ -183,9 +183,10 @@ class TIntersectionMulti(TrafficEnv):
                  speed_cost=0.01,
                  t_cost=0.01,
                  control_cost=0.01,
-                 collision_cost=1.,
-                 outroad_cost=1.,
-                 goal_reward=1.,
+                 collision_cost=5.,
+                 outroad_cost=5.,
+                 survive_reward=0.01,
+                 goal_reward=5.,
                  road=Road([RoadSegment([(-100.,0.),(100.,0.),(100.,8.),(-100.,8.)]),
                              RoadSegment([(-2,-10.),(2,-10.),(2,0.),(-2,0.)])]),
                  left_bound = -20.,
@@ -211,6 +212,7 @@ class TIntersectionMulti(TrafficEnv):
         self.control_cost = control_cost
         self.collision_cost = collision_cost
         self.outroad_cost = outroad_cost
+        self.survive_reward = survive_reward
         self.goal_reward = goal_reward
         self._collision = False
         self._outroad = False
@@ -234,7 +236,7 @@ class TIntersectionMulti(TrafficEnv):
         self.car_expose_level=4
         self.driver_sigma = driver_sigma
         self.s_min = 2.0
-        self.min_overlap = 0.5
+        self.min_overlap = 1.0
 
         super(TIntersectionMulti, self).__init__(
             road=road,
@@ -337,7 +339,7 @@ class TIntersectionMulti(TrafficEnv):
 
     def get_info(self):
         info = {}
-        info['sup_labels'] = self._intentions
+        info['sup_labels'] = np.copy(self._intentions)
 
         if self._collision:
             info['event']='collision'
@@ -413,17 +415,17 @@ class TIntersectionMulti(TrafficEnv):
         reward += self.t_cost*t_cost
 
         control_cost = 0. # TODO
-        reward -= self.control_cost*control_cost
+        reward += self.control_cost*control_cost
         # print(speed_cost, t_cost, control_cost)
 
         if self._collision:
             reward -= self.collision_cost
-
-        if self._outroad:
+        elif self._outroad:
             reward -= self.outroad_cost
-
-        if self._goal:
+        elif self._goal:
             reward += self.goal_reward
+        else:
+            reward += self.survive_reward
 
         return reward
 

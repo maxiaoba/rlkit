@@ -136,7 +136,7 @@ if __name__ == "__main__":
         trainer_kwargs=dict(
             discount=0.99,
             max_path_length=max_path_length,
-            policy_lr=(args.lr if args.lr else 1e-2),
+            policy_lr=(args.lr if args.lr else 1e-4),
             vf_lr=(args.lr if args.lr else 1e-3),
         ),
     )

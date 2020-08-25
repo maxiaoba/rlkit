@@ -23,35 +23,21 @@ def experiment(variant):
     action_dim = eval_env.action_space.n
     label_num = expl_env.label_num
 
-    from graph_builder_multi import MultiTrafficGraphBuilder
-    gb = MultiTrafficGraphBuilder(input_dim=4, node_num=expl_env.max_veh_num+1,
-                            ego_init=torch.tensor([0.,1.]),
-                            other_init=torch.tensor([1.,0.]),
-                            )
-    from gnn_net import GNNNet
-    if variant['attention']:
-        import torch_geometric.nn as pyg_nn
-        attentioner = pyg_nn.GATConv(16,16)
-    else:
-        attentioner = None
-    gnn = GNNNet( 
-                pre_graph_builder=gb, 
-                node_dim=16,
-                num_conv_layers=3,
-                attentioner=attentioner)
-    encoder = gnn
-    from layers import FlattenLayer, SelectLayer
-    decoder = nn.Sequential(
-                SelectLayer(1,0),
-                FlattenLayer(),
-                nn.ReLU(),
-                nn.Linear(16,action_dim)
+    encoder = nn.Sequential(
+             nn.Linear(obs_dim,32),
+             nn.ReLU(),
             )
-    from layers import ReshapeLayer
+    from layers import ReshapeLayer, FlattenLayer, ConcatLayer
     sup_learner = nn.Sequential(
-            SelectLayer(1,np.arange(1,expl_env.max_veh_num+1)),
-            nn.ReLU(),
-            nn.Linear(16, 2),
+            nn.Linear(32, 2*expl_env.max_veh_num),
+            ReshapeLayer(shape=(expl_env.max_veh_num, 2)),
+        )
+    decoder = nn.Sequential(
+            ConcatLayer([
+                nn.Sequential(nn.Linear(32,16),nn.ReLU()),
+                nn.Sequential(sup_learner,nn.Softmax(dim=-1),FlattenLayer()),
+                ],need_gradients=True),
+            nn.Linear(16+int(expl_env.max_veh_num*2), action_dim),
         )
     from sup_softmax_policy import SupSoftmaxPolicy
     policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
@@ -107,8 +93,7 @@ if __name__ == "__main__":
     parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
     parser.add_argument('--obs_mode', type=str, default='full')
-    parser.add_argument('--log_dir', type=str, default='TRPOSupGNN')
-    parser.add_argument('--attention', action='store_true', default=False)
+    parser.add_argument('--log_dir', type=str, default='TRPOSup2')
     parser.add_argument('--sw', type=float, default=None)
     parser.add_argument('--eb', type=float, default=None)
     parser.add_argument('--lr', type=float, default=None)
@@ -121,7 +106,6 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs_mode
     main_dir = args.log_dir\
-                +('attention' if args.attention else '')\
                 +(('sw'+str(args.sw)) if args.sw else '')\
                 +(('eb'+str(args.eb)) if args.eb else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
@@ -130,7 +114,6 @@ if __name__ == "__main__":
     max_path_length = 200
     # noinspection PyTypeChecker
     variant = dict(
-        attention=args.attention,
         env_kwargs=dict(
             observe_mode=args.obs_mode,
             yld=args.yld,

@@ -9,8 +9,8 @@ from rlkit.torch.core import torch_ify
 from rlkit.core.eval_util import create_stats_ordered_dict
 import rlkit.pythonplusplus as ppp
 
-class PPOSupOnlineTrainer(PPOTrainer):
-    """PPO + supervised learning with online data.
+class SupOnlineTrainer(PPOTrainer):
+    """supervised learning with online data.
     """
 
     def __init__(self,
@@ -187,7 +187,8 @@ class PPOSupOnlineTrainer(PPOTrainer):
 
         # Calculate surrogate
         sup_loss = self._compute_sup_loss(obs, labels)
-        objective = advantages - self.sup_weight*sup_loss
+        # objective = advantages - self.sup_weight*sup_loss
+        objective = -self.sup_weight*sup_loss
         # surrogate = likelihood_ratio * (advantages - self.sup_weight*sup_loss)
         surrogate = likelihood_ratio * objective
 
@@ -207,8 +208,7 @@ class PPOSupOnlineTrainer(PPOTrainer):
         valid_mask = ~torch.isnan(labels) # replay buffer!
         labels[~valid_mask] = 0     
         lls = self.policy.sup_log_prob(obs, labels)
-        lls[~valid_mask] = 0
-        return -lls.mean(-1)
+        return -lls[valid_mask]
 
     def _add_exploration_bonus(self, paths):
         paths = copy.deepcopy(paths)
