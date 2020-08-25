@@ -105,6 +105,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
+    parser.add_argument('--nob', action='store_true', default=False)
     parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
     parser.add_argument('--log_dir', type=str, default='PPOSupGNN')
@@ -117,7 +118,7 @@ if __name__ == "__main__":
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
-    pre_dir = './Data/'+args.exp_name+'yld'+str(args.yld)+'ds'+str(args.ds)+'full'
+    pre_dir = './Data/'+args.exp_name+('nob' if args.nob else '')+'yld'+str(args.yld)+'ds'+str(args.ds)+'full'
     main_dir = args.log_dir\
                 +(('eb'+str(args.eb)) if args.eb else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\

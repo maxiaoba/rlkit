@@ -176,6 +176,7 @@ class TIntersectionMulti(TrafficEnv):
     def __init__(self,
                  yld=0.5,
                  observe_mode='full',
+                 normalize_obs=False,
                  vs_actions=[0.,0.5,3.],
                  t_actions=[-1.5,0.,1.5],
                  desire_speed=3.,
@@ -200,6 +201,7 @@ class TIntersectionMulti(TrafficEnv):
 
         self.yld = yld
         self.observe_mode = observe_mode
+        self.normalize_obs = normalize_obs
         self.vs_actions = vs_actions
         self.t_actions = t_actions
         # we use target value instead of target change so system is Markovian
@@ -368,7 +370,6 @@ class TIntersectionMulti(TrafficEnv):
                 obs[i:i+2] = self._cars[indx].position - self._cars[0].position
                 obs[i+2:i+4] = self._cars[indx].velocity - self._cars[0].velocity
                 i += 4
-            obs = np.copy(obs)
         elif self.observe_mode == 'important':
             obs = np.zeros(int(4*4+4))
             obs[:2] = self._cars[0].position
@@ -382,7 +383,12 @@ class TIntersectionMulti(TrafficEnv):
                     obs[i:i+2] = self._cars[indx].position - self._cars[0].position
                     obs[i+2:i+4] = self._cars[indx].velocity - self._cars[0].velocity
                 i += 4
-            obs = np.copy(obs)
+        if self.normalize_obs:
+            obs[0::4] = obs[0::4]/self.right_bound
+            obs[1::4] = obs[1::4]/self.right_bound
+            obs[2::4] = obs[2::4]/self.desire_speed
+            obs[3::4] = obs[3::4]/self.desire_speed
+        obs = np.copy(obs)
         return obs
 
     @property
@@ -603,7 +609,9 @@ class TIntersectionMulti(TrafficEnv):
 if __name__ == '__main__':
     import time
     import pdb
-    env = TIntersectionMulti(num_updates=1, yld=0.5, driver_sigma=0.1, observe_mode='full')
+    env = TIntersectionMulti(num_updates=1, yld=0.5, driver_sigma=0.1, 
+                            normalize_obs=True,
+                            observe_mode='full')
     obs = env.reset()
     img = env.render()
     done = False
