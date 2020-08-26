@@ -8,11 +8,26 @@ import torch_geometric.utils as pyg_utils
 
 from rlkit.torch.networks import Mlp
 
+def get_activation(activation):
+    print(activation)
+    if activation == 'relu':
+        return torch.nn.ReLU()
+    elif activation == 'prelu':
+        return torch.nn.PReLU()
+    elif activation == 'tanh':
+        return torch.nn.Tanh()
+    elif (activation is None) or (activation == 'none'):
+        return torch.nn.Identity()
+    else:
+        raise NotImplementedError
+
 class GNNNet(torch.nn.Module):
     def __init__(self, 
                 pre_graph_builder, 
                 node_dim,
                 num_conv_layers=3,
+                hidden_activation=None,
+                output_activation=None,
                 attentioner=None,
                 ):
         super(GNNNet, self).__init__()
@@ -25,6 +40,8 @@ class GNNNet(torch.nn.Module):
         self.node_dim = node_dim
         self.num_conv_layers = num_conv_layers
         self.convs = self.build_convs(self.node_input_dim, self.node_dim, self.num_conv_layers)
+        self.hidden_activations = nn.ModuleList([get_activation(hidden_activation) for l in range(num_conv_layers)])
+        self.output_activation = get_activation(output_activation)
 
         # attentioner
         self.attentioner = attentioner
@@ -47,9 +64,11 @@ class GNNNet(torch.nn.Module):
         for l, conv in enumerate(self.convs):
             # self.check_input(x, edge_index)
             x = conv(x, edge_index)
+            x = self.hidden_activations[l](x)
         if hasattr(self, 'attentioner') and self.attentioner:
             x, attention_weights = self.attentioner(x, edge_index, return_attention_weights=True)
         x = x.reshape(batch_size,-1,self.node_dim)
+        x = self.output_activation(x)
         if return_attention_weights:
             return x, attention_weights
         else:
