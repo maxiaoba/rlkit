@@ -25,7 +25,7 @@ def experiment(variant):
     action_dim = eval_env.action_space.n
     label_num = expl_env.label_num
     label_dim = expl_env.label_dim
-    
+
     encoder = nn.Sequential(
              nn.Linear(obs_dim,32),
              nn.ReLU(),
@@ -111,7 +111,7 @@ if __name__ == "__main__":
             driver_sigma=args.ds,
         ),
         algorithm_kwargs=dict(
-            num_epochs=(args.epoch if args.epoch else 1000),
+            num_epochs=(args.epoch if args.epoch else 2000),
             num_eval_steps_per_epoch=1000,
             num_train_loops_per_epoch=1,
             num_trains_per_train_loop=1,
