@@ -23,7 +23,9 @@ def experiment(variant):
     eval_env = make_env(args.exp_name,**variant['env_kwargs'])
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
-
+    label_num = expl_env.label_num
+    label_dim = expl_env.label_dim
+    
     encoder = nn.Sequential(
              nn.Linear(obs_dim,32),
              nn.ReLU(),

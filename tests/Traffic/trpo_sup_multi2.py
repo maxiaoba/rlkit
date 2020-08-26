@@ -22,6 +22,7 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
     label_num = expl_env.label_num
+    label_dim = expl_env.label_dim
 
     encoder = nn.Sequential(
              nn.Linear(obs_dim,32),
@@ -29,15 +30,15 @@ def experiment(variant):
             )
     from layers import ReshapeLayer, FlattenLayer, ConcatLayer
     sup_learner = nn.Sequential(
-            nn.Linear(32, int(expl_env.label_num*expl_env.label_dim)),
-            ReshapeLayer(shape=(expl_env.label_num, expl_env.label_dim)),
+            nn.Linear(32, int(label_num*label_dim)),
+            ReshapeLayer(shape=(label_num, label_dim)),
         )
     decoder = nn.Sequential(
             ConcatLayer([
                 nn.Sequential(nn.Linear(32,16),nn.ReLU()),
                 nn.Sequential(sup_learner,nn.Softmax(dim=-1),FlattenLayer()),
                 ],need_gradients=True),
-            nn.Linear(16+int(expl_env.label_num*expl_env.label_dim), action_dim),
+            nn.Linear(16+int(label_num*label_dim), action_dim),
         )
     from sup_softmax_policy import SupSoftmaxPolicy
     policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
