@@ -10,7 +10,7 @@ from rlkit.torch.core import eval_np, np_ify
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
-parser.add_argument('--extra_name', type=str, default='yld0.5ds0.0full')
+parser.add_argument('--extra_name', type=str, default='nobyld0.5ds0.1full')
 parser.add_argument('--log_dir', type=str, default='PPO')
 parser.add_argument('--file', type=str, default='params')
 parser.add_argument('--epoch', type=int, default=None)

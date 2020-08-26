@@ -133,7 +133,7 @@ if __name__ == "__main__":
         trainer_kwargs=dict(
             discount=0.99,
             max_path_length=max_path_length,
-            policy_lr=(args.lr if args.lr else 1e-4),
+            policy_lr=(args.lr if args.lr else 1e-2),
             vf_lr=(args.lr if args.lr else 1e-3),
             exploration_bonus=(args.eb if args.eb else 0.),
             sup_weight=(args.sw if args.sw else 0.1),

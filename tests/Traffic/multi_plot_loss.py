@@ -9,9 +9,11 @@ itr_interval = 100
 max_itr = 2e4
 
 fields = [
-            'evaluation/Average Returns',
+            # 'evaluation/Average Returns',
             # 'evaluation/Actions Max',
             # 'evaluation/Actions Min',
+            # 'evaluation/Num Success',
+            # 'evaluation/Num Timeout',
             # 'evaluation/Num Fail',
             # 'exploration/Average Returns',
             # 'exploration/Returns Max',
@@ -20,13 +22,15 @@ fields = [
             # 'trainer/SUP LossAfter',
             # 'trainer/LossBefore',
             # 'trainer/LossAfter',
-            # 'trainer/KLBefore',
-            # 'trainer/KL'
+            'trainer/KLBefore',
+            'trainer/KL'
             ]
 field_names = [
-            'Eval Average Return',
+            # 'Eval Average Return',
             # 'Eval Action Max',
             # 'Eval Action Min',
+            # 'Eval Success',
+            # 'Eval Timeout',
             # 'Eval Fail',
             # 'Expl Average Return',
             # 'Expl Max Return',
@@ -35,13 +39,13 @@ field_names = [
             # 'Sup LossAfter',
             # 'LossBefore',
             # 'LossAfter',
-            # 'KLBefore',
-            # 'KL',
+            'KLBefore',
+            'KL',
             ]
 itr_name = 'epoch'
 min_loss = [-1000]*100
 max_loss = [1000]*100
-exp_name = "t_intersection_multiyld0.5ds0.0full"
+exp_name = "t_intersection_multinobyld0.5ds0.1full"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
@@ -53,13 +57,13 @@ policies = [
             'PPOGNN',
             'PPOSupOnlineGNN',
             # 'PPOSupOnlineGNNeb0.1',
-            'PPOGNNattention',
-            'PPOSupOnlineGNNattention',
-            # 'TRPO',
-            # 'TRPOSup',
+            # 'PPOGNNattention',
+            # 'PPOSupOnlineGNNattention',
+            'TRPO',
+            'TRPOSup',
             # 'TRPOSupeb0.1',
-            # 'TRPOGNN',
-            # 'TRPOSupGNN',
+            'TRPOGNN',
+            'TRPOSupGNN',
             # 'TRPOSupGNNeb0.1',
             # 'TRPOGNNattention',
             # 'TRPOSupGNNattention',
