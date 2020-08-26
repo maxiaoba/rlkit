@@ -29,7 +29,7 @@ def experiment(variant):
                             other_init=torch.tensor([1.,0.]),
                             )
     from gnn_net import GNNNet
-    if variant['attention']:
+    if variant['gnn_attention']:
         import torch_geometric.nn as pyg_nn
         attentioner = pyg_nn.GATConv(16,16)
     else:
@@ -38,7 +38,9 @@ def experiment(variant):
                 pre_graph_builder=gb, 
                 node_dim=16,
                 num_conv_layers=3,
-                attentioner=attentioner)
+                attentioner=attentioner,
+                hidden_activation=variant['gnn_activation'],
+                )
     encoder = gnn
     from layers import FlattenLayer, SelectLayer
     decoder = nn.Sequential(
@@ -110,6 +112,7 @@ if __name__ == "__main__":
     parser.add_argument('--obs_mode', type=str, default='full')
     parser.add_argument('--log_dir', type=str, default='TRPOSupGNN')
     parser.add_argument('--attention', action='store_true', default=False)
+    parser.add_argument('--act', type=str, default=None)
     parser.add_argument('--sw', type=float, default=None)
     parser.add_argument('--eb', type=float, default=None)
     parser.add_argument('--lr', type=float, default=None)
@@ -123,6 +126,7 @@ if __name__ == "__main__":
     pre_dir = './Data/'+args.exp_name+('nob' if args.nob else '')+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs_mode
     main_dir = args.log_dir\
                 +('attention' if args.attention else '')\
+                +(('act'+args.act) if args.act else '')\
                 +(('sw'+str(args.sw)) if args.sw else '')\
                 +(('eb'+str(args.eb)) if args.eb else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
@@ -131,7 +135,8 @@ if __name__ == "__main__":
     max_path_length = 200
     # noinspection PyTypeChecker
     variant = dict(
-        attention=args.attention,
+        gnn_attention=args.attention,
+        gnn_activation=args.act,
         env_kwargs=dict(
             normalize_obs=args.nob,
             observe_mode=args.obs_mode,
