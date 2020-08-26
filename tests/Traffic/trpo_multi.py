@@ -17,7 +17,6 @@ from rlkit.torch.torch_rl_algorithm import TorchOnlineRLAlgorithm
 from log_path import get_traffic_path_information
 
 def experiment(variant):
-    import sys
     from traffic.make_env import make_env
     expl_env = make_env(args.exp_name,**variant['env_kwargs'])
     eval_env = make_env(args.exp_name,**variant['env_kwargs'])
@@ -40,6 +39,7 @@ def experiment(variant):
         )
     from sup_softmax_policy import SupSoftmaxPolicy
     policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
+    print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
 
     vf = Mlp(
         hidden_sizes=[32, 32],

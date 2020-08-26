@@ -17,7 +17,6 @@ from rlkit.torch.torch_rl_algorithm import TorchOnlineRLAlgorithm
 from log_path import get_traffic_path_information
 
 def experiment(variant):
-    import sys
     from traffic.make_env import make_env
     expl_env = make_env(args.exp_name,**variant['env_kwargs'])
     eval_env = make_env(args.exp_name,**variant['env_kwargs'])

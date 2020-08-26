@@ -22,6 +22,7 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
     label_num = expl_env.label_num
+    label_dim = expl_env.label_dim
 
     from graph_builder_multi import MultiTrafficGraphBuilder
     gb = MultiTrafficGraphBuilder(input_dim=4, node_num=expl_env.max_veh_num+1,
@@ -29,17 +30,17 @@ def experiment(variant):
                             other_init=torch.tensor([1.,0.]),
                             )
     from gnn_net import GNNNet
-    if variant['gnn_attention']:
+    if variant['gnn_kwargs']['attention']:
         import torch_geometric.nn as pyg_nn
-        attentioner = pyg_nn.GATConv(16,16)
+        attentioner = pyg_nn.GATConv(variant['gnn_kwargs']['node'],variant['gnn_kwargs']['node'])
     else:
         attentioner = None
     gnn = GNNNet( 
                 pre_graph_builder=gb, 
-                node_dim=16,
-                num_conv_layers=3,
+                node_dim=variant['gnn_kwargs']['node'],
+                num_conv_layers=variant['gnn_kwargs']['layer'],
                 attentioner=attentioner,
-                hidden_activation=variant['gnn_activation'],
+                hidden_activation=variant['gnn_kwargs']['activation'],
                 )
     encoder = gnn
     from layers import FlattenLayer, SelectLayer
@@ -47,16 +48,17 @@ def experiment(variant):
                 SelectLayer(1,0),
                 FlattenLayer(),
                 nn.ReLU(),
-                nn.Linear(16,action_dim)
+                nn.Linear(variant['gnn_kwargs']['node'],action_dim)
             )
     from layers import ReshapeLayer
     sup_learner = nn.Sequential(
             SelectLayer(1,np.arange(1,expl_env.max_veh_num+1)),
             nn.ReLU(),
-            nn.Linear(16, 2),
+            nn.Linear(variant['gnn_kwargs']['node'], label_dim),
         )
     from sup_softmax_policy import SupSoftmaxPolicy
     policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
+    print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
 
     vf = Mlp(
         hidden_sizes=[32, 32],
@@ -107,11 +109,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
     parser.add_argument('--nob', action='store_true', default=False)
+    parser.add_argument('--obs', type=str, default='full')
+    parser.add_argument('--label', type=str, default='full')
     parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
-    parser.add_argument('--obs_mode', type=str, default='full')
     parser.add_argument('--log_dir', type=str, default='TRPOSupGNN')
     parser.add_argument('--attention', action='store_true', default=False)
+    parser.add_argument('--node', type=int, default=16)
+    parser.add_argument('--layer', type=int, default=3)
     parser.add_argument('--act', type=str, default=None)
     parser.add_argument('--sw', type=float, default=None)
     parser.add_argument('--eb', type=float, default=None)
@@ -123,8 +128,10 @@ if __name__ == "__main__":
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
-    pre_dir = './Data/'+args.exp_name+('nob' if args.nob else '')+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs_mode
+    pre_dir = './Data/'+args.exp_name+('nob' if args.nob else '')+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs+args.label
     main_dir = args.log_dir\
+                +('node'+str(args.node))\
+                +('layer'+str(args.layer))\
                 +('attention' if args.attention else '')\
                 +(('act'+args.act) if args.act else '')\
                 +(('sw'+str(args.sw)) if args.sw else '')\
@@ -135,11 +142,17 @@ if __name__ == "__main__":
     max_path_length = 200
     # noinspection PyTypeChecker
     variant = dict(
-        gnn_attention=args.attention,
-        gnn_activation=args.act,
+        gnn_kwargs=dict(
+            node=args.node,
+            layer=args.layer,
+            attention=args.attention,
+            activation=args.act,
+        ),
         env_kwargs=dict(
+            num_updates=1,
             normalize_obs=args.nob,
-            observe_mode=args.obs_mode,
+            observe_mode=args.obs,
+            label_mode=args.label,
             yld=args.yld,
             driver_sigma=args.ds,
         ),
