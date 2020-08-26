@@ -12,61 +12,41 @@ from traffic.actions.trajectory_accel_action import TrajectoryAccelAction
 from traffic.constants import *
 
 class YNYDriver(XYSeperateDriver):
-    def __init__(self, yld=True, t=1.0, s_min=3.0,
-                v_normal=3., v_ny=6., 
-                s_normal=3., s_ny=1.,
-                **kwargs):
+    def __init__(self, yld=True, **kwargs):
         self.yld = yld
-        self.t = t 
-        self.s_min = 3.0
-        self.v_normal = v_normal
-        self.v_ny = v_ny
-        self.s_normal = s_normal
-        self.s_ny = s_ny
-        self.intention = 0 # 0: noraml drive; 1: yield 2: not yield
+        if self.yld:
+            self.intention = 0
+        else:
+            self.intention = 1
         super(YNYDriver, self).__init__(**kwargs)
 
     def set_yld(self, yld):
         self.yld = yld
-
-    def observe(self, cars, road):
-        s = cars[0].position[0] - self.car.position[0]
-        s = s * self.x_driver.direction
-        t = self.car.get_distance(cars[0],1)
-        # print("t: ",t, self.t1, self.t2)
-        self.x_driver.set_v_des(self.v_normal)
-        self.x_driver.s_des = self.s_normal
-        if (s < self.s_min) or (t > self.t): # normal drive
-            self.x_driver.observe(cars[1:], road)
+        if self.yld:
             self.intention = 0
         else:
-            if self.yld and (t <= self.t): # yield
-                self.x_driver.min_overlap = self.t
-                self.x_driver.observe(cars, road)
-                self.intention = 1
-            else: # not yield
-                self.x_driver.set_v_des(self.v_ny)
-                self.x_driver.s_des = self.s_ny
-                self.x_driver.observe(cars[1:], road)
-                self.intention = 2
-            
+            self.intention = 1
+
+    def observe(self, cars, road):
+        if self.yld:
+            self.x_driver.observe(cars, road)
+            self.intention = 0
+        else:
+            self.x_driver.observe(cars[1:], road)
+            self.intention = 1
         self.y_driver.observe(cars, road)
 
     def setup_render(self, viewer):
         if self.intention == 0:
             self.car._color = GREEN_COLORS[0]
-        elif self.intention == 1:
-            self.car._color = BLUE_COLORS[0]
-        elif self.intention == 2:
-            self.car._color = RED_COLORS[0]
+        else:
+            self.car._color = RED_COLORS[2]
 
     def update_render(self, camera_center):
         if self.intention == 0:
             self.car._color = GREEN_COLORS[0]
-        elif self.intention == 1:
-            self.car._color = BLUE_COLORS[0]
-        elif self.intention == 2:
-            self.car._color = RED_COLORS[0]
+        else:
+            self.car._color = RED_COLORS[2]
 
 class EgoTrajectory:
     def xy_to_traj(self, pos):
@@ -213,7 +193,7 @@ class TIntersectionMulti(TrafficEnv):
                              RoadSegment([(-2,-10.),(2,-10.),(2,0.),(-2,0.)])]),
                  left_bound = -20.,
                  right_bound = 20.,
-                 gap_min = 3.,
+                 gap_min = 2.,
                  gap_max = 10.,
                  max_veh_num = 12,
                  num_updates=1,
@@ -248,7 +228,6 @@ class TIntersectionMulti(TrafficEnv):
         self.gap_min = gap_min
         self.gap_max = gap_max
         self.max_veh_num = max_veh_num
-        self.label_dim = 3
         if self.label_mode == 'full':
             if observe_mode == 'full':
                 self.label_num = self.max_veh_num
@@ -263,7 +242,7 @@ class TIntersectionMulti(TrafficEnv):
         self.car_max_speed=40.0
         self.car_expose_level=4
         self.driver_sigma = driver_sigma
-        self.s_des = 3.0
+        self.s_des = 2.0
         self.s_min = 3.0
         self.min_overlap = 1.0
 
@@ -298,10 +277,9 @@ class TIntersectionMulti(TrafficEnv):
         elif self.label_mode == 'important':
             # [ind_ll, ind_lr, ind_ul, ind_ur]
             ind_ll, ind_lr, ind_ul, ind_ur = self.get_important_indices()
-            if ind_lr is not None:
-                intentions[0] = self._drivers[ind_lr].intention
-            if ind_ul is not None:
-                intentions[1] = self._drivers[ind_ul].intention
+            intentions[0] = self._drivers[ind_lr].intention
+            intentions[1] = self._drivers[ind_ul].intention
+
         return intentions
 
     def update(self, action):
@@ -591,24 +569,7 @@ class TIntersectionMulti(TrafficEnv):
                 if ind is None:
                     pass
                 else:
-                    center = self._cars[ind].position - self.get_camera_center()
-                    attrs = {"color":(1.,0.,0.),"linewidth":1.}
-                    from traffic.rendering import make_circle, _add_attrs
-                    circle = make_circle(radius=1., res=15, filled=False, center=center)
-                    _add_attrs(circle, attrs)
-                    self.viewer.add_onetime(circle)
-        if self.label_mode == 'important':
-            ind_ll, ind_lr, ind_ul, ind_ur = self.get_important_indices()
-            for ind in [ind_lr, ind_ul]:
-                if ind is None:
-                    pass
-                else:
-                    center = self._cars[ind].position - self.get_camera_center()
-                    attrs = {"color":(0.,0.,1.),"linewidth":1.}
-                    from traffic.rendering import make_circle, _add_attrs
-                    circle = make_circle(radius=0.8, res=15, filled=False, center=center)
-                    _add_attrs(circle, attrs)
-                    self.viewer.add_onetime(circle)
+                    self._cars[ind].geom.set_color(0,0,1,0.5)
         if extra_input:
             if ('attention_weight' in extra_input.keys()) and (extra_input['attention_weight'] is not None):
                 edge_index = extra_input['attention_weight'][0]
@@ -663,7 +624,7 @@ if __name__ == '__main__':
     import pdb
     env = TIntersectionMulti(num_updates=1, yld=0.5, driver_sigma=0.1, 
                             normalize_obs=True,
-                            observe_mode='important',
+                            observe_mode='full',
                             label_mode='important')
     obs = env.reset()
     img = env.render()

@@ -190,6 +190,7 @@ class PPOSupOnlineTrainer(PPOTrainer):
         objective = advantages - self.sup_weight*sup_loss
         # surrogate = likelihood_ratio * (advantages - self.sup_weight*sup_loss)
         surrogate = likelihood_ratio * objective
+        # print(advantages.shape, sup_loss.shape, objective.shape, likelihood_ratio.shape, surrogate.shape)
 
         # Clipping the constraint
         likelihood_ratio_clip = torch.clamp(likelihood_ratio,
@@ -208,7 +209,7 @@ class PPOSupOnlineTrainer(PPOTrainer):
         labels[~valid_mask] = 0     
         lls = self.policy.sup_log_prob(obs, labels)
         lls[~valid_mask] = 0
-        return -lls.mean(-1)
+        return -lls.sum(-1)/valid_mask.sum(-1)
 
     def _add_exploration_bonus(self, paths):
         paths = copy.deepcopy(paths)

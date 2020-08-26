@@ -33,8 +33,8 @@ def experiment(variant):
     decoder = nn.Linear(32, action_dim)
     from layers import ReshapeLayer
     sup_learner = nn.Sequential(
-            nn.Linear(32, 2*expl_env.max_veh_num),
-            ReshapeLayer(shape=(expl_env.max_veh_num, 2)),
+            nn.Linear(32, int(expl_env.label_num*expl_env.label_dim)),
+            ReshapeLayer(shape=(expl_env.label_num, expl_env.label_dim)),
         )
     from sup_softmax_policy import SupSoftmaxPolicy
     policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
@@ -79,9 +79,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
     parser.add_argument('--nob', action='store_true', default=False)
+    parser.add_argument('--obs', type=str, default='full')
+    parser.add_argument('--label', type=str, default='full')
     parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
-    parser.add_argument('--obs_mode', type=str, default='full')
     parser.add_argument('--log_dir', type=str, default='PPO')
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
@@ -91,7 +92,7 @@ if __name__ == "__main__":
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
-    pre_dir = './Data/'+args.exp_name+('nob' if args.nob else '')+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs_mode
+    pre_dir = './Data/'+args.exp_name+('nob' if args.nob else '')+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs+args.label
     main_dir = args.log_dir\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
@@ -100,8 +101,10 @@ if __name__ == "__main__":
     # noinspection PyTypeChecker
     variant = dict(
         env_kwargs=dict(
+            num_updates=1,
             normalize_obs=args.nob,
-            observe_mode=args.obs_mode,
+            observe_mode=args.obs,
+            label_mode=args.label,
             yld=args.yld,
             driver_sigma=args.ds,
         ),

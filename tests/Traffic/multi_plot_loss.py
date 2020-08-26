@@ -19,11 +19,11 @@ fields = [
             # 'exploration/Returns Max',
             # 'exploration/Returns Min',
             # 'exploration/Num Fail',
-            # 'trainer/SUP LossAfter',
+            'trainer/SUP LossAfter',
             # 'trainer/LossBefore',
             # 'trainer/LossAfter',
-            'trainer/KLBefore',
-            'trainer/KL'
+            # 'trainer/KLBefore',
+            # 'trainer/KL'
             ]
 field_names = [
             # 'Eval Average Return',
@@ -36,11 +36,11 @@ field_names = [
             # 'Expl Max Return',
             # 'Expl Min Return',
             # 'Expl Fail',
-            # 'Sup LossAfter',
+            'Sup LossAfter',
             # 'LossBefore',
             # 'LossAfter',
-            'KLBefore',
-            'KL',
+            # 'KLBefore',
+            # 'KL',
             ]
 itr_name = 'epoch'
 min_loss = [-1000]*100
@@ -51,19 +51,23 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'PPO',
+            # 'PPO',
             'PPOSupOnline',
             # 'PPOSupOnlineeb0.1',
-            'PPOGNN',
+            # 'PPOGNN',
+            # 'PPOGNNactrelu',
             'PPOSupOnlineGNN',
+            'PPOSupOnlineGNNactrelu',
             # 'PPOSupOnlineGNNeb0.1',
             # 'PPOGNNattention',
             # 'PPOSupOnlineGNNattention',
-            'TRPO',
+            # 'TRPO',
             'TRPOSup',
             # 'TRPOSupeb0.1',
-            'TRPOGNN',
+            # 'TRPOGNN',
+            # 'TRPOGNNactrelu',
             'TRPOSupGNN',
+            'TRPOSupGNNactrelu',
             # 'TRPOSupGNNeb0.1',
             # 'TRPOGNNattention',
             # 'TRPOSupGNNattention',
@@ -76,7 +80,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'ppo'
+extra_name = ''
 
 pre_name = ''
 post_name = ''

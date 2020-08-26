@@ -167,10 +167,10 @@ class Car:
                     [self._length / 2.0, -self._width / 2.0],
                     [self._length / 2.0, self._width / 2.0],
                     [-self._length / 2.0, self._width / 2.0]]
-        arr_poly = [[-self._length / 8.0, -self._width / 4.0],
+        arr_poly = [[0., -self._width / 4.0],
                     [self._length / 2.0, -self._width / 4.0],
                     [self._length / 2.0, self._width / 4.0],
-                    [-self._length / 8.0, self._width / 4.0]]
+                    [0., self._width / 4.0]]
         self.geom = rendering.make_polygon(car_poly)
         self.xform = rendering.Transform()
         self.geom.set_color(*self._color)
