@@ -237,7 +237,8 @@ class TIntersectionMulti(TrafficEnv):
         self.car_max_speed=40.0
         self.car_expose_level=4
         self.driver_sigma = driver_sigma
-        self.s_min = 2.0
+        self.s_des = 2.0
+        self.s_min = 3.0
         self.min_overlap = 1.0
 
         super(TIntersectionMulti, self).__init__(
@@ -447,7 +448,7 @@ class TIntersectionMulti(TrafficEnv):
                           max_accel=self.car_max_accel, max_speed=self.car_max_speed,
                           expose_level=self.car_expose_level)
         driver = YNYDriver(idx=idx, car=car, dt=self.dt,
-                    x_driver=IDMDriver(idx=idx, car=car, sigma=self.driver_sigma, s_min=self.s_min, axis=0, min_overlap=self.min_overlap, dt=self.dt), 
+                    x_driver=IDMDriver(idx=idx, car=car, sigma=self.driver_sigma, s_des=self.s_des, s_min=self.s_min, axis=0, min_overlap=self.min_overlap, dt=self.dt), 
                     y_driver=PDDriver(idx=idx, car=car, sigma=0., axis=1, dt=self.dt)) 
         car.set_position(np.array([x, y]))
         car.set_velocity(np.array([vx, vy]))

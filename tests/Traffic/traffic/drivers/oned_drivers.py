@@ -11,13 +11,14 @@ class IDMDriver(OneDDriver):
     Intelligent Driver Model
     """
 
-    def __init__(self, sigma=0.0, v_des=10.0, k_spd=1.0, delta=4.0, T=1.5, s_min=1.5, a_max=3.0, d_cmf=2.0,
+    def __init__(self, sigma=0.0, v_des=10.0, k_spd=1.0, delta=4.0, T=1.5, s_des=1.5, s_min=0., a_max=3.0, d_cmf=2.0,
                  d_max=9.0, v_min=0., min_overlap=0., **kwargs):
         # sigma action noise [m/s^2]
         # v_des desired speed [m/s]
         # k_spd proportional constant for speed tracking when in freeflow [s⁻¹]
         # delta acceleration exponent [-]
         # T desired time headway [s]
+        # s_des desire gap [m]
         # s_min minimum acceptable gap [m]
         # a_max maximum acceleration ability [m/s^2]
         # d_cmf comfortable deceleration [m/s^2] (positive)
@@ -27,12 +28,14 @@ class IDMDriver(OneDDriver):
         self.k_spd = k_spd
         self.delta = delta
         self.T = T
+        self.s_des = s_des
         self.s_min = s_min
         self.a_max = a_max
         self.d_cmf = d_cmf
         self.d_max = d_max
         self.v_min = v_min
         self.min_overlap = min_overlap
+
 
         self.front_distance = None
         self.front_speed = None
@@ -49,7 +52,7 @@ class IDMDriver(OneDDriver):
         for car in cars:
             if car is self.car:
                 continue
-            if (car.position[self.axis0]-self.car.position[self.axis0]) * self.direction > 0:
+            if (car.position[self.axis0]-self.car.position[self.axis0]) * self.direction > self.s_min:
                 # another car is in front of me
                 if self.car.get_distance(car,self.axis1) < self.min_overlap:
                     # print('overlapping')
@@ -72,7 +75,7 @@ class IDMDriver(OneDDriver):
             self.front_distance = 0.1
         if self.front_speed is not None:
             dv = self.front_speed - v_ego
-            s_des = self.s_min + v_ego * self.T - v_ego * dv / (
+            s_des = self.s_des + v_ego * self.T - v_ego * dv / (
                 2 * np.sqrt(self.a_max * self.d_cmf))
             if v_des > 0.0:
                 v_ratio = v_ego / v_des
