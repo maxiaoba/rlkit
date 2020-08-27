@@ -10,8 +10,8 @@ from rlkit.torch.core import eval_np, np_ify
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
-parser.add_argument('--extra_name', type=str, default='nobyld0.5ds0.1fullimportant')
+parser.add_argument('--exp_name', type=str, default='t_intersection_extreme')
+parser.add_argument('--extra_name', type=str, default='yld0.5ds0.1fullfull')
 parser.add_argument('--log_dir', type=str, default='PPO')
 parser.add_argument('--file', type=str, default='params')
 parser.add_argument('--epoch', type=int, default=None)
@@ -73,7 +73,7 @@ while True:
 	# print("o: ",o)
 	# print('r: ',r)
 	print(done)
-	pdb.set_trace()
+	# pdb.set_trace()
 	time.sleep(0.1)
 	if path_length > max_path_length or done:
 		print('c_r: ',c_r)

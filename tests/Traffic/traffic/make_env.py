@@ -13,7 +13,7 @@ def make_env(env_name, **kwargs):
 		env = TIntersectionMulti(**kwargs)
 	elif env_name == 't_intersection_extreme':
 		from traffic.scenarios.t_intersection_extreme import TIntersectionExtreme
-		env = TIntersectionMulti(**kwargs)
+		env = TIntersectionExtreme(**kwargs)
 	else:
 		raise NotImplementedError
 	return env

@@ -194,8 +194,8 @@ class TIntersectionExtreme(TrafficEnv):
                  observe_mode='full',
                  label_mode='full',
                  normalize_obs=False,
-                 vs_actions=[0.,0.5,3.],
-                 t_actions=[-1.5,0.,1.5],
+                 vs_actions=[0.,3.],
+                 t_actions=[0.],
                  desire_speed=3.,
                  driver_sigma = 0.,
                  speed_cost=0.0,
@@ -461,7 +461,7 @@ class TIntersectionExtreme(TrafficEnv):
         speed_cost = -np.abs(self.desire_speed-v_s)/self.desire_speed
         reward += self.speed_cost*speed_cost
 
-        t_cost = -np.abs(t)/np.max(self.t_actions)
+        t_cost = -np.abs(t)/(np.max(self.t_actions)+1e-3)
         reward += self.t_cost*t_cost
 
         control_cost = 0. # TODO
