@@ -45,7 +45,7 @@ field_names = [
 itr_name = 'epoch'
 min_loss = [-1000]*100
 max_loss = [1000]*100
-exp_name = "t_intersection_multinobyld0.5ds0.1full_1"
+exp_name = "t_intersection_multinobyld0.5ds0.1fullfull"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
@@ -53,25 +53,14 @@ plot_path = "./Data/"+exp_name
 policies = [
             'PPO',
             'PPOSupOnline',
-            # 'PPOSupOnlineeb0.1',
-            # 'PPOGNN',
-            # 'PPOGNNactrelu',
-            # 'PPOSupOnlineGNN',
-            # 'PPOSupOnlineGNNactrelu',
-            # 'PPOSupOnlineGNNeb0.1',
-            # 'PPOGNNattention',
-            # 'PPOSupOnlineGNNattention',
+            'PPOSupOnline2',
+            # 'PPOGNNnode32layer3actrelu',
+            # 'PPOSupOnlineGNNnode32layer3actrelu',
             'TRPO',
             'TRPOSup',
-            # 'TRPOSupeb0.1',
-            # 'TRPOGNN',
-            # 'TRPOGNNactrelu',
-            # 'TRPOSupGNN',
-            # 'TRPOSupGNNactrelu',
-            # 'TRPOSupGNNeb0.1',
-            # 'TRPOGNNattention',
-            # 'TRPOSupGNNattention',
-            # 'TRPOSupGNNattentioneb0.1',
+            'TRPOSup2',
+            # 'TRPOGNNnode32layer3actrelu',
+            # 'TRPOSupGNNnode32layer3actrelu',
         ]
 policy_names = policies
 

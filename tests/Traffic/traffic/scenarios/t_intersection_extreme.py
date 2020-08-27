@@ -12,13 +12,13 @@ from traffic.actions.trajectory_accel_action import TrajectoryAccelAction
 from traffic.constants import *
 
 class YNYDriver(XYSeperateDriver):
-    def __init__(self, yld=True, t=1.0, s_min=3.0,
+    def __init__(self, yld=True, t=1.5, s_min=0.,
                 v_normal=3., v_ny=6., 
                 s_normal=3., s_ny=1.,
                 **kwargs):
         self.yld = yld
         self.t = t 
-        self.s_min = 3.0
+        self.s_min = s_min
         self.v_normal = v_normal
         self.v_ny = v_ny
         self.s_normal = s_normal
@@ -33,14 +33,15 @@ class YNYDriver(XYSeperateDriver):
         s = cars[0].position[0] - self.car.position[0]
         s = s * self.x_driver.direction
         t = self.car.get_distance(cars[0],1)
+        ego_vy = cars[0].velocity[1]
         # print("t: ",t, self.t1, self.t2)
         self.x_driver.set_v_des(self.v_normal)
         self.x_driver.s_des = self.s_normal
-        if (s < self.s_min) or (t > self.t): # normal drive
+        if (s < self.s_min) or (t > self.t) or (ego_vy <= 0): # normal drive
             self.x_driver.observe(cars[1:], road)
             self.intention = 0
         else:
-            if self.yld and (t <= self.t): # yield
+            if self.yld: # yield
                 self.x_driver.min_overlap = self.t
                 self.x_driver.observe(cars, road)
                 self.intention = 1
@@ -49,23 +50,18 @@ class YNYDriver(XYSeperateDriver):
                 self.x_driver.s_des = self.s_ny
                 self.x_driver.observe(cars[1:], road)
                 self.intention = 2
-            
         self.y_driver.observe(cars, road)
 
     def setup_render(self, viewer):
-        if self.intention == 0:
+        if self.yld:
             self.car._color = GREEN_COLORS[0]
-        elif self.intention == 1:
-            self.car._color = BLUE_COLORS[0]
-        elif self.intention == 2:
+        else:
             self.car._color = RED_COLORS[0]
 
     def update_render(self, camera_center):
-        if self.intention == 0:
+        if self.yld:
             self.car._color = GREEN_COLORS[0]
-        elif self.intention == 1:
-            self.car._color = BLUE_COLORS[0]
-        elif self.intention == 2:
+        else:
             self.car._color = RED_COLORS[0]
 
 class EgoTrajectory:
@@ -124,7 +120,7 @@ class EgoDriver(Driver):
                 at_max=3.0,
                 as_max_safe=6.0,
                 at_max_safe=6.0,
-                concern_distance=2.0,
+                concern_distance=0.8,
                 safe_distance=0.5,
                 safe_speed=1.0,
                 **kwargs):
@@ -192,7 +188,7 @@ class EgoDriver(Driver):
     def get_action(self):
         return TrajectoryAccelAction(self.a_s, self.a_t, self.trajectory)
 
-class TIntersectionMulti(TrafficEnv):
+class TIntersectionExtreme(TrafficEnv):
     def __init__(self,
                  yld=0.5,
                  observe_mode='full',
@@ -202,13 +198,13 @@ class TIntersectionMulti(TrafficEnv):
                  t_actions=[-1.5,0.,1.5],
                  desire_speed=3.,
                  driver_sigma = 0.,
-                 speed_cost=0.01,
-                 t_cost=0.01,
-                 control_cost=0.01,
-                 collision_cost=5.,
-                 outroad_cost=5.,
-                 survive_reward=0.01,
-                 goal_reward=5.,
+                 speed_cost=0.0,
+                 t_cost=0.0,
+                 control_cost=0.0,
+                 collision_cost=1.,
+                 outroad_cost=1.,
+                 survive_reward=0.0,
+                 goal_reward=1.,
                  road=Road([RoadSegment([(-100.,0.),(100.,0.),(100.,8.),(-100.,8.)]),
                              RoadSegment([(-2,-10.),(2,-10.),(2,0.),(-2,0.)])]),
                  left_bound = -20.,
@@ -267,25 +263,25 @@ class TIntersectionMulti(TrafficEnv):
         self.s_min = 3.0
         self.min_overlap = 1.0
 
-        super(TIntersectionMulti, self).__init__(
+        super(TIntersectionExtreme, self).__init__(
             road=road,
             cars=[],
             drivers=[],
             dt=dt,
             **kwargs,)
 
-    def get_intentions(self):
-        intentions = np.array([np.nan]*self.label_num)
+    def get_sup_labels(self):
+        labels = np.array([np.nan]*self.label_num)
         if self.label_mode == 'full':
             i = 0
             if self.observe_mode == 'full':
                 upper_indices, lower_indices = self.get_sorted_indices()
                 for indx in lower_indices:
-                    intentions[i] = self._drivers[indx].intention
+                    labels[i] = int(self._drivers[indx].yld)
                     i += 1
                 i = int(self.max_veh_num/2)
                 for indx in upper_indices:
-                    intentions[i] = self._drivers[indx].intention
+                    labels[i] = int(self._drivers[indx].yld)
                     i += 1
             elif self.observe_mode == 'important':
                 important_indices = self.get_important_indices()
@@ -293,20 +289,20 @@ class TIntersectionMulti(TrafficEnv):
                     if indx is None:
                         i += 1
                     else:
-                        intentions[i] = self._drivers[indx].intention
+                        labels[i] = int(self._drivers[indx].yld)
                         i += 1
         elif self.label_mode == 'important':
             # [ind_ll, ind_lr, ind_ul, ind_ur]
             ind_ll, ind_lr, ind_ul, ind_ur = self.get_important_indices()
             if ind_lr is not None:
-                intentions[0] = self._drivers[ind_lr].intention
+                labels[0] = int(self._drivers[ind_lr].yld)
             if ind_ul is not None:
-                intentions[1] = self._drivers[ind_ul].intention
-        return intentions
+                labels[1] = int(self._drivers[ind_ul].yld)
+        return labels
 
     def update(self, action):
         # recorder intentios at the begining
-        self._intentions = self.get_intentions()
+        self._sup_labels = self.get_sup_labels()
 
         rl_action = self.rl_actions[action]
         self._drivers[0].v_des = rl_action[0]
@@ -336,6 +332,19 @@ class TIntersectionMulti(TrafficEnv):
                 and (ego_car.position[1] < 7.):
                 self._goal = True
                 return
+
+            for i,driver in enumerate(self._drivers):
+                if i > 0:
+                    driver.observe(self._cars, self._road)
+            important_indices = self.get_important_indices()
+            for indx in important_indices:
+                if indx is not None:
+                    if self._drivers[indx].intention == 2:
+                        self._collision = True
+                        return
+                    elif self._drivers[indx].intention == 1:
+                        self._goal = True
+                        return
 
             # remove cars that are out-of bound
             for car, driver in zip(self._cars[1:],self._drivers[1:]):
@@ -376,7 +385,7 @@ class TIntersectionMulti(TrafficEnv):
 
     def get_info(self):
         info = {}
-        info['sup_labels'] = np.copy(self._intentions)
+        info['sup_labels'] = np.copy(self._sup_labels)
 
         if self._collision:
             info['event']='collision'
@@ -457,7 +466,6 @@ class TIntersectionMulti(TrafficEnv):
 
         control_cost = 0. # TODO
         reward += self.control_cost*control_cost
-        # print(speed_cost, t_cost, control_cost)
 
         if self._collision:
             reward -= self.collision_cost
@@ -467,7 +475,7 @@ class TIntersectionMulti(TrafficEnv):
             reward += self.goal_reward
         else:
             reward += self.survive_reward
-
+        # print(speed_cost, t_cost, control_cost, reward)
         return reward
 
     def remove_car(self, car, driver):
@@ -576,7 +584,7 @@ class TIntersectionMulti(TrafficEnv):
             x -= (np.random.rand()*(self.gap_max-self.gap_min) + self.gap_min + self.car_length)
             idx += 1
 
-        self._intentions = self.get_intentions()
+        self._sup_labels = self.get_sup_labels()
         return None
 
     def setup_viewer(self):
@@ -666,7 +674,7 @@ class TIntersectionMulti(TrafficEnv):
 if __name__ == '__main__':
     import time
     import pdb
-    env = TIntersectionMulti(num_updates=1, yld=0.5, driver_sigma=0.1, 
+    env = TIntersectionExtreme(num_updates=1, yld=0.5, driver_sigma=0.1, 
                             normalize_obs=True,
                             observe_mode='important',
                             label_mode='important')
@@ -691,6 +699,7 @@ if __name__ == '__main__':
         action = int(action)
         while action < 0:
             t = 0
+            cr = 0.
             env.reset()
             env.render()
             action = input("Action\n")
@@ -713,4 +722,5 @@ if __name__ == '__main__':
             t = 0
             cr = 0.
             env.reset()
+            env.render()
     env.close()

@@ -3,6 +3,7 @@ import numpy as np
 import time
 import pdb
 from rlkit.torch.policies.softmax_policy import SoftmaxPolicy
+from sup_softmax_policy import SupSoftmaxPolicy
 from rlkit.policies.argmax import ArgmaxDiscretePolicy
 from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy, MakeDeterministic
 from rlkit.torch.core import eval_np, np_ify
@@ -10,7 +11,7 @@ from rlkit.torch.core import eval_np, np_ify
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
-parser.add_argument('--extra_name', type=str, default='nobyld0.5ds0.1full')
+parser.add_argument('--extra_name', type=str, default='nobyld0.5ds0.1fullimportant')
 parser.add_argument('--log_dir', type=str, default='PPO')
 parser.add_argument('--file', type=str, default='params')
 parser.add_argument('--epoch', type=int, default=None)
@@ -22,13 +23,14 @@ data_path = '{}/{}/seed{}/{}.pkl'.format(pre_dir,args.log_dir,args.seed,args.fil
 data = torch.load(data_path,map_location='cpu')
 if 'trainer/qf' in data.keys():
 	qf = data['trainer/qf']
-	policy = ArgmaxDiscretePolicy(qf)
+	eval_policy = ArgmaxDiscretePolicy(qf)
 else:
 	policy = data['trainer/policy']
-	if isinstance(policy, SoftmaxPolicy):
-		policy = ArgmaxDiscretePolicy(policy,use_preactivation=True)
+	if isinstance(policy, SoftmaxPolicy) or isinstance(policy, SupSoftmaxPolicy):
+		eval_policy = ArgmaxDiscretePolicy(policy,use_preactivation=True)
 	elif isinstance(policy, TanhGaussianPolicy):
-		policy = MakeDeterministic(policy)
+		eval_policy = MakeDeterministic(policy)
+
 if 'trainer/sup_learner' in data.keys():
 	sup_learner = data['trainer/sup_learner']
 else:
@@ -48,7 +50,7 @@ done = False
 c_r = 0.
 while True:
 	path_length += 1
-	a, _ = policy.get_action(o)
+	a, _ = eval_policy.get_action(o)
 	o, r, done, _ = env.step(a)
 
 	if sup_learner:
@@ -66,12 +68,12 @@ while True:
 	c_r += r
 	env.render(extra_input={'attention_weight':attention_weight,'intention':intentions})
 	print("step: ",path_length)
-	print("intentions: ",intentions)
-	# print("a: ",a)
+	# print("intentions: ",intentions)
+	print("a: ",a)
 	# print("o: ",o)
 	# print('r: ',r)
 	print(done)
-	# pdb.set_trace()
+	pdb.set_trace()
 	time.sleep(0.1)
 	if path_length > max_path_length or done:
 		print('c_r: ',c_r)
