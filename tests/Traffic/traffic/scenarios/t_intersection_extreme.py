@@ -251,7 +251,7 @@ class TIntersectionExtreme(TrafficEnv):
             elif observe_mode == 'important':
                 self.label_num = 4
         elif self.label_mode == 'important':
-            self.label_num = 2
+            self.label_num = 1
 
         self.car_length=5.0
         self.car_width=2.0
@@ -296,8 +296,6 @@ class TIntersectionExtreme(TrafficEnv):
             ind_ll, ind_lr, ind_ul, ind_ur = self.get_important_indices()
             if ind_lr is not None:
                 labels[0] = int(self._drivers[ind_lr].yld)
-            if ind_ul is not None:
-                labels[1] = int(self._drivers[ind_ul].yld)
         return labels
 
     def update(self, action):
@@ -607,7 +605,7 @@ class TIntersectionExtreme(TrafficEnv):
                     self.viewer.add_onetime(circle)
         if self.label_mode == 'important':
             ind_ll, ind_lr, ind_ul, ind_ur = self.get_important_indices()
-            for ind in [ind_lr, ind_ul]:
+            for ind in [ind_lr]:
                 if ind is None:
                     pass
                 else:
@@ -661,7 +659,6 @@ class TIntersectionExtreme(TrafficEnv):
                 elif self.label_mode == 'important':
                     ind_ll, ind_lr, ind_ul, ind_ur = self.get_important_indices()
                     car_indices[0] = (ind_lr if ind_lr else np.nan)
-                    car_indices[1] = (ind_ul if ind_ul else np.nan)
                 for car_ind,intention in zip(car_indices,extra_input['intention']):
                     if not np.isnan(car_ind):
                         from traffic.rendering import make_circle, _add_attrs
