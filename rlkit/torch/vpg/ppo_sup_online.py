@@ -209,7 +209,8 @@ class PPOSupOnlineTrainer(PPOTrainer):
         labels[~valid_mask] = 0     
         lls = self.policy.sup_log_prob(obs, labels)
         lls[~valid_mask] = 0
-        return -lls.sum(-1)/valid_mask.sum(-1)
+        # return -lls.sum(-1)/valid_mask.sum(-1)
+        return -lls.mean(-1)
 
     def _add_exploration_bonus(self, paths):
         paths = copy.deepcopy(paths)

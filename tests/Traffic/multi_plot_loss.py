@@ -10,8 +10,8 @@ max_itr = 2e4
 
 fields = [
             # 'evaluation/Average Returns',
-            'evaluation/Actions Max',
-            'evaluation/Actions Min',
+            # 'evaluation/Actions Max',
+            # 'evaluation/Actions Min',
             # 'evaluation/Num Success',
             # 'evaluation/Num Timeout',
             # 'evaluation/Num Fail',
@@ -26,9 +26,9 @@ fields = [
             # 'trainer/KL'
             ]
 field_names = [
-            # 'Eval Average Return',
-            'Eval Action Max',
-            'Eval Action Min',
+            'Eval Average Return',
+            # 'Eval Action Max',
+            # 'Eval Action Min',
             # 'Eval Success',
             # 'Eval Timeout',
             # 'Eval Fail',
@@ -45,7 +45,7 @@ field_names = [
 itr_name = 'epoch'
 min_loss = [-1000]*100
 max_loss = [1000]*100
-exp_name = "t_intersection_extremenobyld0.5ds0.1fullimportant"
+exp_name = "t_intersection_extremenobyld0.5ds0.1fullfull"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
@@ -54,13 +54,13 @@ policies = [
             'PPO',
             'PPOSupOnline',
             'PPOSupOnline2',
-            # 'PPOGNNnode32layer3actrelu',
-            # 'PPOSupOnlineGNNnode32layer3actrelu',
+            'PPOGNNnode32layer3actrelu',
+            'PPOSupOnlineGNNnode32layer3actrelu',
             'TRPO',
             'TRPOSup',
             'TRPOSup2',
-            # 'TRPOGNNnode32layer3actrelu',
-            # 'TRPOSupGNNnode32layer3actrelu',
+            'TRPOGNNnode32layer3actrelu',
+            'TRPOSupGNNnode32layer3actrelu',
         ]
 policy_names = policies
 
@@ -112,8 +112,11 @@ for fid,field in enumerate(fields):
                             itr = i-1#int(float(row[entry_dict[itr_name]]))
                             if itr > max_itr:
                                 break
-                            loss.append(np.clip(float(row[entry_dict[field]]),
-                                                min_loss[fid],max_loss[fid]))
+                            try:
+                                loss.append(np.clip(float(row[entry_dict[field]]),
+                                                    min_loss[fid],max_loss[fid]))
+                            except:
+                                pass
                             if itr % itr_interval == 0:
                                 itrs.append(itr)
                                 loss = np.mean(loss)
