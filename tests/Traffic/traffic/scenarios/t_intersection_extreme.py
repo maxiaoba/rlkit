@@ -13,16 +13,16 @@ from traffic.constants import *
 
 class YNYDriver(XYSeperateDriver):
     def __init__(self, yld=True, t=1.5, s_min=0.,
-                v_normal=3., v_ny=6., 
-                s_normal=3., s_ny=1.,
+                v_yld=3., v_nyld=6., 
+                s_yld=3., s_nyld=0.,
                 **kwargs):
         self.yld = yld
         self.t = t 
         self.s_min = s_min
-        self.v_normal = v_normal
-        self.v_ny = v_ny
-        self.s_normal = s_normal
-        self.s_ny = s_ny
+        self.v_yld = v_yld
+        self.v_nyld = v_nyld
+        self.s_yld = s_yld
+        self.s_nyld = s_nyld
         self.intention = 0 # 0: noraml drive; 1: yield 2: not yield
         super(YNYDriver, self).__init__(**kwargs)
 
@@ -35,9 +35,13 @@ class YNYDriver(XYSeperateDriver):
         t = self.car.get_distance(cars[0],1)
         ego_vy = cars[0].velocity[1]
         # print("t: ",t, self.t1, self.t2)
-        self.x_driver.set_v_des(self.v_normal)
-        self.x_driver.s_des = self.s_normal
-        if (s < self.s_min) or (t > self.t) or (ego_vy <= 0): # normal drive
+        if self.yld:
+            self.x_driver.set_v_des(self.v_yld)
+            self.x_driver.s_des = self.s_yld
+        else:
+            self.x_driver.set_v_des(self.v_nyld)
+            self.x_driver.s_des = self.s_nyld
+        if (s < self.s_min) or (t > self.t) or (ego_vy <= 0.): # normal drive
             self.x_driver.observe(cars[1:], road)
             self.intention = 0
         else:
@@ -46,10 +50,9 @@ class YNYDriver(XYSeperateDriver):
                 self.x_driver.observe(cars, road)
                 self.intention = 1
             else: # not yield
-                self.x_driver.set_v_des(self.v_ny)
-                self.x_driver.s_des = self.s_ny
                 self.x_driver.observe(cars[1:], road)
                 self.intention = 2
+
         self.y_driver.observe(cars, road)
 
     def setup_render(self, viewer):
@@ -663,7 +666,7 @@ class TIntersectionExtreme(TrafficEnv):
                     if not np.isnan(car_ind):
                         from traffic.rendering import make_circle, _add_attrs
                         start = self._cars[car_ind].position - self.get_camera_center()
-                        attrs = {"color":(intention[2],intention[0],intention[1])}
+                        attrs = {"color":(intention[0],intention[1],0.)}
                         circle = make_circle(radius=0.5, res=15, filled=True, center=start)
                         _add_attrs(circle, attrs)
                         self.viewer.add_onetime(circle) 
@@ -681,8 +684,7 @@ if __name__ == '__main__':
     maximum_step = 200
     t = 0
     cr = 0.
-    # actions = [*[8]*2,*[8]*4,*[7]*20]
-    actions = [*[1]*10,*[1]*20,*[1]*200]
+    actions = [0]*(2*maximum_step)
     # actions = np.load('/Users/xiaobaima/Dropbox/SISL/rlkit/tests/Traffic/Data/t_intersection/MyDQNcg0.1expl0.2/seed0/failure1.npy')
     while True:  #not done: 
         # pdb.set_trace()
@@ -690,10 +692,10 @@ if __name__ == '__main__':
         #     action = 7
         # else:
         #     action = actions[t][0]
-        # action = actions[t]
+        action = actions[t]
         # action = np.random.randint(env.action_space.n)
-        action = input("Action\n")
-        action = int(action)
+        # action = input("Action\n")
+        # action = int(action)
         while action < 0:
             t = 0
             cr = 0.
