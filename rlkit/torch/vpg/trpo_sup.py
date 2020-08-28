@@ -57,7 +57,7 @@ class TRPOSupTrainer(TRPOTrainer):
         sup_batch = self.replay_buffer.random_batch(self.sup_batch_size)
 
         with torch.no_grad():
-            sup_loss_before = self._compute_sup_loss(sup_batch['observations'],sup_batch['labels'])
+            sup_loss_before = self._compute_sup_loss(obs_flat,labels_flat)
             policy_loss_before = self._compute_loss_with_adv(
                 obs_flat, actions_flat, rewards_flat, advs_flat)
             vf_loss_before = self._compute_vf_loss(
@@ -69,7 +69,7 @@ class TRPOSupTrainer(TRPOTrainer):
                     advs_flat)
 
         with torch.no_grad():
-            sup_loss_after = self._compute_sup_loss(sup_batch['observations'],sup_batch['labels'])
+            sup_loss_after = self._compute_sup_loss(obs_flat, labels_flat)
             policy_loss_after = self._compute_loss_with_adv(
                 obs_flat, actions_flat, rewards_flat, advs_flat)
             vf_loss_after = self._compute_vf_loss(
@@ -133,7 +133,9 @@ class TRPOSupTrainer(TRPOTrainer):
         valid_mask = ~torch.isnan(labels) # replay buffer!
         labels[~valid_mask] = 0     
         lls = self.policy.sup_log_prob(obs, labels)
-        return -lls[valid_mask].mean()
+        lls[~valid_mask] = 0
+        # return -lls[valid_mask].mean()
+        return -lls.mean()
 
     def _add_exploration_bonus(self, paths):
         paths = copy.deepcopy(paths)
