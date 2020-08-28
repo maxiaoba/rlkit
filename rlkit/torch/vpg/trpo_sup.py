@@ -53,6 +53,8 @@ class TRPOSupTrainer(TRPOTrainer):
         advs_flat = self._compute_advantage(rewards, valids, baselines)
         labels_flat = torch.cat(filter_valids(labels, valids))
 
+        self.replay_buffer.add_batch(obs_flat, labels_flat)
+
         with torch.no_grad():
             sup_loss_before = self._compute_sup_loss(obs_flat,labels_flat)
             policy_loss_before = self._compute_loss_with_adv(
