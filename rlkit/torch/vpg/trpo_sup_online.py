@@ -9,21 +9,17 @@ from rlkit.torch.core import torch_ify
 from rlkit.core.eval_util import create_stats_ordered_dict
 import rlkit.pythonplusplus as ppp
 
-class TRPOSupTrainer(TRPOTrainer):
+class TRPOSupOnlineTrainer(TRPOTrainer):
     """TRPO + supervised learning.
     """
 
     def __init__(self,
                  sup_weight,
-                 replay_buffer,
                  exploration_bonus,
                  attention_eb=False, # use attention to scale exploration bonus
-                 sup_batch_size=64,
                  **kwargs):
         super().__init__(**kwargs)
         self.sup_weight = sup_weight
-        self.replay_buffer = replay_buffer
-        self.sup_batch_size = sup_batch_size
         self.exploration_bonus = exploration_bonus
         self.attention_eb = attention_eb
 
@@ -63,7 +59,7 @@ class TRPOSupTrainer(TRPOTrainer):
             kl_before = self._compute_kl_constraint(obs_flat)
 
         self._train(obs_flat, actions_flat, rewards_flat, returns_flat,
-                    advs_flat)
+                    advs_flat, labels_flat)
 
         with torch.no_grad():
             sup_loss_after = self._compute_sup_loss(obs_flat, labels_flat)
@@ -95,7 +91,27 @@ class TRPOSupTrainer(TRPOTrainer):
 
         self._old_policy = copy.deepcopy(self.policy)
 
-    def _train_policy(self, obs, actions, rewards, advantages):
+    def _train(self, obs, actions, rewards, returns, advs, labels):
+        r"""Train the policy and value function with minibatch.
+
+        Args:
+            obs (torch.Tensor): Observation from the environment with shape
+                :math:`(N, O*)`.
+            actions (torch.Tensor): Actions fed to the environment with shape
+                :math:`(N, A*)`.
+            rewards (torch.Tensor): Acquired rewards with shape :math:`(N, )`.
+            returns (torch.Tensor): Acquired returns with shape :math:`(N, )`.
+            advs (torch.Tensor): Advantage value at each step with shape
+                :math:`(N, )`.
+
+        """
+        for dataset in self._policy_optimizer.get_minibatch(
+                obs, actions, rewards, advs, labels):
+            self._train_policy(*dataset)
+        for dataset in self._vf_optimizer.get_minibatch(obs, returns):
+            self._train_value_function(*dataset)
+
+    def _train_policy(self, obs, actions, rewards, advantages, labels):
         r"""Train the policy.
 
         Args:
@@ -112,14 +128,13 @@ class TRPOSupTrainer(TRPOTrainer):
             torch.Tensor: Calculated mean scalar value of policy loss (float).
 
         """
-        sup_batch = self.replay_buffer.random_batch(self.sup_batch_size)
         self._policy_optimizer.zero_grad()
         loss = self._compute_loss_with_adv(obs, actions, rewards, advantages) \
-                + self.sup_weight*self._compute_sup_loss(sup_batch['observations'],sup_batch['labels'])
+                + self.sup_weight*self._compute_sup_loss(obs,labels)
         loss.backward()
         self._policy_optimizer.step(
             f_loss=lambda: self._compute_loss_with_adv(obs, actions, rewards, advantages) \
-                            + self.sup_weight*self._compute_sup_loss(sup_batch['observations'],sup_batch['labels']),
+                            + self.sup_weight*self._compute_sup_loss(obs,labels),
             f_constraint=lambda: self._compute_kl_constraint(obs))
 
         return loss
