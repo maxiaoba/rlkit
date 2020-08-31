@@ -3,6 +3,7 @@ import torch
 from collections import OrderedDict
 
 from rlkit.util import tensor_util as tu
+import rlkit.torch.pytorch_util as ptu
 from rlkit.torch.vpg.trpo import TRPOTrainer
 from rlkit.torch.vpg.util import compute_advantages, filter_valids, pad_to_last
 from rlkit.torch.core import torch_ify
@@ -129,9 +130,19 @@ class TRPOSupOnlineTrainer(TRPOTrainer):
 
         """
         self._policy_optimizer.zero_grad()
-        loss = self._compute_loss_with_adv(obs, actions, rewards, advantages) \
-                + self.sup_weight*self._compute_sup_loss(obs,labels)
+        # loss = self._compute_loss_with_adv(obs, actions, rewards, advantages) \
+        #         + self.sup_weight*self._compute_sup_loss(obs,labels)
+        loss = self._compute_loss_with_adv(obs, actions, rewards, advantages)
         loss.backward()
+
+        # grad_norm = torch.tensor(0.).to(ptu.device) 
+        # for p in self.policy.sup_learner.parameters():
+        #     print(p.shape)
+        #     param_norm = p.grad.data.norm(2)
+        #     grad_norm += param_norm.item() ** 2
+        # grad_norm = grad_norm ** (1. / 2)
+        # print(grad_norm)
+
         self._policy_optimizer.step(
             f_loss=lambda: self._compute_loss_with_adv(obs, actions, rewards, advantages) \
                             + self.sup_weight*self._compute_sup_loss(obs,labels),

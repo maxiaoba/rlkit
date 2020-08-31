@@ -12,9 +12,9 @@ fields = [
             # 'evaluation/Average Returns',
             # 'evaluation/Actions Max',
             # 'evaluation/Actions Min',
-            # 'evaluation/Num Success',
-            # 'evaluation/Num Timeout',
-            # 'evaluation/Num Fail',
+            'evaluation/Num Success',
+            'evaluation/Num Timeout',
+            'evaluation/Num Fail',
             # 'exploration/Average Returns',
             # 'exploration/Returns Max',
             # 'exploration/Returns Min',
@@ -26,12 +26,12 @@ fields = [
             # 'trainer/KL'
             ]
 field_names = [
-            'Eval Average Return',
+            # 'Eval Average Return',
             # 'Eval Action Max',
             # 'Eval Action Min',
-            # 'Eval Success',
-            # 'Eval Timeout',
-            # 'Eval Fail',
+            'Eval Success',
+            'Eval Timeout',
+            'Eval Fail',
             # 'Expl Average Return',
             # 'Expl Max Return',
             # 'Expl Min Return',
@@ -54,13 +54,16 @@ policies = [
             'PPO',
             'PPOSupOnline',
             'PPOSupOnline2',
-            'PPOGNNnode32layer3actrelu',
-            'PPOSupOnlineGNNnode32layer3actrelu',
+            'PPOSupOnline3',
+            # 'PPOGNNnode32layer3actrelu',
+            # 'PPOSupOnlineGNNnode32layer3actrelu',
             'TRPO',
             'TRPOSup',
             'TRPOSup2',
-            'TRPOGNNnode32layer3actrelu',
-            'TRPOSupGNNnode32layer3actrelu',
+            'TRPOSup3',
+            'TRPOSupOnline3',
+            # 'TRPOGNNnode32layer3actrelu',
+            # 'TRPOSupGNNnode32layer3actrelu',
         ]
 policy_names = policies
 
@@ -69,7 +72,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'mlp'
+extra_name = ''
 
 pre_name = ''
 post_name = ''

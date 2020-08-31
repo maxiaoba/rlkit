@@ -197,7 +197,7 @@ class TIntersectionExtreme(TrafficEnv):
                  observe_mode='full',
                  label_mode='full',
                  normalize_obs=False,
-                 vs_actions=[0.,0.5,3.],
+                 vs_actions=[0.,3.],
                  t_actions=[0.],
                  desire_speed=3.,
                  driver_sigma = 0.,
@@ -557,7 +557,7 @@ class TIntersectionExtreme(TrafficEnv):
                           max_accel=self.car_max_accel, max_speed=self.car_max_speed,
                           expose_level=self.car_expose_level)
         driver = EgoDriver(trajectory=EgoTrajectory(),idx=0,car=car,dt=self.dt)
-        car.set_position(np.array([0., -5.0]))
+        car.set_position(np.array([0., -2.5]))
         car.set_velocity(np.array([0., 0.]))
         car.set_rotation(np.pi/2.)
         driver.v_des = 0.
@@ -692,10 +692,10 @@ if __name__ == '__main__':
         #     action = 7
         # else:
         #     action = actions[t][0]
-        # action = actions[t]
+        action = actions[t]
         # action = np.random.randint(env.action_space.n)
-        action = input("Action\n")
-        action = int(action)
+        # action = input("Action\n")
+        # action = int(action)
         while action < 0:
             t = 0
             cr = 0.
