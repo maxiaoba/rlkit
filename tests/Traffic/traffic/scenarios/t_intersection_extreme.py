@@ -252,9 +252,9 @@ class TIntersectionExtreme(TrafficEnv):
             if observe_mode == 'full':
                 self.label_num = self.max_veh_num
             elif observe_mode == 'important':
-                self.label_num = 4
+                self.label_num = int(self.max_veh_num/2)+1
         elif self.label_mode == 'important':
-            self.label_num = 1
+            self.label_num = int(self.max_veh_num/2)+1
 
         self.car_length=5.0
         self.car_width=2.0
@@ -275,8 +275,8 @@ class TIntersectionExtreme(TrafficEnv):
 
     def get_sup_labels(self):
         labels = np.array([np.nan]*self.label_num)
+        i = 0
         if self.label_mode == 'full':
-            i = 0
             if self.observe_mode == 'full':
                 upper_indices, lower_indices = self.get_sorted_indices()
                 for indx in lower_indices:
@@ -286,19 +286,14 @@ class TIntersectionExtreme(TrafficEnv):
                 for indx in upper_indices:
                     labels[i] = int(self._drivers[indx].yld)
                     i += 1
-            elif self.observe_mode == 'important':
-                important_indices = self.get_important_indices()
-                for indx in important_indices:
-                    if indx is None:
-                        i += 1
-                    else:
-                        labels[i] = int(self._drivers[indx].yld)
-                        i += 1
-        elif self.label_mode == 'important':
-            # [ind_ll, ind_lr, ind_ul, ind_ur]
-            ind_ll, ind_lr, ind_ul, ind_ur = self.get_important_indices()
-            if ind_lr is not None:
-                labels[0] = int(self._drivers[ind_lr].yld)
+        else:
+            important_indices = self.get_important_indices()
+            for indx in important_indices:
+                if indx is None:
+                    i += 1
+                else:
+                    labels[i] = int(self._drivers[indx].yld)
+                    i += 1
         return labels
 
     def update(self, action):
@@ -509,28 +504,29 @@ class TIntersectionExtreme(TrafficEnv):
         return car, driver
 
     def get_important_indices(self):
-        # return indices of 4 other vehicles that are closest to ego
-        # on 4 directions
-        ego_x = self._cars[0].position[0]
-        min_ll, min_lr, min_ul, min_ur = np.inf, np.inf, np.inf, np.inf
-        ind_ll, ind_lr, ind_ul, ind_ur = None, None, None, None
-        for idx,car in enumerate(self._cars[1:]):
-            x, y = car.position
-            if y < 4.:
-                if (x <= ego_x) and (ego_x - x < min_ll):
-                    min_ll = ego_x - x
-                    ind_ll = idx + 1
-                elif (x > ego_x) and (x - ego_x < min_lr):
-                    min_lr = x - ego_x
-                    ind_lr = idx + 1
+        # return indices of vehicles that are at lower lane 
+        # closest to the left and all to the right of ego
+        lower_indices, lower_xs = [], []
+        for indx,car in enumerate(self._cars[1:]):
+            if car.position[1] > 4.:
+                pass
             else:
-                if (x < ego_x) and (ego_x - x < min_ul):
-                    min_ul = ego_x - x
-                    ind_ul = idx + 1
-                elif (x >= ego_x) and (x - ego_x < min_ur):
-                    min_ur = x - ego_x
-                    ind_ur = idx + 1
-        return [ind_ll, ind_lr, ind_ul, ind_ur]
+                lower_indices.append(indx+1)
+                lower_xs.append(car.position[0])
+        lower_indices = np.array(lower_indices)[np.argsort(lower_xs)]
+        lower_xs = np.sort(lower_xs)
+        ego_x = self._cars[0].position[0]
+        mlr_indx = None
+        for i,x in enumerate(lower_xs):
+            if x > ego_x:
+                mlr_indx = i
+                break
+        important_indices = [None]*(int(self.max_veh_num/2)+1)
+        if mlr_indx == 0: # no vehicle on the left
+            important_indices[1:len(lower_indices[mlr_indx:])+1] = lower_indices[mlr_indx:]
+        else:
+            important_indices[:len(lower_indices[mlr_indx-1:])] = lower_indices[mlr_indx-1:]
+        return important_indices
 
     def get_sorted_indices(self):
         # return indices of all other vehicles from left to right
@@ -607,8 +603,8 @@ class TIntersectionExtreme(TrafficEnv):
                     _add_attrs(circle, attrs)
                     self.viewer.add_onetime(circle)
         if self.label_mode == 'important':
-            ind_ll, ind_lr, ind_ul, ind_ur = self.get_important_indices()
-            for ind in [ind_lr]:
+            important_indices = self.get_important_indices()
+            for ind in important_indices:
                 if ind is None:
                     pass
                 else:
@@ -660,10 +656,10 @@ class TIntersectionExtreme(TrafficEnv):
                     car_indices[0:len(lower_indices)] = lower_indices[:]
                     car_indices[int(self.max_veh_num/2):int(self.max_veh_num/2)+len(upper_indices)] = upper_indices[:]
                 elif self.label_mode == 'important':
-                    ind_ll, ind_lr, ind_ul, ind_ur = self.get_important_indices()
-                    car_indices[0] = (ind_lr if ind_lr else np.nan)
+                    important_indices = self.get_important_indices()
+                    car_indices = important_indices
                 for car_ind,intention in zip(car_indices,extra_input['intention']):
-                    if not np.isnan(car_ind):
+                    if not car_ind:
                         from traffic.rendering import make_circle, _add_attrs
                         start = self._cars[car_ind].position - self.get_camera_center()
                         attrs = {"color":(intention[0],intention[1],0.)}
