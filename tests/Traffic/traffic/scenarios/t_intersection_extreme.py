@@ -251,10 +251,8 @@ class TIntersectionExtreme(TrafficEnv):
         if self.label_mode == 'full':
             if observe_mode == 'full':
                 self.label_num = self.max_veh_num
-            elif observe_mode == 'important':
-                self.label_num = int(self.max_veh_num/2)+1
-        elif self.label_mode == 'important':
-            self.label_num = int(self.max_veh_num/2)+1
+        else:
+            self.label_num = int(self.max_veh_num/2)
 
         self.car_length=5.0
         self.car_width=2.0
@@ -288,7 +286,7 @@ class TIntersectionExtreme(TrafficEnv):
                     i += 1
         else:
             important_indices = self.get_important_indices()
-            for indx in important_indices:
+            for indx in important_indices[1:]:
                 if indx is None:
                     i += 1
                 else:
@@ -411,7 +409,7 @@ class TIntersectionExtreme(TrafficEnv):
                 obs[i+2:i+4] = self._cars[indx].velocity - self._cars[0].velocity
                 i += 4
         elif self.observe_mode == 'important':
-            obs = np.zeros(int(4*4+4))
+            obs = np.zeros(int(4*int(self.max_veh_num/2+1)+4))
             obs[:2] = self._cars[0].position
             obs[2:4] = self._cars[0].velocity
             important_indices = self.get_important_indices()
@@ -437,8 +435,8 @@ class TIntersectionExtreme(TrafficEnv):
             low = -np.ones(int(4*self.max_veh_num+4))
             high = np.ones(int(4*self.max_veh_num+4))
         elif self.observe_mode == 'important':
-            low = -np.ones(20)
-            high = np.ones(20)
+            low = -np.ones(int(4*int(self.max_veh_num/2+1)+4))
+            high = np.ones(int(4*int(self.max_veh_num/2+1)+4))
         return spaces.Box(low=low, high=high, dtype=np.float32)
 
     @property
@@ -604,7 +602,7 @@ class TIntersectionExtreme(TrafficEnv):
                     self.viewer.add_onetime(circle)
         if self.label_mode == 'important':
             important_indices = self.get_important_indices()
-            for ind in important_indices:
+            for ind in important_indices[1:]:
                 if ind is None:
                     pass
                 else:
@@ -657,7 +655,7 @@ class TIntersectionExtreme(TrafficEnv):
                     car_indices[int(self.max_veh_num/2):int(self.max_veh_num/2)+len(upper_indices)] = upper_indices[:]
                 elif self.label_mode == 'important':
                     important_indices = self.get_important_indices()
-                    car_indices = important_indices
+                    car_indices = important_indices[1:]
                 for car_ind,intention in zip(car_indices,extra_input['intention']):
                     if not car_ind:
                         from traffic.rendering import make_circle, _add_attrs
