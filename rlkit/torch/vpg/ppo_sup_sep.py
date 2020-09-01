@@ -3,26 +3,34 @@ import torch
 from collections import OrderedDict
 
 from rlkit.util import tensor_util as tu
-import rlkit.torch.pytorch_util as ptu
-from rlkit.torch.vpg.trpo import TRPOTrainer
+from rlkit.torch.vpg.ppo import PPOTrainer
 from rlkit.torch.vpg.util import compute_advantages, filter_valids, pad_to_last
 from rlkit.torch.core import torch_ify
 from rlkit.core.eval_util import create_stats_ordered_dict
 import rlkit.pythonplusplus as ppp
 
-class TRPOSupOnlineTrainer(TRPOTrainer):
-    """TRPO + supervised learning.
+class PPOSupSepTrainer(PPOTrainer):
+    """PPO + supervised learning.
     """
 
     def __init__(self,
-                 sup_weight,
+                 replay_buffer,
                  exploration_bonus,
                  attention_eb=False, # use attention to scale exploration bonus
+                 sup_lr=1e-3,
+                 sup_batch_size=64,
+                 sup_train_num=1,
                  **kwargs):
         super().__init__(**kwargs)
-        self.sup_weight = sup_weight
+        self.sup_lr = sup_lr
+        self.sup_batch_size = sup_batch_size
+        self.sup_train_num = sup_train_num
+        self.replay_buffer = replay_buffer
         self.exploration_bonus = exploration_bonus
         self.attention_eb = attention_eb
+        self._sup_optimizer = torch.optim.Adam(
+                                self.policy.sup_learner.parameters(),
+                                lr=sup_lr)
 
     def train_once(self, paths):
         """Train the algorithm once.
@@ -40,7 +48,7 @@ class TRPOSupOnlineTrainer(TRPOTrainer):
             self.process_samples(paths)
 
         if self._maximum_entropy:
-            policy_entropies = self._compute_policy_entropy(obs)
+            policy_entropies = self._compute_policy_entropy(obs, labels_flat)
             rewards += self._policy_ent_coeff * policy_entropies
 
         obs_flat = torch.cat(filter_valids(obs, valids))
@@ -49,29 +57,33 @@ class TRPOSupOnlineTrainer(TRPOTrainer):
         returns_flat = torch.cat(filter_valids(returns, valids))
         advs_flat = self._compute_advantage(rewards, valids, baselines)
         labels_flat = torch.cat(filter_valids(labels, valids))
-
+        self.replay_buffer.add_batch(obs_flat, labels_flat)
         with torch.no_grad():
             sup_loss_before = self._compute_sup_loss(obs_flat,labels_flat)
             policy_loss_before = self._compute_loss_with_adv(
-                obs_flat, actions_flat, rewards_flat, advs_flat)
+                obs_flat, actions_flat, rewards_flat, advs_flat, labels_flat)
             vf_loss_before = self._compute_vf_loss(
                 obs_flat, returns_flat)
             # kl_before = self._compute_kl_constraint(obs)
-            kl_before = self._compute_kl_constraint(obs_flat)
+            kl_before = self._compute_kl_constraint(obs_flat, labels_flat)
 
         self._train(obs_flat, actions_flat, rewards_flat, returns_flat,
                     advs_flat, labels_flat)
 
+        for _ in range(self.sup_train_num):
+            batch = self.replay_buffer.random_batch(self.sup_batch_size)
+            sup_loss = self._train_sup_learner(batch['observations'],batch['labels'])
+
         with torch.no_grad():
             sup_loss_after = self._compute_sup_loss(obs_flat, labels_flat)
             policy_loss_after = self._compute_loss_with_adv(
-                obs_flat, actions_flat, rewards_flat, advs_flat)
+                obs_flat, actions_flat, rewards_flat, advs_flat, labels_flat)
             vf_loss_after = self._compute_vf_loss(
                 obs_flat, returns_flat)
             # kl_after = self._compute_kl_constraint(obs)
-            kl_after = self._compute_kl_constraint(obs_flat)
+            kl_after = self._compute_kl_constraint(obs_flat, labels_flat)
             # policy_entropy = self._compute_policy_entropy(obs)
-            policy_entropy = self._compute_policy_entropy(obs_flat)
+            policy_entropy = self._compute_policy_entropy(obs_flat, labels_flat)
 
         if self._need_to_update_eval_statistics:
             self._need_to_update_eval_statistics = False
@@ -130,24 +142,20 @@ class TRPOSupOnlineTrainer(TRPOTrainer):
 
         """
         self._policy_optimizer.zero_grad()
-        loss = self._compute_loss_with_adv(obs, actions, rewards, advantages) \
-                + self.sup_weight*self._compute_sup_loss(obs,labels)
+        loss = self._compute_loss_with_adv(obs, actions, rewards, advantages, labels)
         loss.backward()
-
-        # grad_norm = torch.tensor(0.).to(ptu.device) 
-        # for p in self.policy.sup_learner.parameters():
-        #     print(p.shape)
-        #     param_norm = p.grad.data.norm(2)
-        #     grad_norm += param_norm.item() ** 2
-        # grad_norm = grad_norm ** (1. / 2)
-        # print(grad_norm)
-
-        self._policy_optimizer.step(
-            f_loss=lambda: self._compute_loss_with_adv(obs, actions, rewards, advantages) \
-                            + self.sup_weight*self._compute_sup_loss(obs,labels),
-            f_constraint=lambda: self._compute_kl_constraint(obs))
+        self._policy_optimizer.step()
 
         return loss
+
+    def _train_sup_learner(self, observations, labels):
+        observations = torch_ify(observations)
+        labels = torch_ify(labels)
+        self._sup_optimizer.zero_grad()
+        sup_loss = self._compute_sup_loss(observations, labels)
+        sup_loss.backward()
+        self._sup_optimizer.step()
+        return sup_loss
 
     def _compute_sup_loss(self, obs, labels):
         obs = torch_ify(obs)
@@ -158,6 +166,126 @@ class TRPOSupOnlineTrainer(TRPOTrainer):
         lls[~valid_mask] = 0
         # return -lls[valid_mask].mean()
         return -lls.mean()
+
+    def _compute_kl_constraint(self, obs, labels):
+        r"""Compute KL divergence.
+
+        Compute the KL divergence between the old policy distribution and
+        current policy distribution.
+
+        Notes: P is the maximum path length (self.max_path_length)
+
+        Args:
+            obs (torch.Tensor): Observation from the environment
+                with shape :math:`(N, P, O*)`.
+
+        Returns:
+            torch.Tensor: Calculated mean scalar value of KL divergence
+                (float).
+
+        """
+        try:
+            with torch.no_grad():
+                old_dist = self._old_policy.get_distribution(obs, labels=labels)
+
+            new_dist = self.policy.get_distribution(obs, labels=labels)
+
+            kl_constraint = torch.distributions.kl.kl_divergence(
+                old_dist, new_dist)
+
+            return kl_constraint.mean()
+        except NotImplementedError:
+            return torch.tensor(0.)
+
+    def _compute_policy_entropy(self, obs, labels):
+        r"""Compute entropy value of probability distribution.
+
+        Notes: P is the maximum path length (self.max_path_length)
+
+        Args:
+            obs (torch.Tensor): Observation from the environment
+                with shape :math:`(N, P, O*)`.
+
+        Returns:
+            torch.Tensor: Calculated entropy values given observation
+                with shape :math:`(N, P)`.
+
+        """
+        if self._stop_entropy_gradient:
+            with torch.no_grad():
+                policy_entropy = self.policy.get_distribution(obs, labels=labels).entropy()
+        else:
+            policy_entropy = self.policy.get_distribution(obs, labels=labels).entropy()
+
+        # This prevents entropy from becoming negative for small policy std
+        if self._use_softplus_entropy:
+            policy_entropy = F.softplus(policy_entropy)
+
+        return policy_entropy
+
+    def _compute_loss_with_adv(self, obs, actions, rewards, advantages, labels):
+        r"""Compute mean value of loss.
+
+        Args:
+            obs (torch.Tensor): Observation from the environment
+                with shape :math:`(N \dot [T], O*)`.
+            actions (torch.Tensor): Actions fed to the environment
+                with shape :math:`(N \dot [T], A*)`.
+            rewards (torch.Tensor): Acquired rewards
+                with shape :math:`(N \dot [T], )`.
+            advantages (torch.Tensor): Advantage value at each step
+                with shape :math:`(N \dot [T], )`.
+            labels (torch.Tensor): Labels at each step
+                with shape :math:`(N \dot [T], L*)`.
+        Returns:
+            torch.Tensor: Calculated negative mean scalar value of objective.
+
+        """
+        objectives = self._compute_objective(advantages, obs, actions, rewards, labels)
+
+        if self._entropy_regularzied:
+            policy_entropies = self._compute_policy_entropy(obs, labels)
+            objectives += self._policy_ent_coeff * policy_entropies
+
+        return -objectives.mean()
+
+    def _compute_objective(self, advantages, obs, actions, rewards, labels):
+        r"""Compute objective value.
+
+        Args:
+            advantages (torch.Tensor): Advantage value at each step
+                with shape :math:`(N \dot [T], )`.
+            obs (torch.Tensor): Observation from the environment
+                with shape :math:`(N \dot [T], O*)`.
+            actions (torch.Tensor): Actions fed to the environment
+                with shape :math:`(N \dot [T], A*)`.
+            rewards (torch.Tensor): Acquired rewards
+                with shape :math:`(N \dot [T], )`.
+
+        Returns:
+            torch.Tensor: Calculated objective values
+                with shape :math:`(N \dot [T], )`.
+
+        """
+        # Compute constraint
+        with torch.no_grad():
+            old_ll = self._old_policy.log_prob(obs, actions, labels=labels)
+        new_ll = self.policy.log_prob(obs, actions, labels=labels)
+
+        likelihood_ratio = (new_ll - old_ll).exp()
+
+        # Calculate surrogate
+        surrogate = likelihood_ratio * advantages
+
+        # Clipping the constraint
+        likelihood_ratio_clip = torch.clamp(likelihood_ratio,
+                                            min=1 - self._lr_clip_range,
+                                            max=1 + self._lr_clip_range)
+
+        # Calculate surrotate clip
+        surrogate_clip = likelihood_ratio_clip * advantages
+
+        return torch.min(surrogate, surrogate_clip)
 
     def _add_exploration_bonus(self, paths):
         paths = copy.deepcopy(paths)
@@ -239,7 +367,6 @@ class TRPOSupOnlineTrainer(TRPOTrainer):
                         total_length=self.max_path_length,
                         axis=0) for env_info in env_infos
         ])
-
         with torch.no_grad():
             baselines = self._value_function(obs).squeeze(-1)
 

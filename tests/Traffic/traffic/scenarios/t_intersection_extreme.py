@@ -247,7 +247,7 @@ class TIntersectionExtreme(TrafficEnv):
         self.gap_min = gap_min
         self.gap_max = gap_max
         self.max_veh_num = max_veh_num
-        self.label_dim = 3
+        self.label_dim = 2
         if self.label_mode == 'full':
             if observe_mode == 'full':
                 self.label_num = self.max_veh_num

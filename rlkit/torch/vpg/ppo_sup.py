@@ -108,6 +108,8 @@ class PPOSupTrainer(PPOTrainer):
         return sup_loss
 
     def _compute_sup_loss(self, obs, labels):
+        obs = torch_ify(obs)
+        labels = torch_ify(labels).clone()
         valid_mask = ~torch.isnan(labels) # replay buffer!
         labels[~valid_mask] = 0     
         lls = self.sup_learner.log_prob(obs, labels)

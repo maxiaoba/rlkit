@@ -128,7 +128,7 @@ class TRPOSupTrainer(TRPOTrainer):
 
     def _compute_sup_loss(self, obs, labels):
         obs = torch_ify(obs)
-        labels = torch_ify(labels)
+        labels = torch_ify(labels).clone()
         valid_mask = ~torch.isnan(labels)
         labels[~valid_mask] = 0     
         lls = self.policy.sup_log_prob(obs, labels)

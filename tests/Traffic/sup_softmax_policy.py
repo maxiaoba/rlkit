@@ -64,5 +64,5 @@ class SupSoftmaxPolicy(Policy, nn.Module):
     def sup_log_prob(self, obs, label):
         return self.get_sup_distribution(obs).log_prob(label)
 
-    def sup_probs(self, obs):
+    def sup_prob(self, obs):
         return self.get_sup_distribution(obs).probs

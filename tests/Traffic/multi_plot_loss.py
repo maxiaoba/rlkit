@@ -12,14 +12,14 @@ fields = [
             # 'evaluation/Average Returns',
             # 'evaluation/Actions Max',
             # 'evaluation/Actions Min',
-            'evaluation/Num Success',
-            'evaluation/Num Timeout',
-            'evaluation/Num Fail',
+            # 'evaluation/Num Success',
+            # 'evaluation/Num Timeout',
+            # 'evaluation/Num Fail',
             # 'exploration/Average Returns',
             # 'exploration/Returns Max',
             # 'exploration/Returns Min',
             # 'exploration/Num Fail',
-            # 'trainer/SUP LossAfter',
+            'trainer/SUP LossAfter',
             # 'trainer/LossBefore',
             # 'trainer/LossAfter',
             # 'trainer/KLBefore',
@@ -29,14 +29,14 @@ field_names = [
             # 'Eval Average Return',
             # 'Eval Action Max',
             # 'Eval Action Min',
-            'Eval Success',
-            'Eval Timeout',
-            'Eval Fail',
+            # 'Eval Success',
+            # 'Eval Timeout',
+            # 'Eval Fail',
             # 'Expl Average Return',
             # 'Expl Max Return',
             # 'Expl Min Return',
             # 'Expl Fail',
-            # 'Sup LossAfter',
+            'Sup LossAfter',
             # 'LossBefore',
             # 'LossAfter',
             # 'KLBefore',
@@ -51,19 +51,19 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'PPO',
+            # 'PPO',
             'PPOSupOnline',
             'PPOSupOnline2',
-            'PPOSupOnline3',
+            # 'PPOSupOnline3',
             # 'PPOGNNnode32layer3actrelu',
-            # 'PPOSupOnlineGNNnode32layer3actrelu',
-            'TRPO',
+            'PPOSupOnlineGNNnode32layer3actrelu',
+            # 'TRPO',
             'TRPOSup',
             'TRPOSup2',
             'TRPOSup3',
-            'TRPOSupOnline3',
+            # 'TRPOSupOnline3',
             # 'TRPOGNNnode32layer3actrelu',
-            # 'TRPOSupGNNnode32layer3actrelu',
+            'TRPOSupGNNnode32layer3actrelu',
         ]
 policy_names = policies
 
@@ -135,8 +135,8 @@ for fid,field in enumerate(fields):
         y = np.mean(Losses,0)
         yerr = np.std(Losses,0)
         plot, = plt.plot(itrs,y,colors[policy_index])
-        plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
-                            facecolor=colors[policy_index],alpha=0.3)
+        # plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
+        #                     facecolor=colors[policy_index],alpha=0.3)
         plts.append(plot)
         legends.append(policy_names[policy_index])
 
