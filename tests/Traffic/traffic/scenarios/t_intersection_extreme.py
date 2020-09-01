@@ -57,15 +57,17 @@ class YNYDriver(XYSeperateDriver):
 
     def setup_render(self, viewer):
         if self.yld:
-            self.car._color = GREEN_COLORS[0]
+            self.car._color = [*GREEN_COLORS[0],0.5]
         else:
-            self.car._color = RED_COLORS[0]
+            self.car._color = [*RED_COLORS[0],0.5]
+        self.car._arr_color = [0.8, 0.8, 0.8, 0.5]
 
     def update_render(self, camera_center):
         if self.yld:
-            self.car._color = GREEN_COLORS[0]
+            self.car._color = [*GREEN_COLORS[0],0.5]
         else:
-            self.car._color = RED_COLORS[0]
+            self.car._color = [*RED_COLORS[0],0.5]
+        self.car._arr_color = [0.8, 0.8, 0.8, 0.5]
 
 class EgoTrajectory:
     def xy_to_traj(self, pos):
@@ -655,9 +657,9 @@ class TIntersectionExtreme(TrafficEnv):
                     car_indices[int(self.max_veh_num/2):int(self.max_veh_num/2)+len(upper_indices)] = upper_indices[:]
                 elif self.label_mode == 'important':
                     important_indices = self.get_important_indices()
-                    car_indices = important_indices[1:]
+                    car_indices = important_indices
                 for car_ind,intention in zip(car_indices,extra_input['intention']):
-                    if not car_ind:
+                    if not np.isnan(car_ind):
                         from traffic.rendering import make_circle, _add_attrs
                         start = self._cars[car_ind].position - self.get_camera_center()
                         attrs = {"color":(intention[0],intention[1],0.)}

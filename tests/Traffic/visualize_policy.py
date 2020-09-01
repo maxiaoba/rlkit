@@ -4,6 +4,7 @@ import time
 import pdb
 from rlkit.torch.policies.softmax_policy import SoftmaxPolicy
 from sup_softmax_policy import SupSoftmaxPolicy
+from sup_sep_softmax_policy import SupSepSoftmaxPolicy
 from rlkit.policies.argmax import ArgmaxDiscretePolicy
 from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy, MakeDeterministic
 from rlkit.torch.core import eval_np, np_ify
@@ -26,7 +27,9 @@ if 'trainer/qf' in data.keys():
 	eval_policy = ArgmaxDiscretePolicy(qf)
 else:
 	policy = data['trainer/policy']
-	if isinstance(policy, SoftmaxPolicy) or isinstance(policy, SupSoftmaxPolicy):
+	if isinstance(policy, SoftmaxPolicy)\
+	 or isinstance(policy, SupSoftmaxPolicy)\
+	 or isinstance(policy, SupSepSoftmaxPolicy):
 		eval_policy = ArgmaxDiscretePolicy(policy,use_preactivation=True)
 	elif isinstance(policy, TanhGaussianPolicy):
 		eval_policy = MakeDeterministic(policy)
@@ -55,8 +58,8 @@ while True:
 
 	if sup_learner:
 		intentions = eval_np(sup_learner, o[None,:])
-	elif hasattr(policy, 'sup_probs'):
-		intentions = eval_np(policy.sup_probs, o[None,:])[0]
+	elif hasattr(policy, 'sup_prob'):
+		intentions = eval_np(policy.sup_prob, o[None,:])[0]
 	else:
 		intentions = None
 

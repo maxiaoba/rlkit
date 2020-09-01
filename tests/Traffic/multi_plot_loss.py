@@ -9,7 +9,7 @@ itr_interval = 10
 max_itr = 2e4
 
 fields = [
-            # 'evaluation/Average Returns',
+            'evaluation/Average Returns',
             # 'evaluation/Actions Max',
             # 'evaluation/Actions Min',
             # 'evaluation/Num Success',
@@ -19,14 +19,14 @@ fields = [
             # 'exploration/Returns Max',
             # 'exploration/Returns Min',
             # 'exploration/Num Fail',
-            'trainer/SUP LossAfter',
+            # 'trainer/SUP LossAfter',
             # 'trainer/LossBefore',
             # 'trainer/LossAfter',
             # 'trainer/KLBefore',
             # 'trainer/KL'
             ]
 field_names = [
-            # 'Eval Average Return',
+            'Eval Average Return',
             # 'Eval Action Max',
             # 'Eval Action Min',
             # 'Eval Success',
@@ -36,7 +36,7 @@ field_names = [
             # 'Expl Max Return',
             # 'Expl Min Return',
             # 'Expl Fail',
-            'Sup LossAfter',
+            # 'Sup LossAfter',
             # 'LossBefore',
             # 'LossAfter',
             # 'KLBefore',
@@ -51,19 +51,20 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            # 'PPO',
+            'PPO',
             'PPOSupOnline',
             'PPOSupOnline2',
-            # 'PPOSupOnline3',
+            'PPOSupSep',
             # 'PPOGNNnode32layer3actrelu',
-            'PPOSupOnlineGNNnode32layer3actrelu',
+            # 'PPOSupOnlineGNNnode32layer3actrelu',
+            # 'PPOSupSepGNNnode32layer3actrelu',
             # 'TRPO',
-            'TRPOSup',
-            'TRPOSup2',
-            'TRPOSup3',
-            # 'TRPOSupOnline3',
+            # 'TRPOSup',
+            # 'TRPOSup2',
+            # 'TRPOSupSep',
             # 'TRPOGNNnode32layer3actrelu',
-            'TRPOSupGNNnode32layer3actrelu',
+            # 'TRPOSupGNNnode32layer3actrelu',
+            # 'TRPOSupSepGNNnode32layer3actrelu',
         ]
 policy_names = policies
 
@@ -72,7 +73,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = ''
+extra_name = 'ppomlp'
 
 pre_name = ''
 post_name = ''
@@ -135,8 +136,8 @@ for fid,field in enumerate(fields):
         y = np.mean(Losses,0)
         yerr = np.std(Losses,0)
         plot, = plt.plot(itrs,y,colors[policy_index])
-        # plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
-        #                     facecolor=colors[policy_index],alpha=0.3)
+        plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
+                            facecolor=colors[policy_index],alpha=0.3)
         plts.append(plot)
         legends.append(policy_names[policy_index])
 

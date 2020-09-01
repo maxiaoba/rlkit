@@ -10,6 +10,7 @@ class MdpPathCollector(PathCollector):
             self,
             env,
             policy,
+            rollout_fn=rollout,
             max_num_epoch_paths_saved=None,
             render=False,
             render_kwargs=None,
@@ -18,6 +19,7 @@ class MdpPathCollector(PathCollector):
             render_kwargs = {}
         self._env = env
         self._policy = policy
+        self._rollout_fn = rollout_fn
         self._max_num_epoch_paths_saved = max_num_epoch_paths_saved
         self._epoch_paths = deque(maxlen=self._max_num_epoch_paths_saved)
         self._render = render
@@ -39,7 +41,7 @@ class MdpPathCollector(PathCollector):
                 max_path_length,
                 num_steps - num_steps_collected,
             )
-            path = rollout(
+            path = self._rollout_fn(
                 self._env,
                 self._policy,
                 max_path_length=max_path_length_this_loop,

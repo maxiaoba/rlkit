@@ -54,19 +54,19 @@ class YNYDriver(XYSeperateDriver):
 
     def setup_render(self, viewer):
         if self.intention == 0:
-            self.car._color = GREEN_COLORS[0]
+            self.car._color = [*GREEN_COLORS[0],0.5]
         elif self.intention == 1:
-            self.car._color = BLUE_COLORS[0]
+            self.car._color = [*BLUE_COLORS[0],0.5]
         elif self.intention == 2:
-            self.car._color = RED_COLORS[0]
+            self.car._color = [*RED_COLORS[0],0.5]
 
     def update_render(self, camera_center):
         if self.intention == 0:
-            self.car._color = GREEN_COLORS[0]
+            self.car._color = [*GREEN_COLORS[0],0.5]
         elif self.intention == 1:
-            self.car._color = BLUE_COLORS[0]
+            self.car._color = [*BLUE_COLORS[0],0.5]
         elif self.intention == 2:
-            self.car._color = RED_COLORS[0]
+            self.car._color = [*RED_COLORS[0],0.5]
 
 class EgoTrajectory:
     def xy_to_traj(self, pos):
