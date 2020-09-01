@@ -124,13 +124,14 @@ class PPOSupTrainer(PPOTrainer):
                     obs1 = path['observations'][i]
                     labels1 = torch.tensor(path['env_infos']['sup_labels'][i])
                     valid_mask1 = ~torch.isnan(labels1)[None,:]
-                    entropy_1 = self.sup_learner.get_distribution(torch_ify(obs1)[None,:]).entropy()
+                    entropy_1 = self.policy.get_sup_distribution(torch_ify(obs1)[None,:]).entropy()
+                    # if self.attention_eb: # todo
                     entropy_1 = torch.mean(entropy_1[valid_mask1])
 
                     obs2 = path['observations'][i+1]
                     labels2 = torch.tensor(path['env_infos']['sup_labels'][i+1])
                     valid_mask2 = ~torch.isnan(labels2)[None,:]
-                    entropy_2 = self.sup_learner.get_distribution(torch_ify(obs2)[None,:]).entropy()
+                    entropy_2 = self.policy.get_sup_distribution(torch_ify(obs2)[None,:]).entropy()
                     entropy_2 = torch.mean(entropy_2[valid_mask2])
 
                     entropy_decrease = (entropy_1 - entropy_2).item()
@@ -188,12 +189,12 @@ class PPOSupTrainer(PPOTrainer):
                         total_length=self.max_path_length) for path in paths
         ])
         # batch x label_num x label_dim
+        env_infos = [ppp.list_of_dicts__to__dict_of_lists(p['env_infos']) for p in paths]
         labels = torch.stack([
-            pad_to_last(path['env_infos']['sup_labels'],
+            pad_to_last(env_info['sup_labels'],
                         total_length=self.max_path_length,
-                        axis=0) for path in paths
+                        axis=0) for env_info in env_infos
         ])
-
         with torch.no_grad():
             baselines = self._value_function(obs).squeeze(-1)
 
