@@ -128,7 +128,7 @@ if __name__ == "__main__":
             num_eval_steps_per_epoch=1000,
             num_train_loops_per_epoch=1,
             num_trains_per_train_loop=1,
-            num_expl_steps_per_train_loop=(args.bs if args.bs else 50),#1000),
+            num_expl_steps_per_train_loop=(args.bs if args.bs else 1000),
             max_path_length=max_path_length,
             save_best=True,
         ),

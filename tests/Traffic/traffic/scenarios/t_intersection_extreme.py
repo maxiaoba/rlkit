@@ -252,7 +252,7 @@ class TIntersectionExtreme(TrafficEnv):
             if observe_mode == 'full':
                 self.label_num = self.max_veh_num
         else:
-            self.label_num = int(self.max_veh_num/2)
+            self.label_num = int(self.max_veh_num/2)+1
 
         self.car_length=5.0
         self.car_width=2.0
@@ -286,7 +286,7 @@ class TIntersectionExtreme(TrafficEnv):
                     i += 1
         else:
             important_indices = self.get_important_indices()
-            for indx in important_indices[1:]:
+            for indx in important_indices:
                 if indx is None:
                     i += 1
                 else:
