@@ -55,7 +55,8 @@ class GNNAttentionNet(torch.nn.Module):
         return convs
 
     def build_conv_model(self, node_in_dim, node_out_dim):
-        return pyg_nn.GCNConv(node_in_dim,node_out_dim)
+        return pyg_nn.DenseSAGEConv(node_in_dim,node_out_dim)
+        # return pyg_nn.GCNConv(node_in_dim,node_out_dim)
 
     def forward(self, obs, return_attention_weights=False, **kwargs):
         batch_size = obs.shape[0]
@@ -64,9 +65,16 @@ class GNNAttentionNet(torch.nn.Module):
         x = self.hidden_activations[0](x)
         edge_index, attention_weights = edge_attention
         attention_weights = attention_weights.squeeze(-1)
+        batch_vector = torch.arange(batch_size)[:,None].repeat(1,self.pre_graph_builder.node_num).reshape(-1)
+        adj = pyg_utils.to_dense_adj(edge_index, edge_attr=attention_weights, batch=batch_vector)
+        adj = adj.squeeze(-1)
+        x, _ = pyg_utils.to_dense_batch(x, batch=batch_vector)
         for l, conv in enumerate(self.convs):
-            x = conv(x, edge_index, edge_weight = attention_weights)
+            x = conv(x, adj)
             x = self.hidden_activations[l+1](x)
+        # for l, conv in enumerate(self.convs):
+        #     x = conv(x, edge_index, edge_weight = attention_weights)
+        #     x = self.hidden_activations[l+1](x)
         x = x.reshape(batch_size,self.pre_graph_builder.node_num,self.node_dim)
         x = self.output_activation(x)
         if return_attention_weights:
