@@ -640,6 +640,7 @@ class TIntersectionExtreme(TrafficEnv):
                 starts = np.array(starts)[rank_index]
                 ends = np.array(ends)[rank_index]
                 attentions = np.array(attentions)[rank_index]
+                assert np.isclose(np.sum(attentions),1.)
                 for start, end, attention in zip(starts[-3:],ends[-3:],attentions[-3:]):
                     attrs = {"color":(1.,0.,1.),"linewidth":10.*attention}
                     if (start == end).all():

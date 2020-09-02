@@ -30,17 +30,16 @@ def experiment(variant):
                             ego_init=torch.tensor([0.,1.]),
                             other_init=torch.tensor([1.,0.]),
                             )
-    from gnn_net import GNNNet
     if variant['gnn_kwargs']['attention']:
-        import torch_geometric.nn as pyg_nn
-        attentioner = pyg_nn.GATConv(variant['gnn_kwargs']['node'],variant['gnn_kwargs']['node'])
+        from gnn_attention_net import GNNAttentionNet
+        gnn_class = GNNAttentionNet
     else:
-        attentioner = None
-    gnn = GNNNet( 
+        from gnn_net import GNNNet
+        gnn_class = GNNNet
+    gnn = gnn_class( 
                 pre_graph_builder=gb, 
                 node_dim=variant['gnn_kwargs']['node'],
                 num_conv_layers=variant['gnn_kwargs']['layer'],
-                attentioner=attentioner,
                 hidden_activation=variant['gnn_kwargs']['activation'],
                 )
     encoder = gnn

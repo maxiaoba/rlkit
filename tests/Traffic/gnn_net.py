@@ -28,7 +28,6 @@ class GNNNet(torch.nn.Module):
                 num_conv_layers=3,
                 hidden_activation=None,
                 output_activation=None,
-                attentioner=None,
                 ):
         super(GNNNet, self).__init__()
 
@@ -42,9 +41,7 @@ class GNNNet(torch.nn.Module):
         self.convs = self.build_convs(self.node_input_dim, self.node_dim, self.num_conv_layers)
         self.hidden_activations = nn.ModuleList([get_activation(hidden_activation) for l in range(num_conv_layers)])
         self.output_activation = get_activation(output_activation)
-
-        # attentioner
-        self.attentioner = attentioner
+        
 
     def build_convs(self, node_input_dim, node_dim, num_conv_layers):
         convs = nn.ModuleList()
@@ -58,21 +55,16 @@ class GNNNet(torch.nn.Module):
     def build_conv_model(self, node_in_dim, node_out_dim):
         return pyg_nn.SAGEConv(node_in_dim,node_out_dim)
 
-    def forward(self, obs, return_attention_weights=False,**kwargs):
+    def forward(self, obs, **kwargs):
         batch_size = obs.shape[0]
         x, edge_index = self.pre_graph_builder(obs)
         for l, conv in enumerate(self.convs):
             # self.check_input(x, edge_index)
             x = conv(x, edge_index)
             x = self.hidden_activations[l](x)
-        if hasattr(self, 'attentioner') and self.attentioner:
-            x, attention_weights = self.attentioner(x, edge_index, return_attention_weights=True)
         x = x.reshape(batch_size,-1,self.node_dim)
         x = self.output_activation(x)
-        if return_attention_weights:
-            return x, attention_weights
-        else:
-            return x
+        return x
 
     def check_input(self, xs, edge_index):
         Os = {}

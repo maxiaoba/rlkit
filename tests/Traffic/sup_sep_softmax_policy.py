@@ -29,7 +29,7 @@ class SupSepSoftmaxPolicy(Policy, nn.Module):
         self.label_num = label_num
         self.label_dim = label_dim
 
-    def forward(self, obs, labels=None, return_info=False):
+    def obs_to_policy_inputs(self, obs, labels=None):
         obs_flat = obs
         batch_size, obs_dim = obs.shape
         obs = torch.reshape(obs,(batch_size, self.label_num+1, -1))
@@ -47,9 +47,13 @@ class SupSepSoftmaxPolicy(Policy, nn.Module):
         onehot_labels[:,1:,:].scatter_(-1,labels[:,:,None].long(),1.)
         onehot_labels[:,1:,:][~valid_musk] = 0.
         inputs = torch.cat((obs,onehot_labels),dim=-1).reshape(batch_size,-1)
+        return inputs
+
+    def forward(self, obs, labels=None, return_info=False):
+        inputs = self.obs_to_policy_inputs(obs, labels=labels)
         logits = self.policy(inputs)
         pis = torch.softmax(logits, dim=-1)
-        info = dict(preactivation=logits, labels=labels)
+        info = dict(preactivation=logits)
         if return_info:
             return pis, info
         else:
@@ -72,7 +76,13 @@ class SupSepSoftmaxPolicy(Policy, nn.Module):
         return action, {}
 
     def get_attention_weight(self, obs):
-        return None
+        if hasattr(self.policy[0], 'attentioner'):
+            with torch.no_grad():
+                policy_inputs = eval_np(self.obs_to_policy_inputs, obs[None])
+                x, attention_weight = eval_np(self.policy[0], policy_inputs, return_attention_weights=True)
+            return attention_weight
+        else:
+            return None
 
     def get_labels(self, obs):
         sup_probs = self.sup_prob(obs)

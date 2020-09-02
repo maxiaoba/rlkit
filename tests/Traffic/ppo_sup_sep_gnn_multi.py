@@ -29,17 +29,16 @@ def experiment(variant):
                             ego_init=torch.tensor([0.,1.]),
                             other_init=torch.tensor([1.,0.]),
                             )
-    from gnn_net import GNNNet
     if variant['gnn_kwargs']['attention']:
-        import torch_geometric.nn as pyg_nn
-        policy_attentioner = pyg_nn.GATConv(variant['gnn_kwargs']['node'],variant['gnn_kwargs']['node'])
+        from gnn_attention_net import GNNAttentionNet
+        gnn_class = GNNAttentionNet
     else:
-        policy_attentioner = None
-    policy_gnn = GNNNet( 
+        from gnn_net import GNNNet
+        gnn_class = GNNNet
+    policy_gnn = gnn_class( 
                 pre_graph_builder=policy_gb, 
                 node_dim=variant['gnn_kwargs']['node'],
                 num_conv_layers=variant['gnn_kwargs']['layer'],
-                attentioner=policy_attentioner,
                 hidden_activation=variant['gnn_kwargs']['activation'],
                 )
     from layers import FlattenLayer, SelectLayer
@@ -57,11 +56,11 @@ def experiment(variant):
                             )
     sup_attentioner = None
     from layers import ReshapeLayer
+    from gnn_net import GNNNet
     sup_gnn = GNNNet( 
                 pre_graph_builder=sup_gb, 
                 node_dim=variant['gnn_kwargs']['node'],
                 num_conv_layers=variant['gnn_kwargs']['layer'],
-                attentioner=sup_attentioner,
                 hidden_activation=variant['gnn_kwargs']['activation'],
                 )
     sup_learner = nn.Sequential(

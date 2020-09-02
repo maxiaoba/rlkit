@@ -50,7 +50,7 @@ class SupSoftmaxPolicy(Policy, nn.Module):
         return action, {}
 
     def get_attention_weight(self, obs):
-        if hasattr(self.encoder, 'attentioner') and self.encoder.attentioner:
+        if hasattr(self.encoder, 'attentioner'):
             with torch.no_grad():
                 x, attention_weight = eval_np(self.encoder, obs[None], return_attention_weights=True)
             return attention_weight
