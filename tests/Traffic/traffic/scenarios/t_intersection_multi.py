@@ -48,7 +48,7 @@ class YNYDriver(XYSeperateDriver):
             self.intention = 0
         else:
             if self.yld: # yield
-                self.x_driver.min_overlap = self.t
+                self.x_driver.min_overlap = self.t1
                 self.x_driver.observe(cars, road)
                 self.intention = 1
             else: # not yield
@@ -202,7 +202,7 @@ class TIntersectionMulti(TrafficEnv):
                  label_mode='full',
                  normalize_obs=False,
                  vs_actions=[0.,0.5,3.],
-                 t_actions=[-1.5,0.,1.5],
+                 t_actions=[0.],
                  desire_speed=3.,
                  driver_sigma = 0.,
                  speed_cost=0.01,
@@ -559,15 +559,39 @@ class TIntersectionMulti(TrafficEnv):
         t1 = self._drivers[1].t1
         t2 = self._drivers[1].t2
         
-        start = np.array([self.left_bound,2.-t1]) - self.get_camera_center()
-        end = np.array([self.left_bound,],2.-t1) - self.get_camera_center()
-        attrs = {"color":(1.,1.,0.),"linewidth":1.}
+        start = np.array([self.left_bound,1.-t1]) - self.get_camera_center()
+        end = np.array([self.right_bound,1.-t1]) - self.get_camera_center()
+        attrs = {"color":(1.,1.,0.),"linewidth":2.}
         self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.left_bound,2.-t2]) - self.get_camera_center()
-        end = np.array([self.left_bound,],2.-t2) - self.get_camera_center()
-        attrs = {"color":(1.,0.,0.),"linewidth":1.}
+        start = np.array([self.left_bound,1.-t2]) - self.get_camera_center()
+        end = np.array([self.right_bound,1.-t2]) - self.get_camera_center()
+        attrs = {"color":(1.,0.,0.),"linewidth":2.}
         self.viewer.draw_line(start, end, **attrs)
-        # TODO
+        start = np.array([self.left_bound,3.+t1]) - self.get_camera_center()
+        end = np.array([self.right_bound,3.+t1]) - self.get_camera_center()
+        attrs = {"color":(1.,1.,0.),"linewidth":2.}
+        self.viewer.draw_line(start, end, **attrs)
+        start = np.array([self.left_bound,3.+t2]) - self.get_camera_center()
+        end = np.array([self.right_bound,3.+t2]) - self.get_camera_center()
+        attrs = {"color":(1.,0.,0.),"linewidth":2.}
+        self.viewer.draw_line(start, end, **attrs)
+
+        start = np.array([self.left_bound,5.-t1]) - self.get_camera_center()
+        end = np.array([self.right_bound,5.-t1]) - self.get_camera_center()
+        attrs = {"color":(1.,1.,0.),"linewidth":2.}
+        self.viewer.draw_line(start, end, **attrs)
+        start = np.array([self.left_bound,5.-t2]) - self.get_camera_center()
+        end = np.array([self.right_bound,5.-t2]) - self.get_camera_center()
+        attrs = {"color":(1.,0.,0.),"linewidth":2.}
+        self.viewer.draw_line(start, end, **attrs)
+        start = np.array([self.left_bound,7.+t1]) - self.get_camera_center()
+        end = np.array([self.right_bound,7.+t1]) - self.get_camera_center()
+        attrs = {"color":(1.,1.,0.),"linewidth":2.}
+        self.viewer.draw_line(start, end, **attrs)
+        start = np.array([self.left_bound,7.+t2]) - self.get_camera_center()
+        end = np.array([self.right_bound,7.+t2]) - self.get_camera_center()
+        attrs = {"color":(1.,0.,0.),"linewidth":2.}
+        self.viewer.draw_line(start, end, **attrs)
 
         if extra_input:
             if ('attention_weight' in extra_input.keys()) and (extra_input['attention_weight'] is not None):
