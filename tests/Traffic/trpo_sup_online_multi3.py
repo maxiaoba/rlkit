@@ -43,7 +43,8 @@ def experiment(variant):
         )
     from sup_softmax_policy import SupSoftmaxPolicy
     policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
-
+    print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
+    
     vf = Mlp(
         hidden_sizes=[32, 32],
         input_size=obs_dim,

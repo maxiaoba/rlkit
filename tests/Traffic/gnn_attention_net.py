@@ -49,7 +49,7 @@ class GNNAttentionNet(torch.nn.Module):
 
     def build_convs(self, node_dim, num_conv_layers):
         convs = nn.ModuleList()
-        for l in range(1,num_conv_layers):
+        for l in range(num_conv_layers):
             conv = self.build_conv_model(node_dim, node_dim)
             convs.append(conv)
         return convs

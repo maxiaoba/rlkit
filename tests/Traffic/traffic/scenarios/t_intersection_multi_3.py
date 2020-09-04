@@ -12,16 +12,14 @@ from traffic.actions.trajectory_accel_action import TrajectoryAccelAction
 from traffic.constants import *
 
 class YNYDriver(XYSeperateDriver):
-    def __init__(self, yld=True, t1=1.0, t2=0., 
-                s_min=0., v_min=0.5,
+    def __init__(self, yld=True, t1=1.0, t2=0., s_min=0.,
                 v_yld=3., v_nyld=6., 
-                s_yld=3., s_nyld=0.5,
+                s_yld=3., s_nyld=0.,
                 **kwargs):
         self.yld = yld
         self.t1 = t1
         self.t2 = t2
         self.s_min = s_min
-        self.v_min = v_min
         self.v_yld = v_yld
         self.v_nyld = v_nyld
         self.s_yld = s_yld
@@ -45,7 +43,8 @@ class YNYDriver(XYSeperateDriver):
             self.x_driver.set_v_des(self.v_nyld)
             self.x_driver.s_des = self.s_nyld
         if  (s < self.s_min) or (t > self.t1)\
-             or ((ego_vy <= self.v_min) and (t > self.t2)): # normal drive
+             or ((ego_vy <= 0.) and (t > self.t2)): # normal drive
+             # todo: use a small v instead of 0.
             self.x_driver.observe(cars[1:], road)
             self.intention = 0
         else:
@@ -319,6 +318,16 @@ class TIntersectionMulti(TrafficEnv):
                 and (ego_car.position[1] < 7.):
                 self._goal = True
                 return
+
+            for i,driver in enumerate(self._drivers):
+                if i > 0:
+                    driver.observe(self._cars, self._road)
+            important_indices = self.get_important_indices()
+            for indx in important_indices:
+                if indx is not None:
+                    if self._drivers[indx].intention == 2:
+                        self._collision = True
+                        return
 
             # remove cars that are out-of bound
             for car, driver in zip(self._cars[1:],self._drivers[1:]):
