@@ -188,7 +188,7 @@ class EgoDriver(Driver):
                     elif speed_rel < -self.safe_speed:
                         unsafe = True
         if unsafe:
-            print('unsafe!')
+            # print('unsafe!')
             self.a_s = -self.k_v_safe * v_s
             self.a_t = -self.k_v_safe * v_t
             self.a_s = np.clip(self.a_s,-self.as_max_safe,self.as_max_safe)
