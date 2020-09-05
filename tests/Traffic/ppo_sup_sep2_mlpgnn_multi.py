@@ -5,9 +5,8 @@ from rlkit.exploration_strategies.base import \
     PolicyWrappedWithExplorationStrategy
 from rlkit.exploration_strategies.epsilon_greedy import EpsilonGreedy
 from rlkit.policies.argmax import ArgmaxDiscretePolicy
-from rlkit.torch.vpg.ppo import PPOTrainer
-from rlkit.torch.policies.softmax_policy import SoftmaxPolicy
 from rlkit.torch.networks import Mlp
+from combine_net import CombineNet
 import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
 from rlkit.launchers.launcher_util import setup_logger
@@ -26,22 +25,37 @@ def experiment(variant):
     label_dim = expl_env.label_dim
 
     hidden_dim = variant['mlp_kwargs']['hidden']
-    encoder = nn.Sequential(
-             nn.Linear(obs_dim,hidden_dim),
+    policy = nn.Sequential(
+             nn.Linear(obs_dim+int(label_dim*label_num+label_dim),hidden_dim),
              nn.ReLU(),
              nn.Linear(hidden_dim,hidden_dim),
              nn.ReLU(),
+             nn.Linear(hidden_dim, action_dim)
             )
-    decoder = nn.Linear(hidden_dim, action_dim)
-    from layers import ReshapeLayer
+    from graph_builder_multi import MultiTrafficGraphBuilder
+    sup_gb = MultiTrafficGraphBuilder(input_dim=4, node_num=expl_env.max_veh_num+1,
+                            ego_init=torch.tensor([0.,1.]),
+                            other_init=torch.tensor([1.,0.]),
+                            )
+    sup_attentioner = None
+    from layers import ReshapeLayer, FlattenLayer, SelectLayer
+    from gnn_net import GNNNet
+    sup_gnn = GNNNet( 
+                pre_graph_builder=sup_gb, 
+                node_dim=variant['gnn_kwargs']['node'],
+                num_conv_layers=variant['gnn_kwargs']['layer'],
+                hidden_activation=variant['gnn_kwargs']['activation'],
+                )
     sup_learner = nn.Sequential(
-            nn.Linear(hidden_dim, int(expl_env.label_num*expl_env.label_dim)),
-            ReshapeLayer(shape=(expl_env.label_num, expl_env.label_dim)),
+            sup_gnn,
+            SelectLayer(1,np.arange(1,expl_env.max_veh_num+1)),
+            nn.ReLU(),
+            nn.Linear(variant['gnn_kwargs']['node'], label_dim),
         )
-    from sup_softmax_policy import SupSoftmaxPolicy
-    policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
+    from sup_sep_softmax_policy import SupSepSoftmaxPolicy
+    policy = SupSepSoftmaxPolicy(policy, sup_learner, label_num, label_dim)
     print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
-
+    
     vf = Mlp(
         hidden_sizes=[32, 32],
         input_size=obs_dim,
@@ -55,14 +69,25 @@ def experiment(variant):
         eval_env,
         eval_policy,
     )
+    from sup_sep_rollout import sup_sep_rollout
     expl_path_collector = MdpPathCollector(
         expl_env,
         expl_policy,
+        rollout_fn=sup_sep_rollout,
     )
-    trainer = PPOTrainer(
+    from sup_replay_buffer import SupReplayBuffer
+    replay_buffer = SupReplayBuffer(
+        observation_dim = obs_dim,
+        label_dim = label_num,
+        max_replay_buffer_size = int(1e6),
+    )
+
+    from rlkit.torch.vpg.ppo_sup_sep import PPOSupSepTrainer
+    trainer = PPOSupSepTrainer(
         policy=policy,
         value_function=vf,
         vf_criterion=vf_criterion,
+        replay_buffer=replay_buffer,
         **variant['trainer_kwargs']
     )
     algorithm = TorchOnlineRLAlgorithm(
@@ -86,8 +111,13 @@ if __name__ == "__main__":
     parser.add_argument('--label', type=str, default='full')
     parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
-    parser.add_argument('--log_dir', type=str, default='PPO')
+    parser.add_argument('--log_dir', type=str, default='PPOSupSep2MLPGNN')
+    parser.add_argument('--attention', action='store_true', default=False)
     parser.add_argument('--hidden', type=int, default=32)
+    parser.add_argument('--node', type=int, default=16)
+    parser.add_argument('--layer', type=int, default=3)
+    parser.add_argument('--act', type=str, default=None)
+    parser.add_argument('--eb', type=float, default=None)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -99,6 +129,11 @@ if __name__ == "__main__":
     pre_dir = './Data/'+args.exp_name+('nob' if args.nob else '')+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs+args.label
     main_dir = args.log_dir\
                 +('hidden'+str(args.hidden))\
+                +('node'+str(args.node))\
+                +('layer'+str(args.layer))\
+                +('attention' if args.attention else '')\
+                +(('act'+args.act) if args.act else '')\
+                +(('eb'+str(args.eb)) if args.eb else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
@@ -107,6 +142,12 @@ if __name__ == "__main__":
     variant = dict(
         mlp_kwargs=dict(
             hidden=args.hidden,
+        ),
+        gnn_kwargs=dict(
+            node=args.node,
+            layer=args.layer,
+            attention=args.attention,
+            activation=args.act,
         ),
         env_kwargs=dict(
             num_updates=1,
@@ -130,6 +171,8 @@ if __name__ == "__main__":
             max_path_length=max_path_length,
             policy_lr=(args.lr if args.lr else 1e-4),
             vf_lr=(args.lr if args.lr else 1e-3),
+            exploration_bonus=(args.eb if args.eb else 0.),
+            sup_lr=(args.lr if args.lr else 1e-3),
         ),
     )
     import os

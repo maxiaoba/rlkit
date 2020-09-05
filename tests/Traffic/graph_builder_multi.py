@@ -8,8 +8,6 @@ class MultiTrafficGraphBuilder(torch.nn.Module):
                 node_num,
                 ego_init=torch.tensor([0.,1.]),
                 other_init=torch.tensor([1.,0.]),
-                edge_index=torch.tensor([[0,0,1,2],
-                                     [1,2,0,0]])
                 ):
         super(MultiTrafficGraphBuilder, self).__init__()
 
@@ -17,7 +15,6 @@ class MultiTrafficGraphBuilder(torch.nn.Module):
         self.node_num = node_num
         self.ego_init = ego_init
         self.other_init = other_init
-        self.edge_index = edge_index
 
         self.output_dim = input_dim + self.ego_init.shape[0]
         self.full_edges = self.get_full_edges()

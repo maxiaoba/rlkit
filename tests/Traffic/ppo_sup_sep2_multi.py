@@ -24,26 +24,27 @@ def experiment(variant):
     label_num = expl_env.label_num
     label_dim = expl_env.label_dim
 
+    hidden_dim = variant['mlp_kwargs']['hidden']
     policy = nn.Sequential(
-             nn.Linear(obs_dim+int(label_dim*label_num+label_dim),32),
+             nn.Linear(obs_dim+int(label_dim*label_num+label_dim),hidden_dim),
              nn.ReLU(),
-             nn.Linear(32,32),
+             nn.Linear(hidden_dim,hidden_dim),
              nn.ReLU(),
-             nn.Linear(32, action_dim)
+             nn.Linear(hidden_dim, action_dim)
             )
     from layers import ReshapeLayer
     sup_learner = nn.Sequential(
-             nn.Linear(obs_dim,32),
+             nn.Linear(obs_dim,hidden_dim),
              nn.ReLU(),
-             nn.Linear(32,32),
+             nn.Linear(hidden_dim,hidden_dim),
              nn.ReLU(),
-             nn.Linear(32, int(label_num*label_dim)),
+             nn.Linear(hidden_dim, int(label_num*label_dim)),
              ReshapeLayer(shape=(label_num, label_dim)),
         )
     from sup_sep_softmax_policy import SupSepSoftmaxPolicy
     policy = SupSepSoftmaxPolicy(policy, sup_learner, label_num, label_dim)
     print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
-    
+
     vf = Mlp(
         hidden_sizes=[32, 32],
         input_size=obs_dim,
@@ -100,6 +101,7 @@ if __name__ == "__main__":
     parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
     parser.add_argument('--log_dir', type=str, default='PPOSupSep2')
+    parser.add_argument('--hidden', type=int, default=32)
     parser.add_argument('--eb', type=float, default=None)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
@@ -111,6 +113,7 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+('nob' if args.nob else '')+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs+args.label
     main_dir = args.log_dir\
+                +('hidden'+str(args.hidden))\
                 +(('eb'+str(args.eb)) if args.eb else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
@@ -118,6 +121,9 @@ if __name__ == "__main__":
     max_path_length = 200
     # noinspection PyTypeChecker
     variant = dict(
+        mlp_kwargs=dict(
+            hidden=args.hidden,
+        ),
         env_kwargs=dict(
             num_updates=1,
             normalize_obs=args.nob,

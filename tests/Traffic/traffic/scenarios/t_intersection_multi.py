@@ -129,7 +129,7 @@ class EgoDriver(Driver):
                 at_max=3.0,
                 as_max_safe=6.0,
                 at_max_safe=6.0,
-                concern_distance=0.8,
+                concern_distance=1.0,
                 safe_distance=0.5,
                 safe_speed=1.0,
                 **kwargs):

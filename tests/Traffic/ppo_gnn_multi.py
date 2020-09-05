@@ -158,9 +158,6 @@ if __name__ == "__main__":
             policy_lr=(args.lr if args.lr else 1e-4),
             vf_lr=(args.lr if args.lr else 1e-3),
         ),
-        vf_kwargs=dict(
-            hidden_sizes=[64],
-        ),
     )
     import os
     if not os.path.isdir(log_dir):
