@@ -25,6 +25,7 @@ class GNNNet(torch.nn.Module):
     def __init__(self, 
                 pre_graph_builder, 
                 node_dim,
+                conv_type='GSage',
                 num_conv_layers=3,
                 hidden_activation=None,
                 output_activation=None,
@@ -37,6 +38,7 @@ class GNNNet(torch.nn.Module):
         # convs
         self.node_input_dim = pre_graph_builder.output_dim
         self.node_dim = node_dim
+        self.conv_type = conv_type
         self.num_conv_layers = num_conv_layers
         self.convs = self.build_convs(self.node_input_dim, self.node_dim, self.num_conv_layers)
         self.hidden_activations = nn.ModuleList([get_activation(hidden_activation) for l in range(num_conv_layers)])
@@ -53,7 +55,14 @@ class GNNNet(torch.nn.Module):
         return convs
 
     def build_conv_model(self, node_in_dim, node_out_dim):
-        return pyg_nn.SAGEConv(node_in_dim,node_out_dim)
+        if self.conv_type == 'GSage':
+            return pyg_nn.SAGEConv(node_in_dim,node_out_dim)
+        elif self.conv_type == 'GCN':
+            return pyg_nn.GCNConv(node_in_dim,node_out_dim)
+        elif self.conv_type == 'GAT':
+            return pyg_nn.GATConv(node_in_dim, node_out_dim)
+        else:
+            raise NotImplementedError
 
     def forward(self, obs, **kwargs):
         batch_size = obs.shape[0]

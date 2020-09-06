@@ -5,7 +5,7 @@ matplotlib.rcParams.update({'font.size': 10})
 from matplotlib import pyplot as plt
 import numpy as np
 
-itr_interval = 10
+itr_interval = 100
 max_itr = 2e4
 
 fields = [
@@ -53,16 +53,15 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'PPO',
-            'PPOSupOnline',
-            'PPOSupOnline2',
-            'PPOSupSep2',
+            'PPOhidden32',
+            'PPOhidden64',
+            'PPOSupSep2hidden32',
+            'PPOSupSep2hidden64',
             'PPOGNNnode32layer3actrelu',
-            'PPOGNNnode32layer3attentionactrelu',
-            'PPOSupOnlineGNNnode32layer3actrelu',
-            'PPOSupOnlineGNNnode32layer3attentionactrelu',
+            'PPOGNNnode64layer3actrelu',
             'PPOSupSep2GNNnode32layer3actrelu',
-            'PPOSupSep2GNNnode32layer3attentionactrelu',
+            'PPOSupSep2GNNnode64layer3actrelu',
+            'PPOSupSep2MLPGNNhidden32node32layer3actrelu',
             # 'TRPO',
             # 'TRPOSup',
             # 'TRPOSup2',

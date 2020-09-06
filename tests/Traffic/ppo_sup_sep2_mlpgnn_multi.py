@@ -43,6 +43,7 @@ def experiment(variant):
     sup_gnn = GNNNet( 
                 pre_graph_builder=sup_gb, 
                 node_dim=variant['gnn_kwargs']['node'],
+                conv_type=variant['gnn_kwargs']['conv_type'],
                 num_conv_layers=variant['gnn_kwargs']['layer'],
                 hidden_activation=variant['gnn_kwargs']['activation'],
                 )
@@ -111,7 +112,8 @@ if __name__ == "__main__":
     parser.add_argument('--label', type=str, default='full')
     parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
-    parser.add_argument('--log_dir', type=str, default='PPOSupSep2MLPGNN')
+    parser.add_argument('--log_dir', type=str, default='PPOSupSep2MLP')
+    parser.add_argument('--gnn', type=str, default='GSage')
     parser.add_argument('--attention', action='store_true', default=False)
     parser.add_argument('--hidden', type=int, default=32)
     parser.add_argument('--node', type=int, default=16)
@@ -128,6 +130,7 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+('nob' if args.nob else '')+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs+args.label
     main_dir = args.log_dir\
+                +args.gnn\
                 +('hidden'+str(args.hidden))\
                 +('node'+str(args.node))\
                 +('layer'+str(args.layer))\
@@ -144,6 +147,7 @@ if __name__ == "__main__":
             hidden=args.hidden,
         ),
         gnn_kwargs=dict(
+            conv_type=args.gnn,
             node=args.node,
             layer=args.layer,
             attention=args.attention,
