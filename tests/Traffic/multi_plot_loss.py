@@ -54,23 +54,23 @@ plot_path = "./Data/"+exp_name
 
 policies = [
             # 'PPOhidden32',
-            # 'PPOhidden64',
+            'PPOhidden64',
             # 'PPOSupSep2hidden32',
-            # 'PPOSupSep2hidden64',
+            'PPOSupSep2hidden64',
             # 'PPOGSagenode32layer3actrelu',
-            # 'PPOGSagenode64layer3actrelu',
+            'PPOGSagenode64layer3actrelu',
             # 'PPOSupSep2GSagenode32layer3actrelu',
-            # 'PPOSupSep2GSagenode64layer3actrelu',
+            'PPOSupSep2GSagenode64layer3actrelu',
             # 'PPOSupSep2GATnode32layer3actrelu',
             # 'PPOSupSep2GCNnode32layer3actrelu',
             # 'PPOSupSep2GCNnode32layer3attentionactrelu',
             # 'PPOSupSep2MLPGSagehidden32node32layer3actrelu',
-            'PPOSupSep2hidden16',
-            'PPOSupSep2GSagenode16layer3actrelu',
-            'PPOSupSep2GATnode16layer3actrelu',
-            'PPOSupSep2GCNnode16layer3actrelu',
-            'PPOSupSep2GCNnode16layer3attentionactrelu',
-            'PPOSupSep2MLPGSagehidden16node16layer3actrelu',
+            # 'PPOSupSep2hidden16',
+            # 'PPOSupSep2GSagenode16layer3actrelu',
+            # 'PPOSupSep2GATnode16layer3actrelu',
+            # 'PPOSupSep2GCNnode16layer3actrelu',
+            # 'PPOSupSep2GCNnode16layer3attentionactrelu',
+            # 'PPOSupSep2MLPGSagehidden16node16layer3actrelu',
         ]
 policy_names = policies
 
@@ -79,7 +79,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'node16'
+extra_name = 'node64'
 
 pre_name = ''
 post_name = ''

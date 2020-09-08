@@ -126,6 +126,7 @@ if __name__ == "__main__":
                 +('layer'+str(args.layer))\
                 +('attention' if args.attention else '')\
                 +(('act'+args.act) if args.act else '')\
+                +(('ep'+str(args.epoch)) if args.epoch else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
