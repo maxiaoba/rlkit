@@ -47,7 +47,7 @@ with open('{}/{}/seed{}/variant.json'.format(pre_dir,args.log_dir,args.seed)) as
 env = make_env(args.exp_name,**variant['env_kwargs'])
 o = env.reset()
 
-max_path_length = np.inf#200
+max_path_length = 200
 path_length = 0
 done = False
 c_r = 0.

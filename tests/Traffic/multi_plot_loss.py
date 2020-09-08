@@ -12,14 +12,14 @@ fields = [
             'evaluation/Average Returns',
             # 'evaluation/Actions Max',
             # 'evaluation/Actions Min',
-            'evaluation/Num Success',
+            # 'evaluation/Num Success',
             # 'evaluation/Num Timeout',
             # 'evaluation/Num Fail',
             # 'exploration/Average Returns',
-            'exploration/Returns Max',
+            # 'exploration/Returns Max',
             # 'exploration/Returns Min',
             # 'exploration/Num Fail',
-            'exploration/Num Success',
+            # 'exploration/Num Success',
             'trainer/SUP LossAfter',
             # 'trainer/LossBefore',
             # 'trainer/LossAfter',
@@ -30,14 +30,14 @@ field_names = [
             'Eval Average Return',
             # 'Eval Action Max',
             # 'Eval Action Min',
-            'Eval Success',
+            # 'Eval Success',
             # 'Eval Timeout',
             # 'Eval Fail',
             # 'Expl Average Return',
-            'Expl Max Return',
+            # 'Expl Max Return',
             # 'Expl Min Return',
             # 'Expl Fail',
-            'Expl Success',
+            # 'Expl Success',
             'Sup LossAfter',
             # 'LossBefore',
             # 'LossAfter',
@@ -53,25 +53,24 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'PPOhidden32',
-            'PPOhidden64',
-            'PPOSupSep2hidden32',
-            'PPOSupSep2hidden64',
-            'PPOGNNnode32layer3actrelu',
-            'PPOGNNnode64layer3actrelu',
-            'PPOSupSep2GNNnode32layer3actrelu',
-            'PPOSupSep2GNNnode64layer3actrelu',
-            'PPOSupSep2MLPGNNhidden32node32layer3actrelu',
-            # 'TRPO',
-            # 'TRPOSup',
-            # 'TRPOSup2',
-            # 'TRPOSupSep2',
-            # 'TRPOGNNnode32layer3actrelu',
-            # 'TRPOGNNnode32layer3attentionactrelu',
-            # 'TRPOSupGNNnode32layer3actrelu',
-            # 'TRPOSupGNNnode32layer3attentionactrelu',
-            # 'TRPOSupSep2GNNnode32layer3actrelu',
-            # 'TRPOSupSep2GNNnode32layer3attentionactrelu',
+            # 'PPOhidden32',
+            # 'PPOhidden64',
+            # 'PPOSupSep2hidden32',
+            # 'PPOSupSep2hidden64',
+            # 'PPOGSagenode32layer3actrelu',
+            # 'PPOGSagenode64layer3actrelu',
+            # 'PPOSupSep2GSagenode32layer3actrelu',
+            # 'PPOSupSep2GSagenode64layer3actrelu',
+            # 'PPOSupSep2GATnode32layer3actrelu',
+            # 'PPOSupSep2GCNnode32layer3actrelu',
+            # 'PPOSupSep2GCNnode32layer3attentionactrelu',
+            # 'PPOSupSep2MLPGSagehidden32node32layer3actrelu',
+            'PPOSupSep2hidden16',
+            'PPOSupSep2GSagenode16layer3actrelu',
+            'PPOSupSep2GATnode16layer3actrelu',
+            'PPOSupSep2GCNnode16layer3actrelu',
+            'PPOSupSep2GCNnode16layer3attentionactrelu',
+            'PPOSupSep2MLPGSagehidden16node16layer3actrelu',
         ]
 policy_names = policies
 
@@ -80,7 +79,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'ppo'
+extra_name = 'node16'
 
 pre_name = ''
 post_name = ''

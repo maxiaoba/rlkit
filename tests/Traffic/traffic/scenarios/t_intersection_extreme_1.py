@@ -12,16 +12,13 @@ from traffic.actions.trajectory_accel_action import TrajectoryAccelAction
 from traffic.constants import *
 
 class YNYDriver(XYSeperateDriver):
-    def __init__(self, yld=True, t1=1.0, t2=0., 
-                s_min=0., v_min=0.1,
+    def __init__(self, yld=True, t=1.5, s_min=0.,
                 v_yld=3., v_nyld=6., 
-                s_yld=3., s_nyld=0.5,
+                s_yld=3., s_nyld=0.,
                 **kwargs):
         self.yld = yld
-        self.t1 = t1
-        self.t2 = t2
+        self.t = t 
         self.s_min = s_min
-        self.v_min = v_min
         self.v_yld = v_yld
         self.v_nyld = v_nyld
         self.s_yld = s_yld
@@ -36,7 +33,7 @@ class YNYDriver(XYSeperateDriver):
         s = cars[0].position[0] - self.car.position[0]
         s = s * self.x_driver.direction
         t = self.car.get_distance(cars[0],1)
-        ego_vy = cars[0].velocity[1] * np.sign(self.car.position[1]-cars[0].position[1])
+        ego_vy = cars[0].velocity[1]
         # print("t: ",t, self.t1, self.t2)
         if self.yld:
             self.x_driver.set_v_des(self.v_yld)
@@ -44,13 +41,12 @@ class YNYDriver(XYSeperateDriver):
         else:
             self.x_driver.set_v_des(self.v_nyld)
             self.x_driver.s_des = self.s_nyld
-        if  (s < self.s_min) or (t > self.t1)\
-             or ((ego_vy <= self.v_min) and (t > self.t2)): # normal drive
+        if (s < self.s_min) or (t > self.t) or (ego_vy <= 0.): # normal drive
             self.x_driver.observe(cars[1:], road)
             self.intention = 0
         else:
             if self.yld: # yield
-                self.x_driver.min_overlap = self.t1
+                self.x_driver.min_overlap = self.t
                 self.x_driver.observe(cars, road)
                 self.intention = 1
             else: # not yield
@@ -129,7 +125,7 @@ class EgoDriver(Driver):
                 at_max=3.0,
                 as_max_safe=6.0,
                 at_max_safe=6.0,
-                concern_distance=1.0,
+                concern_distance=0.8,
                 safe_distance=0.5,
                 safe_speed=1.0,
                 **kwargs):
@@ -189,7 +185,6 @@ class EgoDriver(Driver):
                     elif speed_rel < -self.safe_speed:
                         unsafe = True
         if unsafe:
-            # print('unsafe!')
             self.a_s = -self.k_v_safe * v_s
             self.a_t = -self.k_v_safe * v_t
             self.a_s = np.clip(self.a_s,-self.as_max_safe,self.as_max_safe)
@@ -208,13 +203,13 @@ class TIntersectionExtreme(TrafficEnv):
                  t_actions=[0.],
                  desire_speed=3.,
                  driver_sigma = 0.,
-                 speed_cost=0.01,
-                 t_cost=0.01,
-                 control_cost=0.01,
-                 collision_cost=2.,
-                 outroad_cost=2.,
-                 survive_reward=0.01,
-                 goal_reward=2.,
+                 speed_cost=0.0,
+                 t_cost=0.0,
+                 control_cost=0.0,
+                 collision_cost=1.,
+                 outroad_cost=1.,
+                 survive_reward=0.0,
+                 goal_reward=1.,
                  road=Road([RoadSegment([(-100.,0.),(100.,0.),(100.,8.),(-100.,8.)]),
                              RoadSegment([(-2,-10.),(2,-10.),(2,0.),(-2,0.)])]),
                  left_bound = -20.,
@@ -255,7 +250,11 @@ class TIntersectionExtreme(TrafficEnv):
         self.gap_max = gap_max
         self.max_veh_num = max_veh_num
         self.label_dim = 2
-        self.label_num = self.max_veh_num
+        if self.label_mode == 'full':
+            if observe_mode == 'full':
+                self.label_num = self.max_veh_num
+        else:
+            self.label_num = int(self.max_veh_num/2)+1
 
         self.car_length=5.0
         self.car_width=2.0
@@ -277,14 +276,24 @@ class TIntersectionExtreme(TrafficEnv):
     def get_sup_labels(self):
         labels = np.array([np.nan]*self.label_num)
         i = 0
-        upper_indices, lower_indices = self.get_sorted_indices()
-        for indx in lower_indices:
-            labels[i] = int(self._drivers[indx].yld)
-            i += 1
-        i = int(self.max_veh_num/2)
-        for indx in upper_indices:
-            labels[i] = int(self._drivers[indx].yld)
-            i += 1
+        if self.label_mode == 'full':
+            if self.observe_mode == 'full':
+                upper_indices, lower_indices = self.get_sorted_indices()
+                for indx in lower_indices:
+                    labels[i] = int(self._drivers[indx].yld)
+                    i += 1
+                i = int(self.max_veh_num/2)
+                for indx in upper_indices:
+                    labels[i] = int(self._drivers[indx].yld)
+                    i += 1
+        else:
+            important_indices = self.get_important_indices()
+            for indx in important_indices:
+                if indx is None:
+                    i += 1
+                else:
+                    labels[i] = int(self._drivers[indx].yld)
+                    i += 1
         return labels
 
     def update(self, action):
@@ -328,6 +337,9 @@ class TIntersectionExtreme(TrafficEnv):
                 if indx is not None:
                     if self._drivers[indx].intention == 2:
                         self._collision = True
+                        return
+                    elif self._drivers[indx].intention == 1:
+                        self._goal = True
                         return
 
             # remove cars that are out-of bound
@@ -383,20 +395,34 @@ class TIntersectionExtreme(TrafficEnv):
         return info
 
     def observe(self):
-        obs = np.zeros(int(4*self.max_veh_num+4))
-        obs[:2] = self._cars[0].position
-        obs[2:4] = self._cars[0].velocity
-        upper_indices, lower_indices = self.get_sorted_indices()
-        i = 4
-        for indx in lower_indices:
-            obs[i:i+2] = self._cars[indx].position - self._cars[0].position
-            obs[i+2:i+4] = self._cars[indx].velocity - self._cars[0].velocity
-            i += 4
-        i = int(4 + self.max_veh_num/2*4)
-        for indx in upper_indices:
-            obs[i:i+2] = self._cars[indx].position - self._cars[0].position
-            obs[i+2:i+4] = self._cars[indx].velocity - self._cars[0].velocity
-            i += 4
+        if self.observe_mode == 'full':
+            obs = np.zeros(int(4*self.max_veh_num+4))
+            obs[:2] = self._cars[0].position
+            obs[2:4] = self._cars[0].velocity
+            upper_indices, lower_indices = self.get_sorted_indices()
+            i = 4
+            for indx in lower_indices:
+                obs[i:i+2] = self._cars[indx].position - self._cars[0].position
+                obs[i+2:i+4] = self._cars[indx].velocity - self._cars[0].velocity
+                i += 4
+            i = int(4 + self.max_veh_num/2*4)
+            for indx in upper_indices:
+                obs[i:i+2] = self._cars[indx].position - self._cars[0].position
+                obs[i+2:i+4] = self._cars[indx].velocity - self._cars[0].velocity
+                i += 4
+        elif self.observe_mode == 'important':
+            obs = np.zeros(int(4*int(self.max_veh_num/2+1)+4))
+            obs[:2] = self._cars[0].position
+            obs[2:4] = self._cars[0].velocity
+            important_indices = self.get_important_indices()
+            i = 4
+            for indx in important_indices:
+                if indx is None:
+                    obs[i:i+4] = 0.
+                else:
+                    obs[i:i+2] = self._cars[indx].position - self._cars[0].position
+                    obs[i+2:i+4] = self._cars[indx].velocity - self._cars[0].velocity
+                i += 4
         if self.normalize_obs:
             obs[0::4] = obs[0::4]/self.right_bound
             obs[1::4] = obs[1::4]/self.right_bound
@@ -407,8 +433,12 @@ class TIntersectionExtreme(TrafficEnv):
 
     @property
     def observation_space(self):
-        low = -np.ones(int(4*self.max_veh_num+4))
-        high = np.ones(int(4*self.max_veh_num+4))
+        if self.observe_mode == 'full':
+            low = -np.ones(int(4*self.max_veh_num+4))
+            high = np.ones(int(4*self.max_veh_num+4))
+        elif self.observe_mode == 'important':
+            low = -np.ones(int(4*int(self.max_veh_num/2+1)+4))
+            high = np.ones(int(4*int(self.max_veh_num/2+1)+4))
         return spaces.Box(low=low, high=high, dtype=np.float32)
 
     @property
@@ -473,6 +503,31 @@ class TIntersectionExtreme(TrafficEnv):
         self._drivers.append(driver)
         return car, driver
 
+    def get_important_indices(self):
+        # return indices of vehicles that are at lower lane 
+        # closest to the left and all to the right of ego
+        lower_indices, lower_xs = [], []
+        for indx,car in enumerate(self._cars[1:]):
+            if car.position[1] > 4.:
+                pass
+            else:
+                lower_indices.append(indx+1)
+                lower_xs.append(car.position[0])
+        lower_indices = np.array(lower_indices)[np.argsort(lower_xs)]
+        lower_xs = np.sort(lower_xs)
+        ego_x = self._cars[0].position[0]
+        mlr_indx = None
+        for i,x in enumerate(lower_xs):
+            if x > ego_x:
+                mlr_indx = i
+                break
+        important_indices = [None]*(int(self.max_veh_num/2)+1)
+        if mlr_indx == 0: # no vehicle on the left
+            important_indices[1:len(lower_indices[mlr_indx:])+1] = lower_indices[mlr_indx:]
+        else:
+            important_indices[:len(lower_indices[mlr_indx-1:])] = lower_indices[mlr_indx-1:]
+        return important_indices
+
     def get_sorted_indices(self):
         # return indices of all other vehicles from left to right
         upper_indices, upper_xs = [], []
@@ -487,30 +542,6 @@ class TIntersectionExtreme(TrafficEnv):
         upper_indices = np.array(upper_indices)[np.argsort(upper_xs)]
         lower_indices = np.array(lower_indices)[np.argsort(lower_xs)]
         return upper_indices, lower_indices
-
-    def get_important_indices(self):
-        # return indices of 4 other vehicles that are closest to ego
-        # on 4 directions
-        ego_x = self._cars[0].position[0]
-        min_ll, min_lr, min_ul, min_ur = np.inf, np.inf, np.inf, np.inf
-        ind_ll, ind_lr, ind_ul, ind_ur = None, None, None, None
-        for idx,car in enumerate(self._cars[1:]):
-            x, y = car.position
-            if y < 4.:
-                if (x <= ego_x) and (ego_x - x < min_ll):
-                    min_ll = ego_x - x
-                    ind_ll = idx + 1
-                elif (x > ego_x) and (x - ego_x < min_lr):
-                    min_lr = x - ego_x
-                    ind_lr = idx + 1
-            else:
-                if (x < ego_x) and (ego_x - x < min_ul):
-                    min_ul = ego_x - x
-                    ind_ul = idx + 1
-                elif (x >= ego_x) and (x - ego_x < min_ur):
-                    min_ur = x - ego_x
-                    ind_ur = idx + 1
-        return [ind_ll, ind_lr, ind_ul, ind_ur]
 
     def _reset(self):
         self._collision = False
@@ -559,43 +590,30 @@ class TIntersectionExtreme(TrafficEnv):
         self.viewer.set_bounds(-30.0, 30.0, -20.0, 20.0)
 
     def update_extra_render(self, extra_input):
-        t1 = self._drivers[1].t1
-        t2 = self._drivers[1].t2
-        
-        start = np.array([self.left_bound,1.-t1]) - self.get_camera_center()
-        end = np.array([self.right_bound,1.-t1]) - self.get_camera_center()
-        attrs = {"color":(1.,1.,0.),"linewidth":2.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.left_bound,1.-t2]) - self.get_camera_center()
-        end = np.array([self.right_bound,1.-t2]) - self.get_camera_center()
-        attrs = {"color":(1.,0.,0.),"linewidth":2.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.left_bound,3.+t1]) - self.get_camera_center()
-        end = np.array([self.right_bound,3.+t1]) - self.get_camera_center()
-        attrs = {"color":(1.,1.,0.),"linewidth":2.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.left_bound,3.+t2]) - self.get_camera_center()
-        end = np.array([self.right_bound,3.+t2]) - self.get_camera_center()
-        attrs = {"color":(1.,0.,0.),"linewidth":2.}
-        self.viewer.draw_line(start, end, **attrs)
-
-        start = np.array([self.left_bound,5.-t1]) - self.get_camera_center()
-        end = np.array([self.right_bound,5.-t1]) - self.get_camera_center()
-        attrs = {"color":(1.,1.,0.),"linewidth":2.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.left_bound,5.-t2]) - self.get_camera_center()
-        end = np.array([self.right_bound,5.-t2]) - self.get_camera_center()
-        attrs = {"color":(1.,0.,0.),"linewidth":2.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.left_bound,7.+t1]) - self.get_camera_center()
-        end = np.array([self.right_bound,7.+t1]) - self.get_camera_center()
-        attrs = {"color":(1.,1.,0.),"linewidth":2.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.left_bound,7.+t2]) - self.get_camera_center()
-        end = np.array([self.right_bound,7.+t2]) - self.get_camera_center()
-        attrs = {"color":(1.,0.,0.),"linewidth":2.}
-        self.viewer.draw_line(start, end, **attrs)
-
+        if self.observe_mode == 'important':
+            important_indices = self.get_important_indices()
+            for ind in important_indices:
+                if ind is None:
+                    pass
+                else:
+                    center = self._cars[ind].position - self.get_camera_center()
+                    attrs = {"color":(1.,0.,0.),"linewidth":1.}
+                    from traffic.rendering import make_circle, _add_attrs
+                    circle = make_circle(radius=1., res=15, filled=False, center=center)
+                    _add_attrs(circle, attrs)
+                    self.viewer.add_onetime(circle)
+        if self.label_mode == 'important':
+            important_indices = self.get_important_indices()
+            for ind in important_indices[1:]:
+                if ind is None:
+                    pass
+                else:
+                    center = self._cars[ind].position - self.get_camera_center()
+                    attrs = {"color":(0.,0.,1.),"linewidth":1.}
+                    from traffic.rendering import make_circle, _add_attrs
+                    circle = make_circle(radius=0.8, res=15, filled=False, center=center)
+                    _add_attrs(circle, attrs)
+                    self.viewer.add_onetime(circle)
         if extra_input:
             if ('attention_weight' in extra_input.keys()) and (extra_input['attention_weight'] is not None):
                 edge_index = extra_input['attention_weight'][0]
