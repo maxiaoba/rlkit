@@ -8,18 +8,7 @@ import torch_geometric.utils as pyg_utils
 
 from rlkit.torch.networks import Mlp
 
-def get_activation(activation):
-    print(activation)
-    if activation == 'relu':
-        return torch.nn.ReLU()
-    elif activation == 'prelu':
-        return torch.nn.PReLU()
-    elif activation == 'tanh':
-        return torch.nn.Tanh()
-    elif (activation is None) or (activation == 'none'):
-        return torch.nn.Identity()
-    else:
-        raise NotImplementedError
+from network_utils import get_activation, build_conv_model
 
 class GNNNet(torch.nn.Module):
     def __init__(self, 
@@ -47,22 +36,12 @@ class GNNNet(torch.nn.Module):
 
     def build_convs(self, node_input_dim, node_dim, num_conv_layers):
         convs = nn.ModuleList()
-        conv = self.build_conv_model(node_input_dim, node_dim)
+        conv = build_conv_model(self.conv_type, node_input_dim, node_dim)
         convs.append(conv)
         for l in range(1,num_conv_layers):
-            conv = self.build_conv_model(node_dim, node_dim)
+            conv = build_conv_model(self.conv_type, node_dim, node_dim)
             convs.append(conv)
         return convs
-
-    def build_conv_model(self, node_in_dim, node_out_dim):
-        if self.conv_type == 'GSage':
-            return pyg_nn.SAGEConv(node_in_dim,node_out_dim)
-        elif self.conv_type == 'GCN':
-            return pyg_nn.GCNConv(node_in_dim,node_out_dim)
-        elif self.conv_type == 'GAT':
-            return pyg_nn.GATConv(node_in_dim, node_out_dim)
-        else:
-            raise NotImplementedError
 
     def forward(self, obs, **kwargs):
         batch_size = obs.shape[0]

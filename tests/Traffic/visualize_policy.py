@@ -11,7 +11,7 @@ from rlkit.torch.core import eval_np, np_ify
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
+parser.add_argument('--exp_name', type=str, default='t_intersection_extreme')
 parser.add_argument('--extra_name', type=str, default='nobyld0.5ds0.1fullfull')
 parser.add_argument('--log_dir', type=str, default='PPO')
 parser.add_argument('--file', type=str, default='params')
