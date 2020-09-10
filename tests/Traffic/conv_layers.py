@@ -53,7 +53,6 @@ class GraphSageW(MessagePassing):
         foward() needs normalized edge_weight
     """
     def __init__(self, in_channels, out_channels,
-                 activation='relu',
                  normalize_emb=False,
                  aggr='add'):
         super(GraphSageW, self).__init__(aggr=aggr)
