@@ -55,26 +55,35 @@ plot_path = "./Data/"+exp_name
 policies = [
             # 'PPOSupSep2hidden16',
             # 'PPOSupSep2GSagenode16layer3actrelu',
+            # 'PPOSupSep2GSage2node16layer3actreluep5000',
             # 'PPOSupSep2GATnode16layer3actrelu',
             # 'PPOSupSep2GCNnode16layer3actrelu',
             # 'PPOSupSep2GCNnode16layer3attentionactrelu',
             # 'PPOSupSep2MLPGSagehidden16node16layer3actrelu',
-            # 'PPOhidden32',
-            # 'PPOSupSep2hidden32',
+            'PPOhidden32',
+            'PPOSupSep2hidden32',
             # 'PPOGSagenode32layer3actrelu',
-            # 'PPOSupSep2GSagenode32layer3actrelu',
+            'PPOSupSep2GSagenode32layer3actrelu',
+            'PPOSupSep2GSage2node16layer3actreluep5000',
+            # 'PPOSupSep2GSage2node32layer3actreluep5000',
             # 'PPOSupSep2GATnode32layer3actrelu',
             # 'PPOSupSep2GCNnode32layer3actrelu',
             # 'PPOSupSep2GCNnode32layer3attentionactrelu',
-            # 'PPOSupSep2MLPGSagehidden32node32layer3actrelu',
+            'PPOSupSep2MLPGSagehidden32node32layer3actrelu',
             'PPOhidden64',
-            'PPOSupSep2hidden64',
+            'PPOSupSep2hidden64ep5000',
             # 'PPOGSagenode64layer3actrelu',
-            'PPOSupSep2GSagenode64layer3actrelu',
+            'PPOSupSep2GSagenode64layer3actreluep5000',
+            'PPOSupSep2GSage2node32layer3actreluep5000',
             # 'PPOSupSep2GATnode64layer3actrelu',
             # 'PPOSupSep2GCNnode64layer3actrelu',
-            'PPOSupSep2GCNnode64layer3attentionactrelu',
-            'PPOSupSep2MLPGSagehidden64node64layer3actrelu',
+            'PPOSupSep2GCNnode64layer3attentionactreluep5000',
+            'PPOSupSep2MLPGSagehidden64node64layer3actreluep5000',
+            # 'PPOhidden32ep10000',
+            # 'PPOSupSep2hidden32ep10000',
+            # 'PPOSupSep2GSagenode32layer3actreluep10000',
+            # 'PPOSupSep2GCNnode32layer3attentionactreluep10000',
+            # 'PPOSupSep2MLPGSagehidden32node32layer3actreluep10000',
         ]
 policy_names = policies
 
@@ -83,7 +92,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'node64'
+extra_name = ''
 
 pre_name = ''
 post_name = ''

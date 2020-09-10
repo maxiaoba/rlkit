@@ -15,7 +15,7 @@ fields = [
             # 'exploration/Average Returns',
             # 'exploration/Returns Max',
             # 'exploration/Returns Min',
-            # 'trainer/SUP LossAfter',
+            'trainer/SUP LossAfter',
             # 'trainer/LossBefore',
             # 'trainer/LossAfter',
             # 'trainer/KLBefore',
@@ -28,7 +28,7 @@ field_names = [
             # 'Expl Average Return',
             # 'Expl Max Return',
             # 'Expl Min Return',
-            # 'Sup LossAfter',
+            'Sup LossAfter',
             # 'LossBefore',
             # 'LossAfter',
             # 'KLBefore',
@@ -43,19 +43,9 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            # 'PPO',
-            # 'PPOSupOnlinesw0.1',
-            # 'PPOSupOnlinesw0.3',
-            # 'PPOSupOnlinesw0.5',
-            # 'PPOSupOnlinesw1.0',
-            # 'SupOnline',
-            'TRPO',
-            'TRPOSupsw0.1',
-            'TRPOSupsw1.0',
-            'TRPOSup2sw0.1',
-            'TRPOSup2sw1.0',
-            # 'TRPOSup3sw0.1',
-            # 'TRPOSup3ngsw0.1',
+            'PPO',
+            'PPOSupOnlinesw0.1',
+            'PPOSupSep2',
             'Sup',
         ]
 policy_names = policies
@@ -65,7 +55,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'trpo'
+extra_name = 'ppo'
 
 pre_name = ''
 post_name = ''
@@ -108,8 +98,11 @@ for fid,field in enumerate(fields):
                             itr = i-1#int(float(row[entry_dict[itr_name]]))
                             if itr > max_itr:
                                 break
-                            loss.append(np.clip(float(row[entry_dict[field]]),
-                                                min_loss[fid],max_loss[fid]))
+                            try:
+                                loss.append(np.clip(float(row[entry_dict[field]]),
+                                                    min_loss[fid],max_loss[fid]))
+                            except:
+                                pass
                             if itr % itr_interval == 0:
                                 itrs.append(itr)
                                 loss = np.mean(loss)

@@ -47,3 +47,38 @@ class GraphSage2(MessagePassing):
         if self.normalize_emb:
             aggr_out = F.normalize(aggr_out, p=2, dim=-1)
         return aggr_out
+
+class GraphSageW(MessagePassing):
+    """Weighted GraphSage.
+        foward() needs normalized edge_weight
+    """
+    def __init__(self, in_channels, out_channels,
+                 activation='relu',
+                 normalize_emb=False,
+                 aggr='add'):
+        super(GraphSageW, self).__init__(aggr=aggr)
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+
+        self.agg_lin = nn.Linear(in_channels+in_channels, out_channels)
+        self.normalize_emb = normalize_emb
+
+    def forward(self, x, edge_index, edge_weight):
+        # x has shape [N, in_channels]
+        # edge_index has shape [2, E]
+        # edge_weight has shape [E]
+        return self.propagate(edge_index, x=x, edge_weight=edge_weight)
+
+    def message(self, x_j, edge_weight):
+        # x_j has shape [E, in_channels]
+        # edge_weight has shape [E]
+        return edge_weight.view(-1, 1) * x_j
+
+    def update(self, aggr_out, x):
+        # aggr_out has shape [N, out_channels]
+        # x has shape [N, in_channels]
+        aggr_out = self.agg_lin(torch.cat((aggr_out, x),dim=-1))
+        if self.normalize_emb:
+            aggr_out = F.normalize(aggr_out, p=2, dim=-1)
+        return aggr_out

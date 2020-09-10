@@ -20,7 +20,7 @@ class GNNNet(torch.nn.Module):
                 output_activation=None,
                 ):
         super(GNNNet, self).__init__()
-
+        print('gnn')
         # graph builder
         self.pre_graph_builder = pre_graph_builder
 

@@ -20,7 +20,7 @@ class GNNAttentionNet(torch.nn.Module):
                 output_activation=None,
                 ):
         super(GNNAttentionNet, self).__init__()
-
+        print('gnnattention')
         # graph builder
         self.pre_graph_builder = pre_graph_builder
 

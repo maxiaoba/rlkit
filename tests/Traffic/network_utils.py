@@ -14,6 +14,9 @@ def build_conv_model(conv_type, node_in_dim, node_out_dim):
     elif conv_type == 'GSage2':
         from conv_layers import GraphSage2
         return GraphSage2(node_in_dim, node_out_dim)
+    elif conv_type == 'GSageW':
+        from conv_layers import GraphSageW
+        return GraphSageW(node_in_dim, node_out_dim)
     else:
         raise NotImplementedError
 
