@@ -38,6 +38,7 @@ def experiment(variant):
     gnn = gnn_class( 
                 pre_graph_builder=gb, 
                 node_dim=variant['gnn_kwargs']['node'],
+                conv_type=variant['gnn_kwargs']['conv_type'],
                 num_conv_layers=variant['gnn_kwargs']['layer'],
                 hidden_activation=variant['gnn_kwargs']['activation'],
                 )
@@ -58,7 +59,7 @@ def experiment(variant):
     from sup_softmax_policy import SupSoftmaxPolicy
     policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
     print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
-
+    
     vf = Mlp(
         hidden_sizes=[32, 32],
         input_size=obs_dim,
@@ -105,7 +106,8 @@ if __name__ == "__main__":
     parser.add_argument('--label', type=str, default='full')
     parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
-    parser.add_argument('--log_dir', type=str, default='PPOSupOnlineGNN')
+    parser.add_argument('--log_dir', type=str, default='PPOSupOnline')
+    parser.add_argument('--gnn', type=str, default='GSage')
     parser.add_argument('--attention', action='store_true', default=False)
     parser.add_argument('--node', type=int, default=16)
     parser.add_argument('--layer', type=int, default=3)
@@ -122,12 +124,14 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+('nob' if args.nob else '')+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs+args.label
     main_dir = args.log_dir\
+                +args.gnn\
                 +('node'+str(args.node))\
                 +('layer'+str(args.layer))\
                 +('attention' if args.attention else '')\
                 +(('act'+args.act) if args.act else '')\
                 +(('sw'+str(args.sw)) if args.sw else '')\
                 +(('eb'+str(args.eb)) if args.eb else '')\
+                +(('ep'+str(args.epoch)) if args.epoch else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
@@ -135,6 +139,7 @@ if __name__ == "__main__":
     # noinspection PyTypeChecker
     variant = dict(
         gnn_kwargs=dict(
+            conv_type=args.gnn,
             node=args.node,
             layer=args.layer,
             attention=args.attention,

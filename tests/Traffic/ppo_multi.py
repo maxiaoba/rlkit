@@ -26,20 +26,14 @@ def experiment(variant):
     label_dim = expl_env.label_dim
 
     hidden_dim = variant['mlp_kwargs']['hidden']
-    encoder = nn.Sequential(
+    policy = nn.Sequential(
              nn.Linear(obs_dim,hidden_dim),
              nn.ReLU(),
              nn.Linear(hidden_dim,hidden_dim),
              nn.ReLU(),
+             nn.Linear(hidden_dim, action_dim)
             )
-    decoder = nn.Linear(hidden_dim, action_dim)
-    from layers import ReshapeLayer
-    sup_learner = nn.Sequential(
-            nn.Linear(hidden_dim, int(expl_env.label_num*expl_env.label_dim)),
-            ReshapeLayer(shape=(expl_env.label_num, expl_env.label_dim)),
-        )
-    from sup_softmax_policy import SupSoftmaxPolicy
-    policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
+    policy = SoftmaxPolicy(policy, learn_temperature=False)
     print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
 
     vf = Mlp(

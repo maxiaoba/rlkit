@@ -21,7 +21,7 @@ def experiment(variant):
     label_num = expl_env.label_num
     label_dim = expl_env.label_dim
 
-    hidden_dim = 16
+    hidden_dim = variant['hidden_dim']
     policy = nn.Sequential(
              nn.Linear(obs_dim+int(label_dim*label_num),hidden_dim),
              nn.ReLU(),
@@ -93,6 +93,7 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='SimpleSup')
     parser.add_argument('--obs', type=int, default=1)
     parser.add_argument('--log_dir', type=str, default='PPOSupSep2')
+    parser.add_argument('--hidden', type=int, default=16)
     parser.add_argument('--eb', type=float, default=None)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
@@ -104,6 +105,7 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+'obs'+str(args.obs)
     main_dir = args.log_dir\
+                +('hidden'+str(args.hidden))\
                 +(('eb'+str(args.eb)) if args.eb else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
@@ -130,7 +132,9 @@ if __name__ == "__main__":
             vf_lr=(args.lr if args.lr else 1e-3),
             exploration_bonus=(args.eb if args.eb else 0.),
             sup_lr=(args.lr if args.lr else 1e-3),
+            sup_batch_size=(args.bs if args.bs else 10),
         ),
+        hidden_dim = args.hidden,
     )
     import os
     if not os.path.isdir(log_dir):

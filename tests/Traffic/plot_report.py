@@ -6,64 +6,43 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 itr_interval = 100
-max_itr = 2e4
+max_itr = 5000
 
 fields = [
-            'evaluation/Average Returns',
-            # 'evaluation/Actions Max',
-            # 'evaluation/Actions Min',
-            # 'exploration/Average Returns',
-            # 'exploration/Returns Max',
-            # 'exploration/Returns Min',
+            # 'evaluation/Average Returns',
             'trainer/SUP LossAfter',
-            # 'trainer/LossBefore',
-            # 'trainer/LossAfter',
-            'trainer/KLBefore',
-            'trainer/KL'
             ]
 field_names = [
-            'Eval Average Return',
-            # 'Eval Action Max',
-            # 'Eval Action Min',
-            # 'Expl Average Return',
-            # 'Expl Max Return',
-            # 'Expl Min Return',
-            'Sup LossAfter',
-            # 'LossBefore',
-            # 'LossAfter',
-            'KLBefore',
-            'KL',
+            # 'Eval Average Return',
+            'Supervised Learning Loss',
             ]
 itr_name = 'epoch'
 min_loss = [-1000]*100
 max_loss = [1000]*100
-exp_name = "SimpleSupobs10"
+exp_name = "t_intersection_multinobyld0.5ds0.1fullfull"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'PPOhidden24',
-            'PPOSuphidden24',
-            'PPOSupVanillahidden24',
-            'PPOSupOnlinehidden24',
-            'PPOSupSep2hidden16',
-            'Suphidden24',
+            # 'PPOhidden32',
+            # 'PPOGSagenode32layer3actrelu',
+            'PPOSupSep2hidden32',
+            'PPOSupSep2GSagenode32layer3actrelu',
         ]
-policy_names = policies
-# policy_names = [
-#             'PPO',
-#             'PPO + Shared Supervised Learning',
-#             'PPO + Seperated Supervised Learning',
-#             'Supervised Learning'
-#         ]
+policy_names = [
+            # 'MLP',
+            # 'GraphSage',
+            'MLP + Seperated Supervised Learning',
+            'GraphSage + Seperated Supervised Learning',
+        ]
 
 seeds = [0,1,2]
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'ppo'
+extra_name = 't_intersection_ppo'
 
 pre_name = ''
 post_name = ''

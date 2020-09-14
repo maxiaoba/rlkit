@@ -5,7 +5,6 @@ from rlkit.exploration_strategies.base import \
     PolicyWrappedWithExplorationStrategy
 from rlkit.exploration_strategies.epsilon_greedy import EpsilonGreedy
 from rlkit.policies.argmax import ArgmaxDiscretePolicy
-from rlkit.torch.policies.softmax_policy import SoftmaxPolicy
 from rlkit.torch.networks import Mlp
 from combine_net import CombineNet
 import rlkit.torch.pytorch_util as ptu
@@ -23,29 +22,24 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
     label_num = expl_env.label_num
+    label_dim = expl_env.label_dim
 
-    encoder = Mlp(input_size=obs_dim,
-              output_size=32,
-              hidden_sizes=[32,],
+    hidden_dim = variant['mlp_kwargs']['hidden']
+    encoder = nn.Sequential(
+             nn.Linear(obs_dim,hidden_dim),
+             nn.ReLU(),
+             nn.Linear(hidden_dim,hidden_dim),
+             nn.ReLU(),
             )
-    decoder = Mlp(input_size=32,
-              output_size=action_dim,
-              hidden_sizes=[],
-            )
-    module = nn.Sequential(
-            encoder,
-            nn.ReLU(),
-            decoder,
-            )
-    policy = SoftmaxPolicy(module, learn_temperature=False)
+    decoder = nn.Linear(hidden_dim, action_dim)
     from layers import ReshapeLayer
     sup_learner = nn.Sequential(
-            encoder,
-            nn.ReLU(),
-            nn.Linear(32, 2*expl_env.max_veh_num),
-            ReshapeLayer(shape=(expl_env.max_veh_num, 2)),
+            nn.Linear(hidden_dim, int(expl_env.label_num*expl_env.label_dim)),
+            ReshapeLayer(shape=(expl_env.label_num, expl_env.label_dim)),
         )
-    sup_learner = SoftmaxPolicy(sup_learner, learn_temperature=False)
+    from sup_softmax_policy import SupSoftmaxPolicy
+    policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
+    print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
 
     vf = Mlp(
         hidden_sizes=[32, 32],
@@ -64,6 +58,7 @@ def experiment(variant):
         expl_env,
         expl_policy,
     )
+    
     from sup_replay_buffer import SupReplayBuffer
     replay_buffer = SupReplayBuffer(
         observation_dim = obs_dim,
@@ -76,7 +71,6 @@ def experiment(variant):
         policy=policy,
         value_function=vf,
         vf_criterion=vf_criterion,
-        sup_learner=sup_learner,
         replay_buffer=replay_buffer,
         **variant['trainer_kwargs']
     )
@@ -97,10 +91,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='t_intersection_multi')
     parser.add_argument('--nob', action='store_true', default=False)
+    parser.add_argument('--obs', type=str, default='full')
+    parser.add_argument('--label', type=str, default='full')
     parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
-    parser.add_argument('--obs_mode', type=str, default='full')
     parser.add_argument('--log_dir', type=str, default='PPOSup')
+    parser.add_argument('--hidden', type=int, default=32)
+    parser.add_argument('--sw', type=float, default=None)
     parser.add_argument('--eb', type=float, default=None)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
@@ -110,22 +107,31 @@ if __name__ == "__main__":
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
-    pre_dir = './Data/'+args.exp_name+('nob' if args.nob else '')+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs_mode
+    pre_dir = './Data/'+args.exp_name+('nob' if args.nob else '')+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs+args.label
     main_dir = args.log_dir\
+                +('hidden'+str(args.hidden))\
+                +(('sw'+str(args.sw)) if args.sw else '')\
                 +(('eb'+str(args.eb)) if args.eb else '')\
+                +(('ep'+str(args.epoch)) if args.epoch else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     max_path_length = 200
     # noinspection PyTypeChecker
     variant = dict(
+        mlp_kwargs=dict(
+            hidden=args.hidden,
+        ),
         env_kwargs=dict(
-            observe_mode=args.obs_mode,
+            num_updates=1,
+            normalize_obs=args.nob,
+            observe_mode=args.obs,
+            label_mode=args.label,
             yld=args.yld,
             driver_sigma=args.ds,
         ),
         algorithm_kwargs=dict(
-            num_epochs=(args.epoch if args.epoch else 1000),
+            num_epochs=(args.epoch if args.epoch else 2000),
             num_eval_steps_per_epoch=1000,
             num_train_loops_per_epoch=1,
             num_trains_per_train_loop=1,
@@ -139,6 +145,7 @@ if __name__ == "__main__":
             policy_lr=(args.lr if args.lr else 1e-4),
             vf_lr=(args.lr if args.lr else 1e-3),
             exploration_bonus=(args.eb if args.eb else 0.),
+            sup_weight=(args.sw if args.sw else 0.1),
         ),
     )
     import os

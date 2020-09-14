@@ -7,28 +7,31 @@ from rlkit.torch.vpg.ppo import PPOTrainer
 from rlkit.torch.vpg.util import compute_advantages, filter_valids, pad_to_last
 from rlkit.torch.core import torch_ify
 from rlkit.core.eval_util import create_stats_ordered_dict
+import rlkit.pythonplusplus as ppp
 
 class PPOSupTrainer(PPOTrainer):
-    """PPO + supervised learning.
+    """PPO + supervised learning (contrained by PPO)
     """
 
     def __init__(self,
-                 sup_learner,
+                 sup_weight,
+                 # sup_learner,
                  replay_buffer,
                  exploration_bonus,
-                 sup_lr=1e-3,
+                 # sup_lr=1e-3,
                  sup_batch_size=64,
-                 sup_train_num=1,
+                 # sup_train_num=1,
                  **kwargs):
         super().__init__(**kwargs)
-        self.sup_learner = sup_learner
+        self.sup_weight = sup_weight
+        # self.sup_learner = sup_learner
         self.replay_buffer = replay_buffer
         self.sup_batch_size = sup_batch_size
-        self.sup_train_num = sup_train_num
+        # self.sup_train_num = sup_train_num
         self.exploration_bonus = exploration_bonus
-        self._sup_optimizer = torch.optim.Adam(
-                                self.sup_learner.parameters(),
-                                lr=sup_lr)
+        # self._sup_optimizer = torch.optim.Adam(
+        #                         self.sup_learner.parameters(),
+        #                         lr=sup_lr)
 
     def train_once(self, paths):
         """Train the algorithm once.
@@ -56,7 +59,10 @@ class PPOSupTrainer(PPOTrainer):
         advs_flat = self._compute_advantage(rewards, valids, baselines)
         labels_flat = torch.cat(filter_valids(labels, valids))
 
+        self.replay_buffer.add_batch(obs_flat, labels_flat)
+
         with torch.no_grad():
+            sup_loss_before = self._compute_sup_loss(obs_flat, labels_flat)
             policy_loss_before = self._compute_loss_with_adv(
                 obs_flat, actions_flat, rewards_flat, advs_flat)
             vf_loss_before = self._compute_vf_loss(
@@ -67,12 +73,13 @@ class PPOSupTrainer(PPOTrainer):
         self._train(obs_flat, actions_flat, rewards_flat, returns_flat,
                     advs_flat)
 
-        self.replay_buffer.add_batch(obs_flat, labels_flat)
-        for _ in range(self.sup_train_num):
-            batch = self.replay_buffer.random_batch(self.sup_batch_size)
-            sup_loss = self._train_sup_learner(batch['observations'],batch['labels'])
+        # self.replay_buffer.add_batch(obs_flat, labels_flat)
+        # for _ in range(self.sup_train_num):
+        #     batch = self.replay_buffer.random_batch(self.sup_batch_size)
+        #     sup_loss = self._train_sup_learner(batch['observations'],batch['labels'])
 
         with torch.no_grad():
+            sup_loss_after = self._compute_sup_loss(obs_flat, labels_flat)
             policy_loss_after = self._compute_loss_with_adv(
                 obs_flat, actions_flat, rewards_flat, advs_flat)
             vf_loss_after = self._compute_vf_loss(
@@ -94,26 +101,74 @@ class PPOSupTrainer(PPOTrainer):
             self.eval_statistics['VF LossBefore'] = vf_loss_before.item()
             self.eval_statistics['VF LossAfter'] = vf_loss_after.item()
             self.eval_statistics['VF dLoss'] = (vf_loss_before - vf_loss_after).item()
-            self.eval_statistics['SUP Loss'] = sup_loss.item()
+
+            self.eval_statistics['SUP LossBefore'] = sup_loss_before.item()
+            self.eval_statistics['SUP LossAfter'] = sup_loss_after.item()
+            self.eval_statistics['SUP dLoss'] = (sup_loss_before - sup_loss_after).item()
 
         self._old_policy = copy.deepcopy(self.policy)
 
-    def _train_sup_learner(self, observations, labels):
-        observations = torch_ify(observations)
-        labels = torch_ify(labels)
-        self._sup_optimizer.zero_grad()
-        sup_loss = self._compute_sup_loss(observations, labels)
-        sup_loss.backward()
-        self._sup_optimizer.step()
-        return sup_loss
+    # def _train_sup_learner(self, observations, labels):
+    #     observations = torch_ify(observations)
+    #     labels = torch_ify(labels)
+    #     self._sup_optimizer.zero_grad()
+    #     sup_loss = self._compute_sup_loss(observations, labels)
+    #     sup_loss.backward()
+    #     self._sup_optimizer.step()
+    #     return sup_loss
+
+    def _compute_objective(self, advantages, obs, actions, rewards):
+        r"""Compute objective value.
+
+        Args:
+            advantages (torch.Tensor): Advantage value at each step
+                with shape :math:`(N \dot [T], )`.
+            obs (torch.Tensor): Observation from the environment
+                with shape :math:`(N \dot [T], O*)`.
+            actions (torch.Tensor): Actions fed to the environment
+                with shape :math:`(N \dot [T], A*)`.
+            rewards (torch.Tensor): Acquired rewards
+                with shape :math:`(N \dot [T], )`.
+
+        Returns:
+            torch.Tensor: Calculated objective values
+                with shape :math:`(N \dot [T], )`.
+
+        """
+        # Compute constraint
+        with torch.no_grad():
+            old_ll = self._old_policy.log_prob(obs, actions)
+        new_ll = self.policy.log_prob(obs, actions)
+
+        likelihood_ratio = (new_ll - old_ll).exp()
+
+        # Calculate surrogate
+        sup_batch = self.replay_buffer.random_batch(self.sup_batch_size)
+        sup_loss = self._compute_sup_loss(sup_batch['observations'],sup_batch['labels'])
+        objective = advantages - self.sup_weight*sup_loss
+        # surrogate = likelihood_ratio * (advantages - self.sup_weight*sup_loss)
+        surrogate = likelihood_ratio * objective
+        # print(advantages.shape, sup_loss.shape, objective.shape, likelihood_ratio.shape, surrogate.shape)
+
+        # Clipping the constraint
+        likelihood_ratio_clip = torch.clamp(likelihood_ratio,
+                                            min=1 - self._lr_clip_range,
+                                            max=1 + self._lr_clip_range)
+
+        # Calculate surrotate clip
+        surrogate_clip = likelihood_ratio_clip * objective
+
+        return torch.min(surrogate, surrogate_clip)
 
     def _compute_sup_loss(self, obs, labels):
         obs = torch_ify(obs)
         labels = torch_ify(labels).clone()
-        valid_mask = ~torch.isnan(labels) # replay buffer!
+        valid_mask = ~torch.isnan(labels)
         labels[~valid_mask] = 0     
-        lls = self.sup_learner.log_prob(obs, labels)
-        return -lls[valid_mask].mean()
+        lls = self.policy.sup_log_prob(obs, labels)
+        lls[~valid_mask] = 0
+        # return -lls[valid_mask].mean()
+        return -lls.mean()
 
     def _add_exploration_bonus(self, paths):
         paths = copy.deepcopy(paths)
@@ -206,7 +261,7 @@ class PPOSupTrainer(PPOTrainer):
             self._value_function,
             self._old_policy,
             self.policy,
-            self.sup_learner,
+            # self.sup_learner,
         ]
 
     def get_snapshot(self):
@@ -214,5 +269,5 @@ class PPOSupTrainer(PPOTrainer):
             policy=self.policy,
             old_policy=self._old_policy,
             value_function=self._value_function,
-            sup_learner=self.sup_learner,
+            # sup_learner=self.sup_learner,
         )

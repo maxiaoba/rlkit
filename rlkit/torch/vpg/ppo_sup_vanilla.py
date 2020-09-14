@@ -9,8 +9,8 @@ from rlkit.torch.core import torch_ify
 from rlkit.core.eval_util import create_stats_ordered_dict
 import rlkit.pythonplusplus as ppp
 
-class SupTrainer(PPOTrainer):
-    """supervised learning.
+class PPOSupVanillaTrainer(PPOTrainer):
+    """PPO + supervised learning.
     """
 
     def __init__(self,
@@ -66,8 +66,8 @@ class SupTrainer(PPOTrainer):
             # kl_before = self._compute_kl_constraint(obs)
             kl_before = self._compute_kl_constraint(obs_flat)
 
-        # self._train(obs_flat, actions_flat, rewards_flat, returns_flat,
-        #             advs_flat)
+        self._train(obs_flat, actions_flat, rewards_flat, returns_flat,
+                    advs_flat)
 
         for _ in range(self.sup_train_num):
             sup_batch = self.replay_buffer.random_batch(self.sup_batch_size)

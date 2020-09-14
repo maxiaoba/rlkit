@@ -53,12 +53,19 @@ def experiment(variant):
         expl_env,
         expl_policy,
     )
+    from sup_replay_buffer import SupReplayBuffer
+    replay_buffer = SupReplayBuffer(
+        observation_dim = obs_dim,
+        label_dim = 1,
+        max_replay_buffer_size = int(1e6),
+    )
 
-    from rlkit.torch.vpg.ppo_sup_online import PPOSupOnlineTrainer
-    trainer = PPOSupOnlineTrainer(
+    from rlkit.torch.vpg.ppo_sup_vanilla import PPOSupVanillaTrainer
+    trainer = PPOSupVanillaTrainer(
         policy=policy,
         value_function=vf,
         vf_criterion=vf_criterion,
+        replay_buffer=replay_buffer,
         **variant['trainer_kwargs']
     )
     algorithm = TorchOnlineRLAlgorithm(
@@ -77,7 +84,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='SimpleSup')
     parser.add_argument('--obs', type=int, default=1)
-    parser.add_argument('--log_dir', type=str, default='PPOSupOnline')
+    parser.add_argument('--log_dir', type=str, default='PPOSupVanilla')
     parser.add_argument('--hidden', type=int, default=16)
     parser.add_argument('--sw', type=float, default=None)
     parser.add_argument('--eb', type=float, default=None)
@@ -117,8 +124,10 @@ if __name__ == "__main__":
             max_path_length=max_path_length,
             policy_lr=(args.lr if args.lr else 1e-4),
             vf_lr=(args.lr if args.lr else 1e-3),
+            sup_lr=(args.lr if args.lr else 1e-3),
             exploration_bonus=(args.eb if args.eb else 0.),
-            sup_weight=(args.sw if args.sw else 0.1),
+            # sup_weight=(args.sw if args.sw else 0.1),
+            sup_batch_size=(args.bs if args.bs else 10),
         ),
         hidden_dim = args.hidden,
     )

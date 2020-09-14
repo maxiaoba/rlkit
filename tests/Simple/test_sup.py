@@ -19,11 +19,14 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
 
+    hidden_dim = variant['hidden_dim']
     encoder = nn.Sequential(
-             nn.Linear(obs_dim,16),
+             nn.Linear(obs_dim,hidden_dim),
+             nn.ReLU(),
+             nn.Linear(hidden_dim,hidden_dim),
              nn.ReLU(),
             )
-    decoder = nn.Linear(16, action_dim)
+    decoder = nn.Linear(hidden_dim, action_dim)
     from layers import ReshapeLayer
     sup_learner = nn.Sequential(
             decoder,
@@ -31,6 +34,7 @@ def experiment(variant):
         )
     from sup_softmax_policy import SupSoftmaxPolicy
     policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
+    print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
 
     vf = Mlp(
         hidden_sizes=[],
@@ -81,6 +85,9 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='SimpleSup')
     parser.add_argument('--obs', type=int, default=1)
     parser.add_argument('--log_dir', type=str, default='Sup')
+    parser.add_argument('--hidden', type=int, default=16)
+    parser.add_argument('--sw', type=float, default=None)
+    parser.add_argument('--eb', type=float, default=None)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -91,6 +98,9 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+'obs'+str(args.obs)
     main_dir = args.log_dir\
+                +('hidden'+str(args.hidden))\
+                +(('sw'+str(args.sw)) if args.sw else '')\
+                +(('eb'+str(args.eb)) if args.eb else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
@@ -114,10 +124,12 @@ if __name__ == "__main__":
             max_path_length=max_path_length,
             policy_lr=(args.lr if args.lr else 1e-4),
             vf_lr=(args.lr if args.lr else 1e-3),
-            exploration_bonus=0.,
-            sup_weight=1.,
+            sup_lr=(args.lr if args.lr else 1e-3),
+            exploration_bonus=(args.eb if args.eb else 0.),
+            # sup_weight=(args.sw if args.sw else 0.1),
             sup_batch_size=(args.bs if args.bs else 10),
         ),
+        hidden_dim = args.hidden,
     )
     import os
     if not os.path.isdir(log_dir):

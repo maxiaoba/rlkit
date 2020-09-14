@@ -20,18 +20,22 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
 
+    hidden_dim = variant['hidden_dim']
     encoder = nn.Sequential(
-             nn.Linear(obs_dim,16),
+             nn.Linear(obs_dim,hidden_dim),
+             nn.ReLU(),
+             nn.Linear(hidden_dim,hidden_dim),
              nn.ReLU(),
             )
-    decoder = nn.Linear(16, action_dim)
+    decoder = nn.Linear(hidden_dim, action_dim)
     from layers import ReshapeLayer
     sup_learner = nn.Sequential(
-            nn.Linear(16, action_dim),
+            nn.Linear(hidden_dim, action_dim),
             ReshapeLayer(shape=(1, action_dim)),
         )
     from sup_softmax_policy import SupSoftmaxPolicy
     policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
+    print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
 
     vf = Mlp(
         hidden_sizes=[],
@@ -73,6 +77,7 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='SimpleSup')
     parser.add_argument('--obs', type=int, default=1)
     parser.add_argument('--log_dir', type=str, default='PPO')
+    parser.add_argument('--hidden', type=int, default=16)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -83,6 +88,7 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+'obs'+str(args.obs)
     main_dir = args.log_dir\
+                +('hidden'+str(args.hidden))\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
@@ -107,6 +113,7 @@ if __name__ == "__main__":
             policy_lr=(args.lr if args.lr else 1e-4),
             vf_lr=(args.lr if args.lr else 1e-3),
         ),
+        hidden_dim = args.hidden,
     )
     import os
     if not os.path.isdir(log_dir):

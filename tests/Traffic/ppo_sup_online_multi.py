@@ -24,17 +24,18 @@ def experiment(variant):
     label_num = expl_env.label_num
     label_dim = expl_env.label_dim
 
+    hidden_dim = variant['mlp_kwargs']['hidden']
     encoder = nn.Sequential(
-             nn.Linear(obs_dim,32),
+             nn.Linear(obs_dim,hidden_dim),
              nn.ReLU(),
-             nn.Linear(32,32),
+             nn.Linear(hidden_dim,hidden_dim),
              nn.ReLU(),
             )
-    decoder = nn.Linear(32, action_dim)
+    decoder = nn.Linear(hidden_dim, action_dim)
     from layers import ReshapeLayer
     sup_learner = nn.Sequential(
-            nn.Linear(32, int(label_num*label_dim)),
-            ReshapeLayer(shape=(label_num, label_dim)),
+            nn.Linear(hidden_dim, int(expl_env.label_num*expl_env.label_dim)),
+            ReshapeLayer(shape=(expl_env.label_num, expl_env.label_dim)),
         )
     from sup_softmax_policy import SupSoftmaxPolicy
     policy = SupSoftmaxPolicy(encoder, decoder, sup_learner)
@@ -87,6 +88,7 @@ if __name__ == "__main__":
     parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
     parser.add_argument('--log_dir', type=str, default='PPOSupOnline')
+    parser.add_argument('--hidden', type=int, default=32)
     parser.add_argument('--sw', type=float, default=None)
     parser.add_argument('--eb', type=float, default=None)
     parser.add_argument('--lr', type=float, default=None)
@@ -99,14 +101,19 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+('nob' if args.nob else '')+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs+args.label
     main_dir = args.log_dir\
+                +('hidden'+str(args.hidden))\
                 +(('sw'+str(args.sw)) if args.sw else '')\
                 +(('eb'+str(args.eb)) if args.eb else '')\
+                +(('ep'+str(args.epoch)) if args.epoch else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     max_path_length = 200
     # noinspection PyTypeChecker
     variant = dict(
+        mlp_kwargs=dict(
+            hidden=args.hidden,
+        ),
         env_kwargs=dict(
             num_updates=1,
             normalize_obs=args.nob,
