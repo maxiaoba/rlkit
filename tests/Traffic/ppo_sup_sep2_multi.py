@@ -24,32 +24,39 @@ def experiment(variant):
     label_num = expl_env.label_num
     label_dim = expl_env.label_dim
 
-    hidden_dim = variant['mlp_kwargs']['hidden']
-    policy = nn.Sequential(
-             nn.Linear(obs_dim+int(label_dim*label_num+label_dim),hidden_dim),
-             nn.ReLU(),
-             nn.Linear(hidden_dim,hidden_dim),
-             nn.ReLU(),
-             nn.Linear(hidden_dim, action_dim)
+    if variant['load_kwargs']['load']:
+        load_dir = variant['load_kwargs']['load_dir']
+        load_data = torch.load(load_dir+'/params.pkl',map_location='cpu')
+        policy = load_data['trainer/policy']
+        vf = load_data['trainer/value_function']
+    else:
+        hidden_dim = variant['mlp_kwargs']['hidden']
+        policy = nn.Sequential(
+                 nn.Linear(obs_dim+int(label_dim*label_num+label_dim),hidden_dim),
+                 nn.ReLU(),
+                 nn.Linear(hidden_dim,hidden_dim),
+                 nn.ReLU(),
+                 nn.Linear(hidden_dim, action_dim)
+                )
+        from layers import ReshapeLayer
+        sup_learner = nn.Sequential(
+                 nn.Linear(obs_dim,hidden_dim),
+                 nn.ReLU(),
+                 nn.Linear(hidden_dim,hidden_dim),
+                 nn.ReLU(),
+                 nn.Linear(hidden_dim, int(label_num*label_dim)),
+                 ReshapeLayer(shape=(label_num, label_dim)),
             )
-    from layers import ReshapeLayer
-    sup_learner = nn.Sequential(
-             nn.Linear(obs_dim,hidden_dim),
-             nn.ReLU(),
-             nn.Linear(hidden_dim,hidden_dim),
-             nn.ReLU(),
-             nn.Linear(hidden_dim, int(label_num*label_dim)),
-             ReshapeLayer(shape=(label_num, label_dim)),
-        )
-    from sup_sep_softmax_policy import SupSepSoftmaxPolicy
-    policy = SupSepSoftmaxPolicy(policy, sup_learner, label_num, label_dim)
-    print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
+        from sup_sep_softmax_policy import SupSepSoftmaxPolicy
+        policy = SupSepSoftmaxPolicy(policy, sup_learner, label_num, label_dim)
+        print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
 
-    vf = Mlp(
-        hidden_sizes=[32, 32],
-        input_size=obs_dim,
-        output_size=1,
-    )
+        vf = Mlp(
+            hidden_sizes=[32, 32],
+            input_size=obs_dim,
+            output_size=1,
+        )
+        
     vf_criterion = nn.MSELoss()
     eval_policy = ArgmaxDiscretePolicy(policy,use_preactivation=True)
     expl_policy = policy
@@ -106,6 +113,7 @@ if __name__ == "__main__":
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
+    parser.add_argument('--load', action='store_true', default=False)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--snapshot_mode', type=str, default="gap_and_last")
     parser.add_argument('--snapshot_gap', type=int, default=500)
@@ -150,7 +158,13 @@ if __name__ == "__main__":
             exploration_bonus=(args.eb if args.eb else 0.),
             sup_lr=(args.lr if args.lr else 1e-3),
         ),
+        load_kwargs=dict(
+            load=args.load,
+            load_dir=log_dir,
+        ),
     )
+    if args.load:
+        log_dir = log_dir + '_load'
     import os
     if not os.path.isdir(log_dir):
         os.makedirs(log_dir)

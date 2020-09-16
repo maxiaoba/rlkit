@@ -22,6 +22,7 @@ args = parser.parse_args()
 pre_dir = './Data/'+args.exp_name+args.extra_name
 data_path = '{}/{}/seed{}/{}.pkl'.format(pre_dir,args.log_dir,args.seed,args.file)
 data = torch.load(data_path,map_location='cpu')
+
 if 'trainer/qf' in data.keys():
 	qf = data['trainer/qf']
 	eval_policy = ArgmaxDiscretePolicy(qf)

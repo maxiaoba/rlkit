@@ -5,15 +5,15 @@ matplotlib.rcParams.update({'font.size': 13})
 from matplotlib import pyplot as plt
 import numpy as np
 
-itr_interval = 100
-max_itr = 5000
+itr_interval = 10
+max_itr = 1e4
 
 fields = [
-            # 'evaluation/Average Returns',
+            'evaluation/Average Returns',
             'trainer/SUP LossAfter',
             ]
 field_names = [
-            # 'Eval Average Return',
+            'Eval Average Return',
             'Supervised Learning Loss',
             ]
 itr_name = 'epoch'
@@ -24,25 +24,75 @@ exp_name = "t_intersection_multinobyld0.5ds0.1fullfull"
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
-policies = [
-            # 'PPOhidden32',
-            # 'PPOGSagenode32layer3actrelu',
-            'PPOSupSep2hidden32',
-            'PPOSupSep2GSagenode32layer3actrelu',
-        ]
-policy_names = [
-            # 'MLP',
-            # 'GraphSage',
-            'MLP + Seperated Supervised Learning',
-            'GraphSage + Seperated Supervised Learning',
-        ]
+# policies = [
+#             'PPOhidden72ep5000',
+#             # 'PPOSupVanillahidden64ep5000',
+#             'PPOSuphidden64ep5000',
+#             # 'PPOSupOnlinehidden64ep5000',
+#             'PPOSupSep2hidden40ep5000',
+#             ]
+# policy_names = [
+#             'MLP',
+#             'MLP + Shared Supervised Learning',
+#             'MLP + Seperated Supervised Learning'
+#             ]
+# extra_name = 't_intersection_mlp'
 
-seeds = [0,1,2]
+# policies = [
+#             'PPOGSagenode48layer3actreluep5000',
+#             # 'PPOSupVanillaGSagenode48layer3actreluep5000',
+#             'PPOSupGSagenode48layer3actreluep5000',
+#             # 'PPOSupOnlineGSagenode48layer3actreluep5000',
+#             'PPOSupSep2GSagenode32layer3actreluep5000',
+#             ]
+# policy_names = [
+#             'GNN',
+#             'GNN + Shared Supervised Learning',
+#             'GNN + Seperated Supervised Learning'
+#             ]
+# extra_name = 't_intersection_gsage'
+
+# policies = [
+#             'PPOGSageWnode40layer3attentionactreluep5000',
+#             # 'PPOSupVanillaGSageWnode40layer3attentionactreluep5000',
+#             'PPOSupGSageWnode40layer3attentionactreluep5000',
+#             # 'PPOSupOnlineGSageWnode40layer3attentionactreluep5000',
+#             'PPOSupSep2GSageWGSagenode32layer3attentionactreluep5000',
+#             ]
+# policy_names = [
+#             'PPO',
+#             'PPO + Shared Supervised Learning',
+#             'PPO + Seperated Supervised Learning'
+#             ]
+# extra_name = 't_intersection_gsagew'
+
+# policies = [
+#             'PPOhidden72ep5000',
+#             'PPOSuphidden64ep5000',
+#             'PPOSupSep2hidden40ep5000',
+#             'PPOGSagenode48layer3actreluep5000',
+#             'PPOSupGSagenode48layer3actreluep5000',
+#             'PPOSupSep2GSagenode32layer3actreluep5000',
+#             ]
+# policy_names = [
+#             'MLP',
+#             'MLP + Shared Supervised Learning',
+#             'MLP + Seperated Supervised Learning',
+#             'GNN',
+#             'GNN + Shared Supervised Learning',
+#             'GNN + Seperated Supervised Learning',
+#             ]
+# extra_name = 't_intersection'
+            # 'PPOSupSep2MLPGSagehidden40node32layer3actreluep5000',
+
+policies = ['PPOSupSep2GSageWGSagenode32layer3attentionactreluep5000']
+policy_names = policies
+# seeds = [0,1,2]
+extra_name = 'test'
+seeds = [0]
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
-
-extra_name = 't_intersection_ppo'
 
 pre_name = ''
 post_name = ''
@@ -95,8 +145,41 @@ for fid,field in enumerate(fields):
                                 loss = np.mean(loss)
                                 losses.append(loss)
                                 loss = []
-                    if len(losses) < min_itr:
-                        min_itr = len(losses)
+                ### load ###
+                load_file_path = prepath+'/'+policy_path+'/'+'seed'+str(trial)+'_load/progress.csv'
+                if os.path.exists(load_file_path):
+                    last_itr = itr
+                    print(policy+'_'+str(trial)+'_load')
+                    with open(load_file_path) as csv_file:
+                        if '\0' in open(load_file_path).read():
+                            print("you have null bytes in your input file")
+                            csv_reader = csv.reader(x.replace('\0', '') for x in csv_file)
+                        else:
+                            csv_reader = csv.reader(csv_file, delimiter=',')
+
+                        for (i,row) in enumerate(csv_reader):
+                            if i == 0:
+                                entry_dict = {}
+                                for index in range(len(row)):
+                                    entry_dict[row[index]] = index
+                                # print(entry_dict)
+                            else:
+                                itr = last_itr+i #int(float(row[entry_dict[itr_name]]))
+                                if itr > max_itr:
+                                    break
+                                try:
+                                    loss.append(np.clip(float(row[entry_dict[field]]),
+                                                        min_loss[fid],max_loss[fid]))
+                                except:
+                                    pass
+                                if itr % itr_interval == 0:
+                                    itrs.append(itr)
+                                    loss = np.mean(loss)
+                                    losses.append(loss)
+                                    loss = []
+                ### load ###
+                if len(losses) < min_itr:
+                    min_itr = len(losses)
                 Losses.append(losses)
         Losses = [losses[:min_itr] for losses in Losses]
         itrs = itrs[:min_itr]
@@ -110,7 +193,8 @@ for fid,field in enumerate(fields):
         plts.append(plot)
         legends.append(policy_names[policy_index])
 
-    plt.legend(plts,legends,loc='best')
+    if fid == 0:
+        plt.legend(plts,legends,loc='best')
     plt.xlabel('Itr')
     plt.ylabel(field_names[fid]) 
     fig.savefig(plot_path+'/'+plot_names[fid]+'.pdf')

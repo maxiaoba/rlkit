@@ -47,7 +47,7 @@ field_names = [
 itr_name = 'epoch'
 min_loss = [-1000]*100
 max_loss = [1000]*100
-exp_name = "t_intersection_multinobyld0.5ds0.1fullfull"
+exp_name = "t_intersection_extremenobyld0.5ds0.1fullfull"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
@@ -60,17 +60,17 @@ policies = [
             # 'PPOSupSep2GCNnode16layer3actrelu',
             # 'PPOSupSep2GCNnode16layer3attentionactrelu',
             # 'PPOSupSep2MLPGSagehidden16node16layer3actrelu',
-            # 'PPOhidden32',
-            # 'PPOSupSep2hidden32',
+            'PPOhidden32',
+            'PPOSupSep2hidden32',
             # 'PPOGSagenode32layer3actrelu',
-            # 'PPOSupSep2GSagenode32layer3actrelu',
-            # 'PPOSupSep2GSage2node16layer3actreluep5000',
-            # 'PPOSupSep2GSage2node32layer3actreluep5000',
+            'PPOSupSep2GSagenode32layer3actrelu',
+            'PPOSupSep2GSage2node16layer3actreluep5000',
+            'PPOSupSep2GSage2node32layer3actreluep5000',
             # 'PPOSupSep2GATnode32layer3actrelu',
             # 'PPOSupSep2GCNnode32layer3actrelu',
-            # 'PPOSupSep2GCNnode32layer3attentionactrelu',
-            # 'PPOSupSep2GSageWGSagenode32layer3attentionactreluep5000',
-            # 'PPOSupSep2MLPGSagehidden32node32layer3actrelu',
+            'PPOSupSep2GCNnode32layer3attentionactrelu',
+            'PPOSupSep2GSageWGSagenode32layer3attentionactreluep5000',
+            'PPOSupSep2MLPGSagehidden32node32layer3actrelu',
             # 'PPOhidden64',
             # 'PPOSupSep2hidden64ep5000',
             # 'PPOGSagenode64layer3actrelu',
@@ -80,11 +80,11 @@ policies = [
             # 'PPOSupSep2GCNnode64layer3actrelu',
             # 'PPOSupSep2GCNnode64layer3attentionactrelu',
             # 'PPOSupSep2MLPGSagehidden64node64layer3actreluep5000',
-            'PPOhidden32ep10000',
-            'PPOSupSep2hidden32ep10000',
-            'PPOSupSep2GSagenode32layer3actreluep10000',
-            'PPOSupSep2GCNnode32layer3attentionactreluep10000',
-            'PPOSupSep2MLPGSagehidden32node32layer3actreluep10000',
+            # 'PPOhidden32ep10000',
+            # 'PPOSupSep2hidden32ep10000',
+            # 'PPOSupSep2GSagenode32layer3actreluep10000',
+            # 'PPOSupSep2GCNnode32layer3attentionactreluep10000',
+            # 'PPOSupSep2MLPGSagehidden32node32layer3actreluep10000',
         ]
 policy_names = policies
 
@@ -93,7 +93,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'ep10000'
+extra_name = 'node32'
 
 pre_name = ''
 post_name = ''
