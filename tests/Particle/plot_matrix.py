@@ -44,6 +44,7 @@ csv_name = 'payoff.csv'
 def plot_matrix(mat,policy_names):
     # fig, ax = plt.subplots(figsize=(5, 5))
     fig, ax = plt.subplots()
+    # mat = np.array([[0,1,2],[3,4,5],[6,7,8]])
     im = ax.imshow(mat, interpolation="None", cmap="viridis", alpha=0.7)
     for (j, i), label in np.ndenumerate(mat):
         ax.text(i, j, round(label, 3), ha="center", va="center", fontsize=10)
