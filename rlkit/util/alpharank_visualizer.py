@@ -315,7 +315,7 @@ def _draw_pie(ax,
 
   for i, xyi in enumerate(xy):
     ax.scatter([x_center], [y_center],
-               marker=(xyi, 0),
+               # marker=(xyi, 0),
                s=size,
                facecolor=colors[i],
                edgecolors="none",

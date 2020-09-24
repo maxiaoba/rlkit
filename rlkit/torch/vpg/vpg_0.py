@@ -68,7 +68,6 @@ class VPGTrainer(TorchOnlineTrainer):
         use_softplus_entropy=False,
         stop_entropy_gradient=False,
         entropy_method='no_entropy',
-        recurrent=False,
     ):
         super().__init__()
         self.discount = discount
@@ -84,7 +83,7 @@ class VPGTrainer(TorchOnlineTrainer):
         self._use_softplus_entropy = use_softplus_entropy
         self._stop_entropy_gradient = stop_entropy_gradient
         self._entropy_method = entropy_method
-        self._recurrent = recurrent
+        # self._env_spec = env_spec
 
         self._maximum_entropy = (entropy_method == 'max')
         self._entropy_regularzied = (entropy_method == 'regularized')
@@ -136,51 +135,38 @@ class VPGTrainer(TorchOnlineTrainer):
 
         """
         obs, actions, rewards, returns, valids, baselines = \
-            self.process_samples(paths) # num_path x T x ...
+            self.process_samples(paths)
 
         if self._maximum_entropy:
             policy_entropies = self._compute_policy_entropy(obs)
             rewards += self._policy_ent_coeff * policy_entropies
-        advs = self._compute_advantage(rewards, valids, baselines)
 
-        if self._recurrent:
-            pre_actions = actions[:,:-1,:]
-            policy_input = (obs,pre_actions)
-            obs_input, actions_input, rewards_input, returns_input, advs_input = \
-                obs, actions, rewards, returns, advs
-            valid_mask = torch.zeros(obs.shape[0],obs.shape[1]).bool()
-            for i, valid in enumerate(valids):
-                valid_mask[i,:valid] = True
-        else:
-            obs_input = torch.cat(filter_valids(obs, valids))
-            actions_input = torch.cat(filter_valids(actions, valids))
-            rewards_input = torch.cat(filter_valids(rewards, valids))
-            returns_input = torch.cat(filter_valids(returns, valids))
-            advs_input = torch.cat(filter_valids(advs, valids))
-            policy_input = obs_input
-            valid_mask = torch.ones(obs_input.shape[0]).bool()
-            # (num of valid samples) x ...
+        obs_flat = torch.cat(filter_valids(obs, valids))
+        actions_flat = torch.cat(filter_valids(actions, valids))
+        rewards_flat = torch.cat(filter_valids(rewards, valids))
+        returns_flat = torch.cat(filter_valids(returns, valids))
+        advs_flat = self._compute_advantage(rewards, valids, baselines)
 
         with torch.no_grad():
             policy_loss_before = self._compute_loss_with_adv(
-                policy_input, actions_input, rewards_input, advs_input, valid_mask)
+                obs_flat, actions_flat, rewards_flat, advs_flat)
             vf_loss_before = self._compute_vf_loss(
-                obs_input, returns_input, valid_mask)
+                obs_flat, returns_flat)
             # kl_before = self._compute_kl_constraint(obs)
-            kl_before = self._compute_kl_constraint(policy_input, valid_mask)
+            kl_before = self._compute_kl_constraint(obs_flat)
 
-        self._train(policy_input, obs_input, actions_input, rewards_input, returns_input,
-                    advs_input, valid_mask)
+        self._train(obs_flat, actions_flat, rewards_flat, returns_flat,
+                    advs_flat)
 
         with torch.no_grad():
             policy_loss_after = self._compute_loss_with_adv(
-                policy_input, actions_input, rewards_input, advs_input, valid_mask)
+                obs_flat, actions_flat, rewards_flat, advs_flat)
             vf_loss_after = self._compute_vf_loss(
-                obs_input, returns_input, valid_mask)
+                obs_flat, returns_flat)
             # kl_after = self._compute_kl_constraint(obs)
-            kl_after = self._compute_kl_constraint(policy_input, valid_mask)
+            kl_after = self._compute_kl_constraint(obs_flat)
             # policy_entropy = self._compute_policy_entropy(obs)
-            policy_entropy = self._compute_policy_entropy(policy_input)
+            policy_entropy = self._compute_policy_entropy(obs_flat)
 
         if self._need_to_update_eval_statistics:
             self._need_to_update_eval_statistics = False
@@ -189,7 +175,7 @@ class VPGTrainer(TorchOnlineTrainer):
             self.eval_statistics['dLoss'] = (policy_loss_before - policy_loss_after).item()
             self.eval_statistics['KLBefore'] = kl_before.item()
             self.eval_statistics['KL'] = kl_after.item()
-            self.eval_statistics['Entropy'] = policy_entropy[valid_mask].mean().item()
+            self.eval_statistics['Entropy'] = policy_entropy.mean().item()
 
             self.eval_statistics['VF LossBefore'] = vf_loss_before.item()
             self.eval_statistics['VF LossAfter'] = vf_loss_after.item()
@@ -197,7 +183,7 @@ class VPGTrainer(TorchOnlineTrainer):
 
         self._old_policy = copy.deepcopy(self.policy)
 
-    def _train(self, policy_input, obs, actions, rewards, returns, advs, valid_mask):
+    def _train(self, obs, actions, rewards, returns, advs):
         r"""Train the policy and value function with minibatch.
 
         Args:
@@ -212,12 +198,12 @@ class VPGTrainer(TorchOnlineTrainer):
 
         """
         for dataset in self._policy_optimizer.get_minibatch(
-                policy_input, actions, rewards, advs, valid_mask):
+                obs, actions, rewards, advs):
             self._train_policy(*dataset)
-        for dataset in self._vf_optimizer.get_minibatch(obs, returns, valid_mask):
+        for dataset in self._vf_optimizer.get_minibatch(obs, returns):
             self._train_value_function(*dataset)
 
-    def _train_policy(self, obs, actions, rewards, advantages, valid_mask):
+    def _train_policy(self, obs, actions, rewards, advantages):
         r"""Train the policy.
 
         Args:
@@ -235,13 +221,13 @@ class VPGTrainer(TorchOnlineTrainer):
 
         """
         self._policy_optimizer.zero_grad()
-        loss = self._compute_loss_with_adv(obs, actions, rewards, advantages, valid_mask)
+        loss = self._compute_loss_with_adv(obs, actions, rewards, advantages)
         loss.backward()
         self._policy_optimizer.step()
 
         return loss
 
-    def _train_value_function(self, obs, returns, valid_mask):
+    def _train_value_function(self, obs, returns):
         r"""Train the value function.
 
         Args:
@@ -256,12 +242,13 @@ class VPGTrainer(TorchOnlineTrainer):
 
         """
         self._vf_optimizer.zero_grad()
-        loss = self._compute_vf_loss(obs, returns, valid_mask)
+        loss = self._compute_vf_loss(obs, returns)
         loss.backward()
         self._vf_optimizer.step()
+
         return loss
 
-    def _compute_loss_with_adv(self, obs, actions, rewards, advantages, valid_mask):
+    def _compute_loss_with_adv(self, obs, actions, rewards, advantages):
         r"""Compute mean value of loss.
 
         Args:
@@ -284,7 +271,7 @@ class VPGTrainer(TorchOnlineTrainer):
             policy_entropies = self._compute_policy_entropy(obs)
             objectives += self._policy_ent_coeff * policy_entropies
 
-        return -objectives[valid_mask].mean()
+        return -objectives.mean()
 
     def _compute_advantage(self, rewards, valids, baselines):
         r"""Compute mean value of loss.
@@ -306,19 +293,19 @@ class VPGTrainer(TorchOnlineTrainer):
         advantages = compute_advantages(self.discount, self._gae_lambda,
                                         self.max_path_length, baselines,
                                         rewards)
-        advantages_flat = torch.cat(filter_valids(advantages, valids))
+        advantage_flat = torch.cat(filter_valids(advantages, valids))
 
         if self._center_adv:
-            means = advantages_flat.mean()
-            variance = advantages_flat.var()
-            advantages = (advantages - means) / (variance + 1e-8)
+            means = advantage_flat.mean()
+            variance = advantage_flat.var()
+            advantage_flat = (advantage_flat - means) / (variance + 1e-8)
 
         if self._positive_adv:
-            advantages -= advantages.min()
+            advantage_flat -= advantage_flat.min()
 
-        return advantages
+        return advantage_flat
 
-    def _compute_kl_constraint(self, obs, valid_mask):
+    def _compute_kl_constraint(self, obs):
         r"""Compute KL divergence.
 
         Compute the KL divergence between the old policy distribution and
@@ -344,7 +331,7 @@ class VPGTrainer(TorchOnlineTrainer):
             kl_constraint = torch.distributions.kl.kl_divergence(
                 old_dist, new_dist)
 
-            return kl_constraint[valid_mask].mean()
+            return kl_constraint.mean()
         except NotImplementedError:
             return torch.tensor(0.)
 
@@ -374,9 +361,9 @@ class VPGTrainer(TorchOnlineTrainer):
 
         return policy_entropy
 
-    def _compute_vf_loss(self, obs, returns, valid_mask):
+    def _compute_vf_loss(self, obs, returns):
         baselines = self._value_function(obs).squeeze(-1)
-        vf_loss = self._vf_criterion(baselines[valid_mask], returns[valid_mask])
+        vf_loss = self._vf_criterion(baselines, returns)
         return vf_loss
 
     def _compute_objective(self, advantages, obs, actions, rewards):

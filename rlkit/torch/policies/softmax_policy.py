@@ -13,25 +13,18 @@ from rlkit.torch.policies.deterministic_policies import MlpPolicy
 
 class SoftmaxPolicy(Policy, nn.Module):
     """
-    A helper class using softmax output activation with a learned temperature
+    Polict with Categorical distributon using softmax
     """
 
     def __init__(
             self,
             module,
-            learn_temperature=True,
     ):
-        print("SoftmaxMlpPolicy: learn_temperature is {}".format(learn_temperature))
         super().__init__()
         self.module = module
-        self.learn_temperature = learn_temperature
 
     def forward(self, obs, return_info=False):
         logits = self.module.forward(obs)
-        if self.learn_temperature:
-            logits = logits[:,:-1]/(torch.exp(logits[:,-1][:,None])+1e-3)
-        else:
-            logits = logits
         pis = torch.softmax(logits, dim=-1)
         info = dict(preactivation = logits)
         if return_info:

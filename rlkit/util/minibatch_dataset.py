@@ -9,14 +9,20 @@ class BatchDataset:
         self._extra_inputs = extra_inputs
         self._batch_size = batch_size
         if batch_size is not None:
-            self._ids = np.arange(self._inputs[0].shape[0])
+            if isinstance(self._inputs[0], tuple):
+                self._ids = np.arange(self._inputs[0][0].shape[0])
+            else:
+                self._ids = np.arange(self._inputs[0].shape[0])
             self.update()
 
     @property
     def number_batches(self):
         if self._batch_size is None:
             return 1
-        return int(np.ceil(self._inputs[0].shape[0] * 1.0 / self._batch_size))
+        if isinstance(self._inputs[0], tuple):
+            return int(np.ceil(self._inputs[0][0].shape[0] * 1.0 / self._batch_size))
+        else:
+            return int(np.ceil(self._inputs[0].shape[0] * 1.0 / self._batch_size))
 
     def iterate(self, update=True):
         if self._batch_size is None:
@@ -26,7 +32,7 @@ class BatchDataset:
                 batch_start = itr * self._batch_size
                 batch_end = (itr + 1) * self._batch_size
                 batch_ids = self._ids[batch_start:batch_end]
-                batch = [d[batch_ids] for d in self._inputs]
+                batch = [tuple([dd[batch_ids] for dd in d]) if isinstance(d,tuple) else d[batch_ids] for d in self._inputs]
                 yield list(batch) + list(self._extra_inputs)
             if update:
                 self.update()

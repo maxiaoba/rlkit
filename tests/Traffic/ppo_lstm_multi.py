@@ -6,7 +6,6 @@ from rlkit.exploration_strategies.base import \
 from rlkit.exploration_strategies.epsilon_greedy import EpsilonGreedy
 from rlkit.policies.argmax import ArgmaxDiscretePolicy
 from rlkit.torch.vpg.ppo import PPOTrainer
-from rlkit.torch.policies.softmax_policy import SoftmaxPolicy
 from rlkit.torch.networks import Mlp
 import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
@@ -31,15 +30,22 @@ def experiment(variant):
         policy = load_data['trainer/policy']
         vf = load_data['trainer/value_function']
     else:
-        hidden_dim = variant['mlp_kwargs']['hidden']
-        policy = nn.Sequential(
-                 nn.Linear(obs_dim,hidden_dim),
-                 nn.ReLU(),
-                 nn.Linear(hidden_dim,hidden_dim),
-                 nn.ReLU(),
-                 nn.Linear(hidden_dim, action_dim)
-                )
-        policy = SoftmaxPolicy(policy)
+        hidden_dim = variant['lstm_kwargs']['hidden_dim']
+        num_layers = variant['lstm_kwargs']['num_layers']
+        a_0 = np.zeros(action_dim)
+        h_0 = np.zeros(hidden_dim*num_layers)
+        c_0 = np.zeros(hidden_dim*num_layers)
+        post_net = torch.nn.Linear(hidden_dim, action_dim)
+        from softmax_lstm_policy import SoftmaxLSTMPolicy
+        policy = SoftmaxLSTMPolicy(
+                    a_0=a_0,
+                    h_0=h_0,
+                    c_0=c_0,
+                    obs_dim=obs_dim,
+                    action_dim=action_dim,
+                    post_net=post_net,
+                    **variant['lstm_kwargs']
+                    )
         print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
 
         vf = Mlp(
@@ -47,9 +53,10 @@ def experiment(variant):
             input_size=obs_dim,
             output_size=1,
         )
-
+        
     vf_criterion = nn.MSELoss()
-    eval_policy = ArgmaxDiscretePolicy(policy,use_preactivation=True)
+    from rlkit.torch.policies.make_deterministic import MakeDeterministic
+    eval_policy = MakeDeterministic(policy)
     expl_policy = policy
 
     eval_path_collector = MdpPathCollector(
@@ -64,6 +71,7 @@ def experiment(variant):
         policy=policy,
         value_function=vf,
         vf_criterion=vf_criterion,
+        recurrent=True,
         **variant['trainer_kwargs']
     )
     algorithm = TorchOnlineRLAlgorithm(
@@ -87,7 +95,8 @@ if __name__ == "__main__":
     parser.add_argument('--label', type=str, default='full')
     parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
-    parser.add_argument('--log_dir', type=str, default='PPO')
+    parser.add_argument('--log_dir', type=str, default='PPOLSTM')
+    parser.add_argument('--layer', type=int, default=1)
     parser.add_argument('--hidden', type=int, default=32)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
@@ -100,6 +109,7 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+('nob' if args.nob else '')+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs+args.label
     main_dir = args.log_dir\
+                +('layer'+str(args.layer))\
                 +('hidden'+str(args.hidden))\
                 +(('ep'+str(args.epoch)) if args.epoch else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
@@ -108,8 +118,9 @@ if __name__ == "__main__":
     max_path_length = 200
     # noinspection PyTypeChecker
     variant = dict(
-        mlp_kwargs=dict(
-            hidden=args.hidden,
+        lstm_kwargs=dict(
+            hidden_dim=args.hidden,
+            num_layers=args.layer,
         ),
         env_kwargs=dict(
             num_updates=1,

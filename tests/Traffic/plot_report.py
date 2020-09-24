@@ -5,19 +5,22 @@ matplotlib.rcParams.update({'font.size': 13})
 from matplotlib import pyplot as plt
 import numpy as np
 
-itr_interval = 10
+itr_interval = 100
 max_itr = 1e4
 
 fields = [
             'evaluation/Average Returns',
+            'evaluation/Num Success',
             'trainer/SUP LossAfter',
             ]
 field_names = [
             'Eval Average Return',
+            'Eval Success Rate',
             'Supervised Learning Loss',
             ]
+legend_fields = [0,1]
 itr_name = 'epoch'
-min_loss = [-1000]*100
+min_loss = [0]*100
 max_loss = [1000]*100
 exp_name = "t_intersection_multinobyld0.5ds0.1fullfull"
 
@@ -32,25 +35,31 @@ plot_path = "./Data/"+exp_name
 #             'PPOSupSep2hidden40ep5000',
 #             ]
 # policy_names = [
-#             'MLP',
-#             'MLP + Shared Supervised Learning',
-#             'MLP + Seperated Supervised Learning'
+#             'PPO',
+#             # 'MLP + Sup Vanilla',
+#             'PPO + Shared Supervised Learning',
+#             # 'MLP + Sup Online',
+#             'PPO + Separated Supervised Learning'
 #             ]
 # extra_name = 't_intersection_mlp'
+# colors = ['C0','C1','C2']
 
 # policies = [
 #             'PPOGSagenode48layer3actreluep5000',
 #             # 'PPOSupVanillaGSagenode48layer3actreluep5000',
 #             'PPOSupGSagenode48layer3actreluep5000',
 #             # 'PPOSupOnlineGSagenode48layer3actreluep5000',
-#             'PPOSupSep2GSagenode32layer3actreluep5000',
+#             'PPOSupSep2GSagenode32layer3actreluep10000',
 #             ]
 # policy_names = [
-#             'GNN',
-#             'GNN + Shared Supervised Learning',
-#             'GNN + Seperated Supervised Learning'
+#             'PPO',
+#             # 'GNN + Sup Vanilla',
+#             'PPO + Shared Supervised Learning',
+#             # 'GNN + Sup Online',
+#             'PPO + Separated Supervised Learning'
 #             ]
 # extra_name = 't_intersection_gsage'
+# colors = ['C3','C4','C5']
 
 # policies = [
 #             'PPOGSageWnode40layer3attentionactreluep5000',
@@ -61,38 +70,59 @@ plot_path = "./Data/"+exp_name
 #             ]
 # policy_names = [
 #             'PPO',
+#             # 'GNN + Sup Vanilla',
 #             'PPO + Shared Supervised Learning',
-#             'PPO + Seperated Supervised Learning'
+#             # 'GNN + Sup Online',
+#             'PPO + Separated Supervised Learning'
 #             ]
 # extra_name = 't_intersection_gsagew'
+# colors = ['C6','C7','C8']
+
+policies = [
+            # 'PPOhidden72ep5000',
+            'PPOSuphidden64ep5000',
+            'PPOSupSep2hidden40ep5000',
+            # 'PPOGSagenode48layer3actreluep5000',
+            # 'PPOSupGSagenode48layer3actreluep5000',
+            # 'PPOSupSep2GSagenode32layer3actreluep10000',
+            # 'PPOGSageWnode40layer3attentionactreluep5000',
+            'PPOSupGSageWnode40layer3attentionactreluep5000',
+            'PPOSupSep2GSageWGSagenode32layer3attentionactreluep5000',
+            # 'PPOSupSep2MLPGSagehidden40node32layer3actreluep5000',
+            ]
+policy_names = [
+            # 'MLP',
+            'MLP + Shared Supervised Learning',
+            'MLP + Separated Supervised Learning',
+            # 'GNN',
+            'GNN + Shared Supervised Learning',
+            'GNN + Separated Supervised Learning',
+            # 'MLPGNN',
+            ]
+colors = ['C1','C2','C7','C8']
+extra_name = 't_intersection_sup'
 
 # policies = [
-#             'PPOhidden72ep5000',
+#             # 'PPOhidden72ep5000',
 #             'PPOSuphidden64ep5000',
-#             'PPOSupSep2hidden40ep5000',
-#             'PPOGSagenode48layer3actreluep5000',
+#             # 'PPOSupSep2hidden40ep5000',
+#             # 'PPOGSagenode48layer3actreluep5000',
 #             'PPOSupGSagenode48layer3actreluep5000',
-#             'PPOSupSep2GSagenode32layer3actreluep5000',
+#             # 'PPOSupSep2GSagenode32layer3actreluep10000',
+#             # 'PPOGSageWnode40layer3attentionactreluep5000',
+#             'PPOSupGSageWnode40layer3attentionactreluep5000',
+#             # 'PPOSupSep2GSageWGSagenode32layer3attentionactreluep5000',
+#             # 'PPOSupSep2MLPGSagehidden40node32layer3actreluep5000',
 #             ]
 # policy_names = [
 #             'MLP',
-#             'MLP + Shared Supervised Learning',
-#             'MLP + Seperated Supervised Learning',
 #             'GNN',
-#             'GNN + Shared Supervised Learning',
-#             'GNN + Seperated Supervised Learning',
+#             'GNN + attention',
 #             ]
-# extra_name = 't_intersection'
-            # 'PPOSupSep2MLPGSagehidden40node32layer3actreluep5000',
+# colors = ['C1','C4','C7']
+# extra_name = 't_intersection_share'
 
-policies = ['PPOSupSep2GSageWGSagenode32layer3attentionactreluep5000']
-policy_names = policies
-# seeds = [0,1,2]
-extra_name = 'test'
-seeds = [0]
-colors = []
-for pid in range(len(policies)):
-    colors.append('C'+str(pid))
+seeds = [0,1,2]
 
 pre_name = ''
 post_name = ''
@@ -136,7 +166,12 @@ for fid,field in enumerate(fields):
                             if itr > max_itr:
                                 break
                             try:
-                                loss.append(np.clip(float(row[entry_dict[field]]),
+                                if field == 'evaluation/Num Success':
+                                    num_path = float(row[entry_dict['evaluation/Num Paths']])
+                                    loss.append(np.clip(float(row[entry_dict[field]])/num_path,
+                                                    min_loss[fid],max_loss[fid]))
+                                else:
+                                    loss.append(np.clip(float(row[entry_dict[field]]),
                                                     min_loss[fid],max_loss[fid]))
                             except:
                                 pass
@@ -168,7 +203,12 @@ for fid,field in enumerate(fields):
                                 if itr > max_itr:
                                     break
                                 try:
-                                    loss.append(np.clip(float(row[entry_dict[field]]),
+                                    if field == 'evaluation/Num Success':
+                                        num_path = float(row[entry_dict['evaluation/Num Paths']])
+                                        loss.append(np.clip(float(row[entry_dict[field]])/num_path,
+                                                        min_loss[fid],max_loss[fid]))
+                                    else:
+                                        loss.append(np.clip(float(row[entry_dict[field]]),
                                                         min_loss[fid],max_loss[fid]))
                                 except:
                                     pass
@@ -193,7 +233,7 @@ for fid,field in enumerate(fields):
         plts.append(plot)
         legends.append(policy_names[policy_index])
 
-    if fid == 0:
+    if fid in legend_fields:
         plt.legend(plts,legends,loc='best')
     plt.xlabel('Itr')
     plt.ylabel(field_names[fid]) 

@@ -20,7 +20,12 @@ parser.add_argument('--seed', type=int, default=0)
 args = parser.parse_args()
 
 pre_dir = './Data/'+args.exp_name+args.extra_name
-data_path = '{}/{}/seed{}/{}.pkl'.format(pre_dir,args.log_dir,args.seed,args.file)
+import os
+data_path = '{}/{}/seed{}_load/{}.pkl'.format(pre_dir,args.log_dir,args.seed,args.file)
+if os.path.exists(data_path):
+	print('_load')
+else:
+	data_path = '{}/{}/seed{}/{}.pkl'.format(pre_dir,args.log_dir,args.seed,args.file)
 data = torch.load(data_path,map_location='cpu')
 
 if 'trainer/qf' in data.keys():
