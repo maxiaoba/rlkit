@@ -14,6 +14,9 @@ def make_env(env_name, **kwargs):
 	elif env_name == 't_intersection_extreme':
 		from traffic.scenarios.t_intersection_extreme import TIntersectionExtreme
 		env = TIntersectionExtreme(**kwargs)
+	elif env_name == 't_intersection_lstm':
+		from traffic.scenarios.t_intersection_lstm import TIntersectionLSTM
+		env = TIntersectionLSTM(**kwargs)
 	else:
 		raise NotImplementedError
 	return env

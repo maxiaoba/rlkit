@@ -1,7 +1,7 @@
 import csv
 import os.path
 import matplotlib 
-matplotlib.rcParams.update({'font.size': 10})
+matplotlib.rcParams.update({'font.size': 13})
 from matplotlib import pyplot as plt
 import numpy as np
 
@@ -12,79 +12,46 @@ fields = [
             'evaluation/Average Returns',
             # 'evaluation/Actions Max',
             # 'evaluation/Actions Min',
-            # 'evaluation/Num Success',
-            # 'evaluation/Num Timeout',
-            # 'evaluation/Num Fail',
-            # 'exploration/Average Returns',
+            'exploration/Average Returns',
             # 'exploration/Returns Max',
             # 'exploration/Returns Min',
-            # 'exploration/Num Fail',
-            # 'exploration/Num Success',
             'trainer/SUP LossAfter',
             # 'trainer/LossBefore',
             # 'trainer/LossAfter',
-            # 'trainer/KLBefore',
-            # 'trainer/KL'
+            'trainer/KLBefore',
+            'trainer/KL'
             ]
 field_names = [
             'Eval Average Return',
             # 'Eval Action Max',
             # 'Eval Action Min',
-            # 'Eval Success',
-            # 'Eval Timeout',
-            # 'Eval Fail',
-            # 'Expl Average Return',
+            'Expl Average Return',
             # 'Expl Max Return',
             # 'Expl Min Return',
-            # 'Expl Fail',
-            # 'Expl Success',
             'Sup LossAfter',
             # 'LossBefore',
             # 'LossAfter',
-            # 'KLBefore',
-            # 'KL',
+            'KLBefore',
+            'KL',
             ]
 itr_name = 'epoch'
 min_loss = [-1000]*100
 max_loss = [1000]*100
-exp_name = "t_intersection_extremenobyld0.5ds0.1fullfull"
+exp_name = "SimpleSupLSTMobs1int10"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            # 'PPOSupSep2hidden16',
-            # 'PPOSupSep2GSagenode16layer3actrelu',
-            # 'PPOSupSep2GSage2node16layer3actreluep5000',
-            # 'PPOSupSep2GATnode16layer3actrelu',
-            # 'PPOSupSep2GCNnode16layer3actrelu',
-            # 'PPOSupSep2GCNnode16layer3attentionactrelu',
-            # 'PPOSupSep2MLPGSagehidden16node16layer3actrelu',
-            'PPOhidden32',
-            'PPOSupSep2hidden32',
-            # 'PPOGSagenode32layer3actrelu',
-            'PPOSupSep2GSagenode32layer3actrelu',
-            'PPOSupSep2GSage2node16layer3actreluep5000',
-            'PPOSupSep2GSage2node32layer3actreluep5000',
-            # 'PPOSupSep2GATnode32layer3actrelu',
-            # 'PPOSupSep2GCNnode32layer3actrelu',
-            'PPOSupSep2GCNnode32layer3attentionactrelu',
-            'PPOSupSep2GSageWGSagenode32layer3attentionactreluep5000',
-            'PPOSupSep2MLPGSagehidden32node32layer3actrelu',
-            # 'PPOhidden64',
-            # 'PPOSupSep2hidden64ep5000',
-            # 'PPOGSagenode64layer3actrelu',
-            # 'PPOSupSep2GSagenode64layer3actreluep5000',
-            # 'PPOSupSep2GSage2node32layer3actreluep5000',
-            # 'PPOSupSep2GATnode64layer3actrelu',
-            # 'PPOSupSep2GCNnode64layer3actrelu',
-            # 'PPOSupSep2GCNnode64layer3attentionactrelu',
-            # 'PPOSupSep2MLPGSagehidden64node64layer3actreluep5000',
-            # 'PPOhidden32ep10000',
-            # 'PPOSupSep2hidden32ep10000',
-            # 'PPOSupSep2GSagenode32layer3actreluep10000',
-            # 'PPOSupSep2GCNnode32layer3attentionactreluep10000',
-            # 'PPOSupSep2MLPGSagehidden32node32layer3actreluep10000',
+            'PPOhidden16',
+            'PPOSuphidden16',
+            'PPOLSTMlayer1hidden16',
+            'PPOSupLSTMlayer1hidden16',
+            # 'PPOSupOnlineLSTMlayer1hidden16',
+            # 'PPOSupVanillaLSTMlayer1hidden16',
+            'PPOSupSepLSTMlayer1hidden16',
+            'PPOSupSep2LSTMlayer1hidden16',
+            'SupLSTMlayer1hidden16',
         ]
 policy_names = policies
 
@@ -93,7 +60,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'node32'
+extra_name = ''
 
 pre_name = ''
 post_name = ''
@@ -156,8 +123,8 @@ for fid,field in enumerate(fields):
         y = np.mean(Losses,0)
         yerr = np.std(Losses,0)
         plot, = plt.plot(itrs,y,colors[policy_index])
-        # plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
-        #                     facecolor=colors[policy_index],alpha=0.3)
+        plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
+                            facecolor=colors[policy_index],alpha=0.3)
         plts.append(plot)
         legends.append(policy_names[policy_index])
 

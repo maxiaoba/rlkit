@@ -11,7 +11,7 @@ from rlkit.torch.data_management.normalizer import TorchFixedNormalizer
 from rlkit.torch.modules import LayerNorm
 from rlkit.torch.policies.deterministic_policies import MlpPolicy
 
-class SoftmaxLSTMPolicy(Policy, nn.Module):
+class SupSoftmaxLSTMPolicy(Policy, nn.Module):
     """
     LSTM policy with Categorical distributon using softmax
     """
@@ -24,7 +24,8 @@ class SoftmaxLSTMPolicy(Policy, nn.Module):
             obs_dim,
             action_dim,
             hidden_dim,
-            post_net,
+            decoder,
+            sup_learner,
             num_layers=1,
     ):
         super().__init__()
@@ -42,18 +43,20 @@ class SoftmaxLSTMPolicy(Policy, nn.Module):
                                     hidden_size=hidden_dim,
                                     num_layers=num_layers,
                                     batch_first=True)
-        self.post_net = post_net
+        self.decoder = decoder
+        self.sup_learner = sup_learner
         
     def to_onehot(self, prev_actions):
-        assert len(prev_actions.shape) == 3
         if prev_actions.shape[-1] != self.action_dim:
-            prev_actions_onehot = torch.zeros(prev_actions.shape[0],prev_actions.shape[1],self.action_dim)
+            prev_actions_onehot = torch.zeros(*prev_actions.shape[:-1],self.action_dim)
             prev_actions_onehot.scatter_(-1,prev_actions.long(),1.)
         else:
             prev_actions_onehot = prev_actions
         return prev_actions_onehot
 
-    def forward(self, obs_action, return_info=False):
+    def forward(self, obs_action, post_net=None, return_info=False):
+        if post_net is None:
+            post_net = self.decoder
         obs, prev_actions = obs_action
         assert (len(obs.shape) == 3) and ((len(prev_actions.shape) == 3))
         assert obs.shape[1] == prev_actions.shape[1] + 1
@@ -67,15 +70,17 @@ class SoftmaxLSTMPolicy(Policy, nn.Module):
         c_0_batch = self.c_0.reshape(self.num_layers,self.hidden_dim)[:,None,:].repeat(1,obs.shape[0],1)
         output, (h_n, c_n) = self.lstm.forward(obs, (h_0_batch, c_0_batch))
 
-        logits = self.post_net(output)
+        logits = post_net(output)
         pis = torch.softmax(logits, dim=-1)
-        info = dict(preactivation = logits, h=h_n, c=c_n)
+        info = dict(preactivation = logits, output=output, h=h_n, c=c_n)
         if return_info:
             return pis, info
         else:
             return pis
 
-    def step(self, obs_action, return_info=False):
+    def step(self, obs_action, post_net=None, return_info=False):
+        if post_net is None:
+            post_net = self.decoder
         obs, prev_actions = obs_action
         assert (len(obs.shape) == 2) and ((len(prev_actions.shape) == 2))
         # trajectory batch x |O|
@@ -89,9 +94,9 @@ class SoftmaxLSTMPolicy(Policy, nn.Module):
         output, (h_n, c_n) = self.lstm.forward(obs, (h_p_batch, c_p_batch))
         output = output.reshape(obs.shape[0],-1)
 
-        logits = self.post_net(output)
+        logits = post_net(output)
         pis = torch.softmax(logits, dim=-1)
-        info = dict(preactivation = logits, h=h_n, c=c_n)
+        info = dict(preactivation = logits, output=output, h=h_n, c=c_n)
         if return_info:
             return pis, info
         else:
@@ -119,6 +124,21 @@ class SoftmaxLSTMPolicy(Policy, nn.Module):
         self.h_p = info['h'].clone().reshape(-1)
         self.c_p = info['c'].clone().reshape(-1)
         return action, {}
+
+    def get_sup_distribution(self, obs):
+        if isinstance(obs, tuple):
+            _, info = self.forward(obs, post_net=self.sup_learner, return_info=True)
+        elif len(obs.shape) == 2:
+            obs_action = (torch_ify(obs), self.a_p[None].repeat(obs.shape[0],1))
+            _, info = self.step(obs_action, post_net=self.sup_learner, return_info=True)
+        logits = info['preactivation']
+        return Categorical(logits=logits)
+
+    def sup_log_prob(self, obs, label):
+        return self.get_sup_distribution(obs).log_prob(label)
+
+    def sup_prob(self, obs):
+        return self.get_sup_distribution(obs).probs
 
     def reset(self):
         self.a_p = self.a_0.clone().detach()

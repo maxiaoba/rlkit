@@ -9,25 +9,21 @@ from rlkit.torch.core import torch_ify
 from rlkit.core.eval_util import create_stats_ordered_dict
 import rlkit.pythonplusplus as ppp
 
-class PPOSupVanillaTrainer(PPOTrainer):
-    """PPO + supervised learning.
+class SupTrainer(PPOTrainer):
+    """supervised learning
     """
 
     def __init__(self,
+                 sup_weight,
                  replay_buffer,
                  exploration_bonus,
-                 sup_lr=1e-3,
                  sup_batch_size=64,
-                 sup_train_num=1,
                  **kwargs):
         super().__init__(**kwargs)
+        self.sup_weight = sup_weight
         self.replay_buffer = replay_buffer
         self.sup_batch_size = sup_batch_size
-        self.sup_train_num = sup_train_num
         self.exploration_bonus = exploration_bonus
-        self._sup_optimizer = torch.optim.Adam(
-                                self.policy.parameters(),
-                                lr=sup_lr)
 
     def train_once(self, paths):
         """Train the algorithm once.
@@ -82,11 +78,6 @@ class PPOSupVanillaTrainer(PPOTrainer):
         self._train(policy_input, obs_input, actions_input, rewards_input, returns_input,
                     advs_input, valid_mask)
 
-        for _ in range(self.sup_train_num):
-            sup_batch = self.replay_buffer.random_batch(self.sup_batch_size)
-            sup_loss = self._train_sup_learner(sup_batch['observations'],sup_batch['actions'],
-                                                sup_batch['labels'],sup_batch['valids'])
-
         with torch.no_grad():
             policy_loss_after = self._compute_loss_with_adv(
                 policy_input, actions_input, rewards_input, advs_input, valid_mask)
@@ -116,20 +107,36 @@ class PPOSupVanillaTrainer(PPOTrainer):
 
         self._old_policy = copy.deepcopy(self.policy)
 
-    def _train_sup_learner(self, observations, actions, labels, valids):
-        self._sup_optimizer.zero_grad()
-        sup_loss = self._compute_sup_loss(observations, actions, labels, valids)
-        sup_loss.backward()
-        self._sup_optimizer.step()
-        return sup_loss
+    def _compute_objective(self, advantages, obs, actions, rewards):
+        r"""Compute objective value.
 
-    def _compute_sup_loss(self, obs, actions, labels, valid_mask):
+        Args:
+            advantages (torch.Tensor): Advantage value at each step
+                with shape :math:`(N \dot [T], )`.
+            obs (torch.Tensor): Observation from the environment
+                with shape :math:`(N \dot [T], O*)`.
+            actions (torch.Tensor): Actions fed to the environment
+                with shape :math:`(N \dot [T], A*)`.
+            rewards (torch.Tensor): Acquired rewards
+                with shape :math:`(N \dot [T], )`.
+
+        Returns:
+            torch.Tensor: Calculated objective values
+                with shape :math:`(N \dot [T], )`.
+
+        """
+        sup_batch = self.replay_buffer.random_batch(self.sup_batch_size)
+        sup_loss = self._compute_sup_loss(sup_batch['observations'],sup_batch['actions'],sup_batch['labels'],sup_batch['valids'])
+        objective = -sup_loss
+        return objective*torch.ones_like(advantages)
+
+    def _compute_sup_loss(self, obs, actions, labels, valids):
         obs = torch_ify(obs)
         actions = torch_ify(actions)
-        valid_mask = torch_ify(valid_mask).bool()
+        valids = torch_ify(valids).bool()
         labels = torch_ify(labels).clone()
-        valids = ~torch.isnan(labels)
-        labels[~valids] = 0
+        valid_mask = ~torch.isnan(labels)
+        labels[~valid_mask] = 0
         if self._recurrent:
             pre_actions = actions[:,:-1,:]  
             policy_input = (obs, pre_actions)
@@ -139,7 +146,7 @@ class PPOSupVanillaTrainer(PPOTrainer):
         lls[~valids] = 0
         lls[~valid_mask] = 0
         # return -lls[valid_mask].mean()
-        return -lls.sum()/(valid_mask.unsqueeze(-1)*valids).float().sum()
+        return -lls.sum()/(valids[:,:,None]*valid_mask).float().sum()
 
     def _add_exploration_bonus(self, paths):
         paths = copy.deepcopy(paths)
@@ -232,7 +239,6 @@ class PPOSupVanillaTrainer(PPOTrainer):
             self._value_function,
             self._old_policy,
             self.policy,
-            # self.sup_learner,
         ]
 
     def get_snapshot(self):
@@ -240,5 +246,4 @@ class PPOSupVanillaTrainer(PPOTrainer):
             policy=self.policy,
             old_policy=self._old_policy,
             value_function=self._value_function,
-            # sup_learner=self.sup_learner,
         )

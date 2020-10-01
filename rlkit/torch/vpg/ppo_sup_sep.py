@@ -8,6 +8,7 @@ from rlkit.torch.vpg.util import compute_advantages, filter_valids, pad_to_last
 from rlkit.torch.core import torch_ify
 from rlkit.core.eval_util import create_stats_ordered_dict
 import rlkit.pythonplusplus as ppp
+from rlkit.torch.pytorch_util import get_gradient_norm
 
 class PPOSupSepTrainer(PPOTrainer):
     """PPO + supervised learning.
@@ -50,40 +51,55 @@ class PPOSupSepTrainer(PPOTrainer):
         if self._maximum_entropy:
             policy_entropies = self._compute_policy_entropy(obs, labels_flat)
             rewards += self._policy_ent_coeff * policy_entropies
+        advs = self._compute_advantage(rewards, valids, baselines)
 
-        obs_flat = torch.cat(filter_valids(obs, valids))
-        actions_flat = torch.cat(filter_valids(actions, valids))
-        rewards_flat = torch.cat(filter_valids(rewards, valids))
-        returns_flat = torch.cat(filter_valids(returns, valids))
-        advs_flat = self._compute_advantage(rewards, valids, baselines)
-        labels_flat = torch.cat(filter_valids(labels, valids))
-        self.replay_buffer.add_batch(obs_flat, labels_flat)
+        if self._recurrent:
+            pre_actions = actions[:,:-1,:]
+            policy_input = (obs,pre_actions)
+            obs_input, actions_input, rewards_input, returns_input, advs_input = \
+                obs, actions, rewards, returns, advs
+            labels_input = labels
+            valid_mask = torch.zeros(obs.shape[0],obs.shape[1]).bool()
+            for i, valid in enumerate(valids):
+                valid_mask[i,:valid] = True
+        else:
+            obs_input = torch.cat(filter_valids(obs, valids))
+            actions_input = torch.cat(filter_valids(actions, valids))
+            rewards_input = torch.cat(filter_valids(rewards, valids))
+            returns_input = torch.cat(filter_valids(returns, valids))
+            advs_input = torch.cat(filter_valids(advs, valids))
+            labels_input = torch.cat(filter_valids(labels, valids))
+            policy_input = obs_input
+            valid_mask = torch.ones(obs_input.shape[0]).bool()
+            # (num of valid samples) x ...
+        self.replay_buffer.add_batch(obs_input, actions_input, labels_input, valid_mask)
+
         with torch.no_grad():
-            sup_loss_before = self._compute_sup_loss(obs_flat,labels_flat)
             policy_loss_before = self._compute_loss_with_adv(
-                obs_flat, actions_flat, rewards_flat, advs_flat, labels_flat)
+                policy_input, actions_input, rewards_input, advs_input, labels_input, valid_mask)
             vf_loss_before = self._compute_vf_loss(
-                obs_flat, returns_flat)
+                obs_input, returns_input, valid_mask)
             # kl_before = self._compute_kl_constraint(obs)
-            kl_before = self._compute_kl_constraint(obs_flat, labels_flat)
+            kl_before = self._compute_kl_constraint(policy_input, labels_input, valid_mask)
+            sup_loss_before = self._compute_sup_loss(obs_input, actions_input, labels_input, valid_mask)
 
-        self._train(obs_flat, actions_flat, rewards_flat, returns_flat,
-                    advs_flat, labels_flat)
+        self._train(policy_input, obs_input, actions_input, rewards_input, returns_input,
+                    advs_input, labels_input, valid_mask)
 
-        for _ in range(self.sup_train_num):
-            batch = self.replay_buffer.random_batch(self.sup_batch_size)
-            sup_loss = self._train_sup_learner(batch['observations'],batch['labels'])
+        # for _ in range(self.sup_train_num):
+            # sup_batch = self.replay_buffer.random_batch(self.sup_batch_size)
+            # sup_loss = self._train_sup_learner(sup_batch['observations'],sup_batch['actions'],
+            #                                     sup_batch['labels'],sup_batch['valids'])
 
         with torch.no_grad():
-            sup_loss_after = self._compute_sup_loss(obs_flat, labels_flat)
             policy_loss_after = self._compute_loss_with_adv(
-                obs_flat, actions_flat, rewards_flat, advs_flat, labels_flat)
+                policy_input, actions_input, rewards_input, advs_input, labels_input, valid_mask)
             vf_loss_after = self._compute_vf_loss(
-                obs_flat, returns_flat)
-            # kl_after = self._compute_kl_constraint(obs)
-            kl_after = self._compute_kl_constraint(obs_flat, labels_flat)
-            # policy_entropy = self._compute_policy_entropy(obs)
-            policy_entropy = self._compute_policy_entropy(obs_flat, labels_flat)
+                obs_input, returns_input, valid_mask)
+            # kl_before = self._compute_kl_constraint(obs)
+            kl_after = self._compute_kl_constraint(policy_input, labels_input, valid_mask)
+            sup_loss_after = self._compute_sup_loss(obs_input, actions_input, labels_input, valid_mask)
+            policy_entropy = self._compute_policy_entropy(policy_input, labels_input)
 
         if self._need_to_update_eval_statistics:
             self._need_to_update_eval_statistics = False
@@ -92,19 +108,19 @@ class PPOSupSepTrainer(PPOTrainer):
             self.eval_statistics['dLoss'] = (policy_loss_before - policy_loss_after).item()
             self.eval_statistics['KLBefore'] = kl_before.item()
             self.eval_statistics['KL'] = kl_after.item()
-            self.eval_statistics['Entropy'] = policy_entropy.mean().item()
+            self.eval_statistics['Entropy'] = policy_entropy[valid_mask].mean().item()
 
             self.eval_statistics['VF LossBefore'] = vf_loss_before.item()
             self.eval_statistics['VF LossAfter'] = vf_loss_after.item()
             self.eval_statistics['VF dLoss'] = (vf_loss_before - vf_loss_after).item()
-            
+
             self.eval_statistics['SUP LossBefore'] = sup_loss_before.item()
             self.eval_statistics['SUP LossAfter'] = sup_loss_after.item()
             self.eval_statistics['SUP dLoss'] = (sup_loss_before - sup_loss_after).item()
 
         self._old_policy = copy.deepcopy(self.policy)
 
-    def _train(self, obs, actions, rewards, returns, advs, labels):
+    def _train(self, policy_input, obs, actions, rewards, returns, advs, labels, valid_mask):
         r"""Train the policy and value function with minibatch.
 
         Args:
@@ -119,12 +135,15 @@ class PPOSupSepTrainer(PPOTrainer):
 
         """
         for dataset in self._policy_optimizer.get_minibatch(
-                obs, actions, rewards, advs, labels):
+                policy_input, actions, rewards, advs, labels, valid_mask):
             self._train_policy(*dataset)
-        for dataset in self._vf_optimizer.get_minibatch(obs, returns):
+            sup_batch = self.replay_buffer.random_batch(self.sup_batch_size)
+            sup_loss = self._train_sup_learner(sup_batch['observations'],sup_batch['actions'],
+                                                sup_batch['labels'],sup_batch['valids'])
+        for dataset in self._vf_optimizer.get_minibatch(obs, returns, valid_mask):
             self._train_value_function(*dataset)
 
-    def _train_policy(self, obs, actions, rewards, advantages, labels):
+    def _train_policy(self, obs, actions, rewards, advantages, labels, valid_mask):
         r"""Train the policy.
 
         Args:
@@ -142,32 +161,39 @@ class PPOSupSepTrainer(PPOTrainer):
 
         """
         self._policy_optimizer.zero_grad()
-        loss = self._compute_loss_with_adv(obs, actions, rewards, advantages, labels)
+        loss = self._compute_loss_with_adv(obs, actions, rewards, advantages, labels, valid_mask)
         loss.backward()
         self._policy_optimizer.step()
-
+        self._policy_optimizer.zero_grad()
         return loss
 
-    def _train_sup_learner(self, observations, labels):
-        observations = torch_ify(observations)
-        labels = torch_ify(labels)
+    def _train_sup_learner(self, observations, actions, labels, valids):
         self._sup_optimizer.zero_grad()
-        sup_loss = self._compute_sup_loss(observations, labels)
+        sup_loss = self._compute_sup_loss(observations, actions, labels, valids)
         sup_loss.backward()
         self._sup_optimizer.step()
+        self._sup_optimizer.zero_grad()
         return sup_loss
 
-    def _compute_sup_loss(self, obs, labels):
+    def _compute_sup_loss(self, obs, actions, labels, valid_mask):
         obs = torch_ify(obs)
+        actions = torch_ify(actions)
+        valid_mask = torch_ify(valid_mask).bool()
         labels = torch_ify(labels).clone()
-        valid_mask = ~torch.isnan(labels)
-        labels[~valid_mask] = 0     
-        lls = self.policy.sup_log_prob(obs, labels)
+        valids = ~torch.isnan(labels)
+        labels[~valids] = 0
+        if self._recurrent:
+            pre_actions = actions[:,:-1,:]  
+            policy_input = (obs, pre_actions)
+        else:
+            policy_input = obs       
+        lls = self.policy.sup_log_prob(policy_input, labels)
+        lls[~valids] = 0
         lls[~valid_mask] = 0
         # return -lls[valid_mask].mean()
-        return -lls.mean()
+        return -lls.sum()/(valid_mask.unsqueeze(-1)*valids).float().sum()
 
-    def _compute_kl_constraint(self, obs, labels):
+    def _compute_kl_constraint(self, obs, labels, valid_mask):
         r"""Compute KL divergence.
 
         Compute the KL divergence between the old policy distribution and
@@ -193,7 +219,7 @@ class PPOSupSepTrainer(PPOTrainer):
             kl_constraint = torch.distributions.kl.kl_divergence(
                 old_dist, new_dist)
 
-            return kl_constraint.mean()
+            return kl_constraint[valid_mask].mean()
         except NotImplementedError:
             return torch.tensor(0.)
 
@@ -223,7 +249,7 @@ class PPOSupSepTrainer(PPOTrainer):
 
         return policy_entropy
 
-    def _compute_loss_with_adv(self, obs, actions, rewards, advantages, labels):
+    def _compute_loss_with_adv(self, obs, actions, rewards, advantages, labels, valid_mask):
         r"""Compute mean value of loss.
 
         Args:
@@ -247,7 +273,7 @@ class PPOSupSepTrainer(PPOTrainer):
             policy_entropies = self._compute_policy_entropy(obs, labels)
             objectives += self._policy_ent_coeff * policy_entropies
 
-        return -objectives.mean()
+        return -objectives[valid_mask].mean()
 
     def _compute_objective(self, advantages, obs, actions, rewards, labels):
         r"""Compute objective value.

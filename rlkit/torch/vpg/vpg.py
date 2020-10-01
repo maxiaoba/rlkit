@@ -11,7 +11,7 @@ from rlkit.util import tensor_util as tu
 from rlkit.torch.torch_rl_algorithm import TorchOnlineTrainer
 from rlkit.torch.vpg.util import compute_advantages, filter_valids, pad_to_last
 from rlkit.torch.optimizers import OptimizerWrapper
-
+from rlkit.torch.pytorch_util import get_gradient_norm
 
 class VPGTrainer(TorchOnlineTrainer):
     """Vanilla Policy Gradient (REINFORCE).
@@ -213,6 +213,7 @@ class VPGTrainer(TorchOnlineTrainer):
         """
         for dataset in self._policy_optimizer.get_minibatch(
                 policy_input, actions, rewards, advs, valid_mask):
+            # print('_train: ',dataset[0][1][0])
             self._train_policy(*dataset)
         for dataset in self._vf_optimizer.get_minibatch(obs, returns, valid_mask):
             self._train_value_function(*dataset)
@@ -235,6 +236,7 @@ class VPGTrainer(TorchOnlineTrainer):
 
         """
         self._policy_optimizer.zero_grad()
+        # print('_train_policy: ',obs[1][0])
         loss = self._compute_loss_with_adv(obs, actions, rewards, advantages, valid_mask)
         loss.backward()
         self._policy_optimizer.step()

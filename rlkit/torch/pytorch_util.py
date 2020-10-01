@@ -1,6 +1,16 @@
 import torch
 import numpy as np
 
+def get_gradient_norm(model):
+    total_norm = 0.
+    for p in model.parameters():
+        if p.grad is None:
+            total_norm += 0.
+        else:
+            param_norm = p.grad.data.norm(2)
+            total_norm += param_norm.item() ** 2
+    total_norm = total_norm ** (1. / 2)
+    return total_norm
 
 def soft_update_from_to(source, target, tau):
     for target_param, param in zip(target.parameters(), source.parameters()):
