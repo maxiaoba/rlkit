@@ -31,21 +31,47 @@ def experiment(variant):
         vf = load_data['trainer/value_function']
     else:
         hidden_dim = variant['lstm_kwargs']['hidden_dim']
-        num_layers = variant['lstm_kwargs']['num_layers']
+        num_lstm_layers = variant['lstm_kwargs']['num_layers']
+        node_dim = variant['gnn_kwargs']['node_dim']
+
+        node_num = expl_env.max_veh_num+1
         a_0 = np.zeros(action_dim)
-        h_0 = np.zeros(hidden_dim*num_layers)
-        c_0 = np.zeros(hidden_dim*num_layers)
-        latent_0 = (h_0, c_0)
+        o_0 = np.zeros((node_num, (hidden_dim+1)*num_lstm_layers))
+        h_0 = np.zeros((node_num, (hidden_dim+1)*num_lstm_layers))
+        c_0 = np.zeros((node_num, (hidden_dim+1)*num_lstm_layers))
+        latent_0 = (o_0, h_0, c_0)
         from lstm_net import LSTMNet
-        lstm_net = LSTMNet(obs_dim, action_dim, hidden_dim, num_layers)
-        post_net = torch.nn.Linear(hidden_dim, action_dim)
+        lstm_ego = LSTMNet(node_dim, action_dim, hidden_dim, num_lstm_layers)
+        lstm_other = LSTMNet(node_dim, 0, hidden_dim, num_lstm_layers)
+        from graph_builder import TrafficGraphBuilder
+        gb = TrafficGraphBuilder(input_dim=4+hidden_dim, node_num=expl_env.max_veh_num+1,
+                                ego_init=torch.tensor([0.,1.]),
+                                other_init=torch.tensor([1.,0.]),
+                                )
+        from gnn_net import GNNNet
+        gnn = GNNNet( 
+                    pre_graph_builder=gb, 
+                    node_dim=variant['gnn_kwargs']['node_dim'],
+                    conv_type=variant['gnn_kwargs']['conv_type'],
+                    num_conv_layers=variant['gnn_kwargs']['num_layers'],
+                    hidden_activation=variant['gnn_kwargs']['activation'],
+                    )
+        from gnn_lstm_net import GNNLSTMNet
+        policy_net = GNNLSTMNet(node_num,gnn,lstm_ego,lstm_other)
+        from layers import FlattenLayer, SelectLayer
+        post_net = nn.Sequential(
+                    SelectLayer(-2,0),
+                    FlattenLayer(2),
+                    nn.ReLU(),
+                    nn.Linear(hidden_dim,action_dim)
+                )
         from softmax_lstm_policy import SoftmaxLSTMPolicy
         policy = SoftmaxLSTMPolicy(
                     a_0=a_0,
                     latent_0 = latent_0,
                     obs_dim=obs_dim,
                     action_dim=action_dim,
-                    lstm_net=lstm_net,
+                    lstm_net=policy_net,
                     post_net=post_net,
                     )
         print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
@@ -54,7 +80,7 @@ def experiment(variant):
             hidden_sizes=[32, 32],
             input_size=obs_dim,
             output_size=1,
-        )
+        ) # TODO: id is also an input
         
     vf_criterion = nn.MSELoss()
     from rlkit.torch.policies.make_deterministic import MakeDeterministic
@@ -96,8 +122,12 @@ if __name__ == "__main__":
     parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
     parser.add_argument('--log_dir', type=str, default='PPO')
-    parser.add_argument('--layer', type=int, default=1)
+    parser.add_argument('--llayer', type=int, default=1)
     parser.add_argument('--hidden', type=int, default=32)
+    parser.add_argument('--gnn', type=str, default='GSage')
+    parser.add_argument('--node', type=int, default=16)
+    parser.add_argument('--glayer', type=int, default=3)
+    parser.add_argument('--act', type=str, default='relu')
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -109,8 +139,12 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+'noise'+str(args.noise)+'yld'+str(args.yld)+'ds'+str(args.ds)
     main_dir = args.log_dir\
-                +('layer'+str(args.layer))\
+                +('llayer'+str(args.llayer))\
                 +('hidden'+str(args.hidden))\
+                +args.gnn\
+                +('node'+str(args.node))\
+                +('glayer'+str(args.glayer))\
+                +('act'+args.act)\
                 +(('ep'+str(args.epoch)) if args.epoch else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
@@ -120,11 +154,17 @@ if __name__ == "__main__":
     variant = dict(
         lstm_kwargs=dict(
             hidden_dim=args.hidden,
-            num_layers=args.layer,
+            num_layers=args.llayer,
+        ),
+        gnn_kwargs=dict(
+            conv_type=args.gnn,
+            node_dim=args.node,
+            num_layers=args.glayer,
+            activation=args.act,
         ),
         env_kwargs=dict(
             num_updates=1,
-            observe_mode='normal',
+            observe_mode='id',
             obs_noise=args.noise,
             yld=args.yld,
             driver_sigma=args.ds,

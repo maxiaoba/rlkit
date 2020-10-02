@@ -2,14 +2,14 @@ import torch
 import numpy as np
 import torch_geometric.utils as pyg_utils
 
-class MultiTrafficGraphBuilder(torch.nn.Module):
+class TrafficGraphBuilder(torch.nn.Module):
     def __init__(self, 
                 input_dim,
                 node_num,
                 ego_init=torch.tensor([0.,1.]),
                 other_init=torch.tensor([1.,0.]),
                 ):
-        super(MultiTrafficGraphBuilder, self).__init__()
+        super(TrafficGraphBuilder, self).__init__()
 
         self.input_dim = input_dim
         self.node_num = node_num
@@ -24,10 +24,10 @@ class MultiTrafficGraphBuilder(torch.nn.Module):
         # edge_index: 2 x node_edge
         # messages from nodes in edge_index[0] are sent to nodes in edge_index[1]
         
-        batch_size, obs_dim = obs.shape
+        batch_size, node_num, obs_dim = obs.shape
 
         x = torch.zeros(batch_size,self.node_num, self.output_dim)
-        x[:,:,:self.input_dim] = obs.reshape(batch_size, self.node_num, self.input_dim)
+        x[:,:,:self.input_dim] = obs
         x[:,0,self.input_dim:] = self.ego_init[None,:]
         x[:,1:,self.input_dim:] = self.other_init[None,None,:]
         x = x.reshape(int(batch_size*self.node_num),self.output_dim)
@@ -46,8 +46,7 @@ class MultiTrafficGraphBuilder(torch.nn.Module):
     def get_valid_node_mask(self, obs):
         # return a mask of all valid nodes
         # shape: batch x node_num-1 (assume node 0 always valid)
-        batch_size, obs_dim = obs.shape
-        obs = torch.reshape(obs,(batch_size, self.node_num, self.input_dim))
+        batch_size, node_num, obs_dim = obs.shape
         valid_musk = (torch.sum(torch.abs(obs),dim=-1) != 0)
         return valid_musk[:,1:]
         # valid_musk = valid_musk[:,1:]
