@@ -201,6 +201,7 @@ class EgoDriver(Driver):
 class TIntersectionLSTM(TrafficEnv):
     def __init__(self,
                  yld=0.5,
+                 observe_mode='normal',
                  obs_noise=0.,
                  vs_actions=[0.,0.5,3.],
                  t_actions=[0.],
@@ -225,6 +226,7 @@ class TIntersectionLSTM(TrafficEnv):
                  **kwargs):
 
         self.yld = yld
+        self.observe_mode = observe_mode
         self.obs_noise = obs_noise
         self.vs_actions = vs_actions
         self.t_actions = t_actions
@@ -240,7 +242,10 @@ class TIntersectionLSTM(TrafficEnv):
         self.outroad_cost = outroad_cost
         self.survive_reward = survive_reward
         self.goal_reward = goal_reward
-
+        self._collision = False
+        self._outroad = False
+        self._goal = False
+        self._intentions = []
 
         self.left_bound = left_bound
         self.right_bound = right_bound
@@ -249,13 +254,6 @@ class TIntersectionLSTM(TrafficEnv):
         self.max_veh_num = max_veh_num
         self.label_dim = 2
         self.label_num = self.max_veh_num
-
-        self._collision = False
-        self._outroad = False
-        self._goal = False
-        self._intentions = []
-        self._lower_lane_next_idx = 1
-        self._upper_lane_next_idx = int(self.max_veh_num/2.)+1
 
         self.car_length=5.0
         self.car_width=2.0
@@ -276,10 +274,15 @@ class TIntersectionLSTM(TrafficEnv):
 
     def get_sup_labels(self):
         labels = np.array([np.nan]*self.label_num)
-        for driver in self._drivers[1:]:
-            i = driver._idx - 1
-            labels[i] = int(driver.yld)
-
+        i = 0
+        upper_indices, lower_indices = self.get_sorted_indices()
+        for indx in lower_indices:
+            labels[i] = int(self._drivers[indx].yld)
+            i += 1
+        i = int(self.max_veh_num/2)
+        for indx in upper_indices:
+            labels[i] = int(self._drivers[indx].yld)
+            i += 1
         return labels
 
     def update(self, action):
@@ -315,6 +318,13 @@ class TIntersectionLSTM(TrafficEnv):
                 self._goal = True
                 return
 
+            # remove cars that are out-of bound
+            for car, driver in zip(self._cars[1:],self._drivers[1:]):
+                if(car.position[1] < 4.) and (car.position[0] < self.left_bound):
+                    self.remove_car(car, driver)
+                elif(car.position[1] > 4.) and (car.position[0] > self.right_bound):
+                    self.remove_car(car, driver)
+
             # add cars when there is enough space
             min_upper_x = np.inf
             max_lower_x = -np.inf
@@ -328,7 +338,8 @@ class TIntersectionLSTM(TrafficEnv):
                 p_des = 2.
                 direction = -1
                 x = self.right_bound
-                car, driver = self.add_car(x, 2., -self.desire_speed, 0., v_des, p_des, direction, np.pi)
+                idx = np.random.rand()
+                car, driver = self.add_car(idx, x, 2., -self.desire_speed, 0., v_des, p_des, direction, np.pi)
                 if hasattr(self, 'viewer') and self.viewer:
                     car.setup_render(self.viewer)
                     driver.setup_render(self.viewer)
@@ -337,17 +348,11 @@ class TIntersectionLSTM(TrafficEnv):
                 p_des = 6.
                 direction = 1
                 x = self.left_bound
-                car, driver = self.add_car(x, 6., self.desire_speed, 0., v_des, p_des, direction, 0.)
+                idx = np.random.rand()
+                car, driver = self.add_car(idx, x, 6., self.desire_speed, 0., v_des, p_des, direction, 0.)
                 if hasattr(self, 'viewer') and self.viewer:
                     car.setup_render(self.viewer)
                     driver.setup_render(self.viewer)
-
-            # remove cars that are out-of bound
-            for car, driver in zip(self._cars[1:],self._drivers[1:]):
-                if(car.position[1] < 4.) and (car.position[0] < self.left_bound):
-                    self.remove_car(car, driver)
-                elif(car.position[1] > 4.) and (car.position[0] > self.right_bound):
-                    self.remove_car(car, driver)
 
     def is_terminal(self):
         return (self._collision or self._outroad or self._goal)
@@ -368,19 +373,51 @@ class TIntersectionLSTM(TrafficEnv):
         return info
 
     def observe(self):
-        obs = np.zeros(int(4*self.max_veh_num+4))
-        for car in self._cars:
-            i = int(car._idx*4)
-            obs[i:i+2] = car.position/self.right_bound + np.random.uniform(-1.,1.,2)*self.obs_noise
-            obs[i+2:i+4] = car.velocity/self.desire_speed + np.random.uniform(-1.,1.,2)*self.obs_noise
+        if self.observe_mode == 'normal':
+            obs = np.zeros(int(4*self.max_veh_num+4))
+            obs[:2] = self._cars[0].position/self.right_bound + np.random.uniform(-1.,1.,2)*self.obs_noise
+            obs[2:4] = self._cars[0].velocity/self.desire_speed + np.random.uniform(-1.,1.,2)*self.obs_noise
+            upper_indices, lower_indices = self.get_sorted_indices()
+            i = 4
+            for indx in lower_indices:
+                obs[i:i+2] = self._cars[indx].position/self.right_bound + np.random.uniform(-1.,1.,2)*self.obs_noise
+                obs[i+2:i+4] = self._cars[indx].velocity/self.desire_speed + np.random.uniform(-1.,1.,2)*self.obs_noise
+                i += 4
+            i = int(4 + self.max_veh_num/2*4)
+            for indx in upper_indices:
+                obs[i:i+2] = self._cars[indx].position/self.right_bound + np.random.uniform(-1.,1.,2)*self.obs_noise
+                obs[i+2:i+4] = self._cars[indx].velocity/self.desire_speed + np.random.uniform(-1.,1.,2)*self.obs_noise
+                i += 4
+        elif self.observe_mode == 'id':
+            obs = np.zeros(int(5*self.max_veh_num+5))
+            obs[:2] = self._cars[0].position/self.right_bound + np.random.uniform(-1.,1.,2)*self.obs_noise
+            obs[2:4] = self._cars[0].velocity/self.desire_speed + np.random.uniform(-1.,1.,2)*self.obs_noise
+            obs[4] = self._cars[0]._idx
+            upper_indices, lower_indices = self.get_sorted_indices()
+            i = 5
+            for indx in lower_indices:
+                obs[i:i+2] = self._cars[indx].position/self.right_bound + np.random.uniform(-1.,1.,2)*self.obs_noise
+                obs[i+2:i+4] = self._cars[indx].velocity/self.desire_speed + np.random.uniform(-1.,1.,2)*self.obs_noise
+                obs[i+4] = self._cars[indx]._idx
+                i += 5
+            i = int(5 + self.max_veh_num/2*5)
+            for indx in upper_indices:
+                obs[i:i+2] = self._cars[indx].position/self.right_bound + np.random.uniform(-1.,1.,2)*self.obs_noise
+                obs[i+2:i+4] = self._cars[indx].velocity/self.desire_speed + np.random.uniform(-1.,1.,2)*self.obs_noise
+                obs[i+4] = self._cars[indx]._idx
+                i += 5
 
         obs = np.copy(obs)
         return obs
 
     @property
     def observation_space(self):
-        low = -np.ones(int(4*self.max_veh_num+4))
-        high = np.ones(int(4*self.max_veh_num+4))
+        if self.observe_mode == 'id':
+            low = -np.ones(int(5*self.max_veh_num+5))
+            high = np.ones(int(5*self.max_veh_num+5))
+        else:
+            low = -np.ones(int(4*self.max_veh_num+4))
+            high = np.ones(int(4*self.max_veh_num+4))
         return spaces.Box(low=low, high=high, dtype=np.float32)
 
     @property
@@ -423,17 +460,7 @@ class TIntersectionLSTM(TrafficEnv):
             car.remove_render(self.viewer)
             driver.remove_render(self.viewer)
 
-    def add_car(self, x, y, vx, vy, v_des, p_des, direction, theta):
-        if y < 4.:
-            idx = self._lower_lane_next_idx
-            self._lower_lane_next_idx += 1
-            if self._lower_lane_next_idx > int(self.max_veh_num/2.):
-                self._lower_lane_next_idx = 1
-        elif y > 4.:
-            idx = self._upper_lane_next_idx
-            self._upper_lane_next_idx += 1
-            if self._upper_lane_next_idx > self.max_veh_num:
-                self._upper_lane_next_idx = int(self.max_veh_num/2.)+1
+    def add_car(self, idx, x, y, vx, vy, v_des, p_des, direction, theta):
         car = Car(idx=idx, length=self.car_length, width=self.car_width, color=random.choice(RED_COLORS),
                           max_accel=self.car_max_accel, max_speed=self.car_max_speed,
                           expose_level=self.car_expose_level)
@@ -455,19 +482,56 @@ class TIntersectionLSTM(TrafficEnv):
         self._drivers.append(driver)
         return car, driver
 
+    def get_sorted_indices(self):
+        # return indices of all other vehicles from left to right
+        upper_indices, upper_xs = [], []
+        lower_indices, lower_xs = [], []
+        for indx,car in enumerate(self._cars[1:]):
+            if car.position[1] > 4.:
+                upper_indices.append(indx+1)
+                upper_xs.append(car.position[0])
+            else:
+                lower_indices.append(indx+1)
+                lower_xs.append(car.position[0])
+        upper_indices = np.array(upper_indices)[np.argsort(upper_xs)]
+        lower_indices = np.array(lower_indices)[np.argsort(lower_xs)]
+        return upper_indices, lower_indices
+
+    def get_important_indices(self):
+        # return indices of 4 other vehicles that are closest to ego
+        # on 4 directions
+        ego_x = self._cars[0].position[0]
+        min_ll, min_lr, min_ul, min_ur = np.inf, np.inf, np.inf, np.inf
+        ind_ll, ind_lr, ind_ul, ind_ur = None, None, None, None
+        for idx,car in enumerate(self._cars[1:]):
+            x, y = car.position
+            if y < 4.:
+                if (x <= ego_x) and (ego_x - x < min_ll):
+                    min_ll = ego_x - x
+                    ind_ll = idx + 1
+                elif (x > ego_x) and (x - ego_x < min_lr):
+                    min_lr = x - ego_x
+                    ind_lr = idx + 1
+            else:
+                if (x < ego_x) and (ego_x - x < min_ul):
+                    min_ul = ego_x - x
+                    ind_ul = idx + 1
+                elif (x >= ego_x) and (x - ego_x < min_ur):
+                    min_ur = x - ego_x
+                    ind_ur = idx + 1
+        return [ind_ll, ind_lr, ind_ul, ind_ur]
+
     def _reset(self):
         self._collision = False
         self._outroad = False
         self._goal = False
-        self._intentions = []
-        self._lower_lane_next_idx = 1
-        self._upper_lane_next_idx = int(self.max_veh_num/2.)+1
 
         self._cars, self._drivers = [], []
-        car = Car(idx=0, length=self.car_length, width=self.car_width, color=random.choice(BLUE_COLORS),
+        idx = np.random.random()
+        car = Car(idx=idx, length=self.car_length, width=self.car_width, color=random.choice(BLUE_COLORS),
                           max_accel=self.car_max_accel, max_speed=self.car_max_speed,
                           expose_level=self.car_expose_level)
-        driver = EgoDriver(trajectory=EgoTrajectory(),idx=0,car=car,dt=self.dt)
+        driver = EgoDriver(trajectory=EgoTrajectory(),idx=idx,car=car,dt=self.dt)
         car.set_position(np.array([0., -5.0]))
         car.set_velocity(np.array([0., 0.]))
         car.set_rotation(np.pi/2.)
@@ -476,22 +540,24 @@ class TIntersectionLSTM(TrafficEnv):
         self._cars.append(car)
         self._drivers.append(driver)
         # randomly generate surrounding cars and drivers
-        # lower lane 
+        # upper lane
         x = self.left_bound + np.random.rand()*(self.gap_max-self.gap_min)
         while (x < self.right_bound):
             v_des = self.desire_speed
-            p_des = 2.
-            direction = -1
-            self.add_car(x, p_des, -self.desire_speed, 0., v_des, p_des, direction, np.pi)
+            p_des = 6.
+            direction = 1
+            idx = np.random.rand()
+            self.add_car(idx, x, 6., self.desire_speed, 0., v_des, p_des, direction, 0.)
             x += (np.random.rand()*(self.gap_max-self.gap_min) + self.gap_min + self.car_length)
 
-        # upper lane
+        # lower lane
         x = self.right_bound - np.random.rand()*(self.gap_max-self.gap_min)
         while (x > self.left_bound):
             v_des = self.desire_speed
-            p_des = 6.
-            direction = 1
-            self.add_car(x, p_des, self.desire_speed, 0., v_des, p_des, direction, 0.)
+            p_des = 2.
+            direction = -1
+            idx = np.random.rand()
+            self.add_car(idx, x, 2., -self.desire_speed, 0., v_des, p_des, direction, np.pi)
             x -= (np.random.rand()*(self.gap_max-self.gap_min) + self.gap_min + self.car_length)
 
         self._sup_labels = self.get_sup_labels()
@@ -595,7 +661,7 @@ if __name__ == '__main__':
     import time
     import pdb
     env = TIntersectionLSTM(num_updates=1, yld=0.5, driver_sigma=0.1, 
-                            obs_noise=0.1,
+                            observe_mode='id', obs_noise=0.1,
                             )
     obs = env.reset()
     img = env.render()

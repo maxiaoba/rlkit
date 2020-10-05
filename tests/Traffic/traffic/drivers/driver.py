@@ -10,7 +10,7 @@ from traffic.actions.xy_accel_action import XYAccelAction
 
 class Driver:
 	def __init__(self, idx, car, dt):
-		self.idx = idx
+		self._idx = idx
 		self.car = car
 		self.dt = dt
 

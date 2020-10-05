@@ -24,16 +24,39 @@ class GNNLSTMNet(torch.nn.Module):
         self.lstm_other = lstm_other
 
     def identity_match(self, obs, o ,h, c):
-        # obs: batch x n_num x dim
-        # o: batch x n_num x dim
-        # h: batch x n_num x (num_layer*dim)
-        # c: batch x n_num x (num_layer*dim)
-        valid_mask = (torch.sum(torch.abs(obs),dim=-1) != 0)
-        # o[~valid_mask] = 0. # do not modify o
-        h[~valid_mask] = 0.
-        c[~valid_mask] = 0.
+        # obs: batch x n_num x (dim+1)
+        # o: batch x n_num x (dim+1)
+        # h: batch x n_num x (num_layer*dim+1)
+        # c: batch x n_num x (num_layer*dim+1)
+        obs_ids = obs[:,:,-1].reshape(-1)
+        obs_flat = obs[:,:,:-1].reshape(-1,obs.shape[2]-1)
+        o_ids = o[:,:,-1].reshape(-1)
+        o_flat = o[:,:,:-1].reshape(-1,o.shape[2]-1)
+        h_ids = h[:,:,-1].reshape(-1)
+        h_flat = h[:,:,:-1].reshape(-1,h.shape[2]-1)
+        c_ids = c[:,:,-1].reshape(-1)
+        c_flat = c[:,:,:-1].reshape(-1,c.shape[2]-1)
 
-        return obs, o, h, c, valid_mask
+        assert torch.equal(o_ids,h_ids) and torch.equal(o_ids,c_ids)
+        # all the invalid nodes are with same id = 0
+        _, obs_ind, o_ind = np.intersect1d(obs_ids.detach().numpy(), o_ids.detach().numpy(), return_indices=True)
+        obs_n = obs[:,:,:-1]
+
+        o_n = torch.zeros(int(o.shape[0]*o.shape[1]), o.shape[2]-1)
+        o_n[obs_ind,:] = o_flat[o_ind,:]   
+        o_n = o_n.reshape(o.shape[0], o.shape[1], o.shape[2]-1)
+
+        h_n = torch.zeros(int(h.shape[0]*h.shape[1]), h.shape[2]-1) 
+        h_n[obs_ind,:] = h_flat[o_ind,:]   
+        h_n = h_n.reshape(h.shape[0], h.shape[1], h.shape[2]-1)
+
+        c_n = torch.zeros(int(c.shape[0]*c.shape[1]), c.shape[2]-1)
+        c_n[obs_ind,:] = c_flat[o_ind,:]   
+        c_n = c_n.reshape(c.shape[0], c.shape[1], c.shape[2]-1)
+
+        ids = obs_ids.reshape(obs.shape[0], obs.shape[1], 1)
+
+        return obs_n, o_n, h_n, c_n, ids
 
     def step(self, obs, action, o, h, c, t):
         # obs: batch x n_num x (dim+1)
@@ -43,19 +66,18 @@ class GNNLSTMNet(torch.nn.Module):
         # c: batch x n_num x (num_layer*dim+1)
         batch_size, n_num, _ = obs.shape
 
-        obs, o, h, c, valid_mask = self.identity_match(obs, o, h, c)
+        obs, o, h, c, ids = self.identity_match(obs, o, h, c)
         # batch x n_num x dim
-        gnn_input = torch.cat((obs,h),-1) # batch x n_num x dim
-        # if t == 1:
-        #     print(obs.shape)
-        #     print('obs: ',obs[0,0,:])
-        #     print('o: ',o[0,0,:])
-        #     print('h: ',h[0,0,:])
-        #     print('c: ',c[0,0,:])
-        #     print('gnn_input: ',gnn_input[0,0,:])
-
+        gnn_input = torch.cat((obs,o),-1) # batch x n_num x dim
+        if t == 1:
+            print(obs.shape)
+            print('obs: ',obs[0,0,:])
+            print('o: ',o[0,0,:])
+            print('h: ',h[0,0,:])
+            print('c: ',c[0,0,:])
+            print('ids: ',ids[0,0,:])
+            print('gnn_input: ',gnn_input[0,0,:])
         e = self.gnn(gnn_input) # batch x n_num x dim
-        e[~valid_mask] = 0.
 
         # ego
         e_ego = e[:,0,:].unsqueeze(1) 
@@ -86,9 +108,10 @@ class GNNLSTMNet(torch.nn.Module):
         c_n = torch.cat((c_ego_n.unsqueeze(1),c_other_n),1)
         # batch x n_num x dim
 
-        o_n[~valid_mask] = 0.
-        h_n[~valid_mask] = 0.
-        c_n[~valid_mask] = 0.
+        o_n = torch.cat((o_n,ids),-1)
+        h_n = torch.cat((h_n,ids),-1)
+        c_n = torch.cat((c_n,ids),-1)
+        # batch x n_num x (dim+1)
 
         return o_n, h_n, c_n
 
@@ -112,7 +135,7 @@ class GNNLSTMNet(torch.nn.Module):
             obs = obs_sequence[:,t,:,:]
             action = action_sequence[:,t,:]
             o, h, c = self.step(obs, action, o, h, c, t)
-            o_sequence.append(o.unsqueeze(1))
+            o_sequence.append(o[:,:,:-1].unsqueeze(1))
 
         o_sequence = torch.cat(o_sequence,1)
         return o_sequence, (o, h, c)

@@ -42,7 +42,7 @@ def experiment(variant):
         from softmax_lstm_policy import SoftmaxLSTMPolicy
         policy = SoftmaxLSTMPolicy(
                     a_0=a_0,
-                    latent_0 = latent_0,
+                    latent_0=latent_0,
                     obs_dim=obs_dim,
                     action_dim=action_dim,
                     lstm_net=lstm_net,
@@ -124,7 +124,6 @@ if __name__ == "__main__":
         ),
         env_kwargs=dict(
             num_updates=1,
-            observe_mode='normal',
             obs_noise=args.noise,
             yld=args.yld,
             driver_sigma=args.ds,

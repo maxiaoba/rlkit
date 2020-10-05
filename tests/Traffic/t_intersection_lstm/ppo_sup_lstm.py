@@ -36,6 +36,9 @@ def experiment(variant):
         a_0 = np.zeros(action_dim)
         h_0 = np.zeros(hidden_dim*num_layers)
         c_0 = np.zeros(hidden_dim*num_layers)
+        latent_0 = (h_0, c_0)
+        from lstm_net import LSTMNet
+        lstm_net = LSTMNet(obs_dim, action_dim, hidden_dim, num_layers)
         decoder = nn.Linear(hidden_dim, action_dim)
         from layers import ReshapeLayer
         sup_learner = nn.Sequential(
@@ -45,13 +48,12 @@ def experiment(variant):
         from sup_softmax_lstm_policy import SupSoftmaxLSTMPolicy
         policy = SupSoftmaxLSTMPolicy(
                     a_0=a_0,
-                    h_0=h_0,
-                    c_0=c_0,
+                    latent_0=latent_0,
                     obs_dim=obs_dim,
                     action_dim=action_dim,
+                    lstm_net=lstm_net,
                     decoder=decoder,
                     sup_learner=sup_learner,
-                    **variant['lstm_kwargs']
                     )
         print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
 
@@ -110,9 +112,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='t_intersection_lstm')
-    parser.add_argument('--nob', action='store_true', default=False)
-    parser.add_argument('--obs', type=str, default='full')
-    parser.add_argument('--label', type=str, default='full')
+    parser.add_argument('--noise', type=float, default=0.05)
     parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
     parser.add_argument('--log_dir', type=str, default='PPOSup')
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
-    pre_dir = './Data/'+args.exp_name+('nob' if args.nob else '')+'yld'+str(args.yld)+'ds'+str(args.ds)+args.obs+args.label
+    pre_dir = './Data/'+args.exp_name+'noise'+str(args.noise)+'yld'+str(args.yld)+'ds'+str(args.ds)
     main_dir = args.log_dir\
                 +('layer'+str(args.layer))\
                 +('hidden'+str(args.hidden))\
@@ -148,9 +148,7 @@ if __name__ == "__main__":
         ),
         env_kwargs=dict(
             num_updates=1,
-            normalize_obs=args.nob,
-            observe_mode=args.obs,
-            label_mode=args.label,
+            obs_noise=args.noise,
             yld=args.yld,
             driver_sigma=args.ds,
         ),

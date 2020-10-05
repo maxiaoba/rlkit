@@ -39,7 +39,7 @@ class TrafficGraphBuilder(torch.nn.Module):
         valid_musk = self.get_valid_node_mask(obs) # batch x node_num-1
         edge_index = edge_index[valid_musk] # valid_veh_num x 2 x per_edge_num
         edge_index = edge_index.transpose(0,1).reshape(2,-1)
-        edge_index = pyg_utils.remove_self_loops(edge_index)[0]
+        # edge_index = pyg_utils.remove_self_loops(edge_index)[0]
 
         return x, edge_index
 
@@ -61,19 +61,28 @@ class TrafficGraphBuilder(torch.nn.Module):
         # there are self-loops! use torch_geometric.remove_self_loops later
         edges = torch.zeros(self.node_num-1, 2, 4, dtype=int)
         for i in range(self.node_num-1):
-            edges[i,:,0] = torch.tensor([i+1,0])
-            edges[i,:,1] = torch.tensor([0,i+1])
-            if (i+1==1) or (i+1==int((self.node_num-1)/2)+1):
-                # the first vehicle in each lane, add self loops
-                edges[i,:,2] = torch.tensor([i+1,i+2])
-                edges[i,:,3] = torch.tensor([i+1,i+1])
-            elif (i+1==int((self.node_num-1)/2)) or (i+1==self.node_num-1):
-                # the last vehicle in each lane, add self loops
-                edges[i,:,2] = torch.tensor([i+1,i+1])
-                edges[i,:,3] = torch.tensor([i+1,i])
+            idx = i+1
+            edges[i,:,0] = torch.tensor([idx,0])
+            edges[i,:,1] = torch.tensor([0,idx])
+            if (idx==1):
+                # the first vehicle in lower lane
+                edges[i,:,2] = torch.tensor([idx,idx+1])
+                edges[i,:,3] = torch.tensor([idx,int((self.node_num-1)/2)])
+            elif (idx==int((self.node_num-1)/2)+1):
+                # the first vehicle in upper lane
+                edges[i,:,2] = torch.tensor([idx,idx+1])
+                edges[i,:,3] = torch.tensor([idx,self.node_num-1])
+            elif (idx==int((self.node_num-1)/2)):
+                # the last vehicle in lower lane
+                edges[i,:,2] = torch.tensor([idx,1])
+                edges[i,:,3] = torch.tensor([idx,idx-1])
+            elif (idx==self.node_num-1):
+                # the last vehicle in upper lane
+                edges[i,:,2] = torch.tensor([idx,int((self.node_num-1)/2)+1])
+                edges[i,:,3] = torch.tensor([idx,idx-1])
             else:
-                edges[i,:,2] = torch.tensor([i+1,i+2])
-                edges[i,:,3] = torch.tensor([i+1,i])
+                edges[i,:,2] = torch.tensor([idx,idx+1])
+                edges[i,:,3] = torch.tensor([idx,idx-1])
         return edges
 
 

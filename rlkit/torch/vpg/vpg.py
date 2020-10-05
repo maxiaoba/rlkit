@@ -236,7 +236,6 @@ class VPGTrainer(TorchOnlineTrainer):
 
         """
         self._policy_optimizer.zero_grad()
-        # print('_train_policy: ',obs[1][0])
         loss = self._compute_loss_with_adv(obs, actions, rewards, advantages, valid_mask)
         loss.backward()
         self._policy_optimizer.step()

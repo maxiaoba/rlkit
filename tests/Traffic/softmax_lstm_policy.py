@@ -70,13 +70,13 @@ class SoftmaxLSTMPolicy(Policy, nn.Module):
         else:
             return pis
 
-    def get_distribution(self, obs_action):
-        _, info = self.forward(obs_action, return_info=True)
+    def get_distribution(self, obs_action, latent=None):
+        _, info = self.forward(obs_action, latent=latent, return_info=True)
         logits = info['preactivation']
         return Categorical(logits=logits)
 
-    def log_prob(self, obs, action):
-        return self.get_distribution(obs).log_prob(action.squeeze(-1))
+    def log_prob(self, obs_action, action, latent=None):
+        return self.get_distribution(obs_action, latent=latent).log_prob(action.squeeze(-1))
 
     def get_action(self, obs, deterministic=False):
         assert len(obs.shape) == 1

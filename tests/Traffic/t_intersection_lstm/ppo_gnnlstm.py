@@ -36,15 +36,15 @@ def experiment(variant):
 
         node_num = expl_env.max_veh_num+1
         a_0 = np.zeros(action_dim)
-        o_0 = np.zeros((node_num, (hidden_dim+1)*num_lstm_layers))
-        h_0 = np.zeros((node_num, (hidden_dim+1)*num_lstm_layers))
-        c_0 = np.zeros((node_num, (hidden_dim+1)*num_lstm_layers))
+        o_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
+        h_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
+        c_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
         latent_0 = (o_0, h_0, c_0)
         from lstm_net import LSTMNet
         lstm_ego = LSTMNet(node_dim, action_dim, hidden_dim, num_lstm_layers)
         lstm_other = LSTMNet(node_dim, 0, hidden_dim, num_lstm_layers)
         from graph_builder import TrafficGraphBuilder
-        gb = TrafficGraphBuilder(input_dim=4+hidden_dim, node_num=expl_env.max_veh_num+1,
+        gb = TrafficGraphBuilder(input_dim=4+hidden_dim, node_num=node_num,
                                 ego_init=torch.tensor([0.,1.]),
                                 other_init=torch.tensor([1.,0.]),
                                 )
@@ -68,7 +68,7 @@ def experiment(variant):
         from softmax_lstm_policy import SoftmaxLSTMPolicy
         policy = SoftmaxLSTMPolicy(
                     a_0=a_0,
-                    latent_0 = latent_0,
+                    latent_0=latent_0,
                     obs_dim=obs_dim,
                     action_dim=action_dim,
                     lstm_net=policy_net,
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     parser.add_argument('--noise', type=float, default=0.05)
     parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
-    parser.add_argument('--log_dir', type=str, default='PPO')
+    parser.add_argument('--log_dir', type=str, default='PPOGNN')
     parser.add_argument('--llayer', type=int, default=1)
     parser.add_argument('--hidden', type=int, default=32)
     parser.add_argument('--gnn', type=str, default='GSage')
@@ -164,7 +164,6 @@ if __name__ == "__main__":
         ),
         env_kwargs=dict(
             num_updates=1,
-            observe_mode='id',
             obs_noise=args.noise,
             yld=args.yld,
             driver_sigma=args.ds,
