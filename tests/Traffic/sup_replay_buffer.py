@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 import numpy as np
-
+from rlkit.torch.core import eval_np, np_ify, torch_ify
 
 class SupReplayBuffer:
 
@@ -36,10 +36,10 @@ class SupReplayBuffer:
 
     def add_sample(self, observation, action, label, valid):
         # labes: label_num x label_dim
-        self._observations[self._top] = observation
-        self._actions[self._top] = action
-        self._labels[self._top] = label
-        self._valids[self._top] = valid
+        self._observations[self._top] = np_ify(observation)
+        self._actions[self._top] = np_ify(action)
+        self._labels[self._top] = np_ify(label)
+        self._valids[self._top] = np_ify(valid)
         self._advance()
 
     def add_batch(self, batch_obs, bacth_act, batch_label, valid_batch):
