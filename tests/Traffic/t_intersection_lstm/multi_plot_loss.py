@@ -10,8 +10,8 @@ max_itr = 2e4
 
 fields = [
             'evaluation/Average Returns',
-            'evaluation/Actions Max',
-            'evaluation/Actions Min',
+            # 'evaluation/Actions Max',
+            # 'evaluation/Actions Min',
             'evaluation/Num Success',
             # 'evaluation/Num Timeout',
             # 'evaluation/Num Fail',
@@ -28,8 +28,8 @@ fields = [
             ]
 field_names = [
             'Eval Average Return',
-            'Eval Action Max',
-            'Eval Action Min',
+            # 'Eval Action Max',
+            # 'Eval Action Min',
             'Eval Success',
             # 'Eval Timeout',
             # 'Eval Fail',
@@ -53,12 +53,12 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'PPOlayer1hidden48ep5000',
+            # 'PPOlayer1hidden48ep5000',
             'PPOGNNllayer1hidden32GSagenode24glayer3actreluep5000',
-            'PPOSuplayer1hidden48ep5000',
+            # 'PPOSuplayer1hidden48ep5000',
             'PPOSupGNNllayer1hidden24GSagenode32glayer3actreluep5000',
             'PPOSupGNNllayer1hidden32GSagenode24glayer3actreluep5000',
-            'PPOSupSep2layer1hidden28ep5000',
+            # 'PPOSupSep2layer1hidden28ep5000',
             'PPOSupSep2GNNllayer1hidden16GSagenode24glayer3actreluep5000',
             'PPOSupSep2GNNllayer1hidden24GSagenode16glayer3actreluep5000'
         ]
@@ -69,7 +69,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = ''
+extra_name = 'gnnlstm'
 
 pre_name = ''
 post_name = ''

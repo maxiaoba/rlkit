@@ -42,15 +42,15 @@ class LSTMNet(torch.nn.Module):
             h = h[None,:].repeat(batch_size,1)
         if len(c.shape) == 1:
             c = c[None,:].repeat(batch_size,1)
-        h = h.reshape(batch_size, self.num_layers, self.hidden_dim).transpose(0,1)
-        c = c.reshape(batch_size, self.num_layers, self.hidden_dim).transpose(0,1)
+        h = h.reshape(batch_size, self.num_layers, self.hidden_dim).transpose(0,1).contiguous()
+        c = c.reshape(batch_size, self.num_layers, self.hidden_dim).transpose(0,1).contiguous()
         o_n, (h_n, c_n) = self.lstm.forward(x, (h, c))
         # x_n: batch x T x dim
         # h_n, c_n: num_layers x batch x dim
 
         # flatten num_layers
-        h_n = h_n.transpose(0,1).reshape(batch_size,int(self.num_layers*self.hidden_dim))
-        c_n = c_n.transpose(0,1).reshape(batch_size,int(self.num_layers*self.hidden_dim))
+        h_n = h_n.transpose(0,1).reshape(batch_size,int(self.num_layers*self.hidden_dim)).contiguous()
+        c_n = c_n.transpose(0,1).reshape(batch_size,int(self.num_layers*self.hidden_dim)).contiguous()
         # bacth x (num_layers*dim)
         return o_n, (h_n, c_n)
 

@@ -5,7 +5,7 @@ matplotlib.rcParams.update({'font.size': 13})
 from matplotlib import pyplot as plt
 import numpy as np
 
-itr_interval = 100
+itr_interval = 10
 max_itr = 2e4
 
 fields = [
