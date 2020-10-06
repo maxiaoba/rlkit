@@ -43,6 +43,7 @@ class SupSepSoftmaxLSTMPolicy(Policy, nn.Module):
 
     def to_policy_inputs(self, obs_action, labels, sup_latent, return_info=False):
         obs_flat, prev_actions = obs_action
+        print(obs_flat, prev_actions)
         obs = torch.reshape(obs_flat,(*obs_flat.shape[:-1], self.label_num+1, -1))
         valid_musk = (torch.sum(torch.abs(obs),dim=-1) != 0)
         valid_musk = torch.index_select(valid_musk,-1,torch.arange(1,self.label_num+1))
