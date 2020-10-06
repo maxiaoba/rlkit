@@ -60,7 +60,7 @@ class PPOSupSepTrainer(PPOTrainer):
             obs_input, actions_input, rewards_input, returns_input, advs_input = \
                 obs, actions, rewards, returns, advs
             labels_input = labels
-            valid_mask = torch.zeros(obs.shape[0],obs.shape[1]).bool()
+            valid_mask = torch.zeros(obs.shape[0],obs.shape[1]).bool().to(ptu.device)
             for i, valid in enumerate(valids):
                 valid_mask[i,:valid] = True
         else:
@@ -192,10 +192,6 @@ class PPOSupSepTrainer(PPOTrainer):
         lls[~valids] = 0
         lls[~valid_mask] = 0
         # return -lls[valid_mask].mean()
-        print(lls.sum())
-        print(valid_mask,valids)
-        print((valid_mask.unsqueeze(-1)*valids).float())
-        print(-lls.sum()/(valid_mask.unsqueeze(-1)*valids).sum())
         return -lls.sum()/(valid_mask.unsqueeze(-1)*valids).float().sum()
 
     def _compute_kl_constraint(self, obs, labels, valid_mask):
