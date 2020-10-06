@@ -192,6 +192,7 @@ class PPOSupSepTrainer(PPOTrainer):
         lls[~valids] = 0
         lls[~valid_mask] = 0
         # return -lls[valid_mask].mean()
+        print(lls.sum(),(valid_mask.unsqueeze(-1)*valids).float().sum())
         return -lls.sum()/(valid_mask.unsqueeze(-1)*valids).float().sum()
 
     def _compute_kl_constraint(self, obs, labels, valid_mask):
@@ -382,7 +383,7 @@ class PPOSupSepTrainer(PPOTrainer):
             pad_to_last(path['rewards'].reshape(-1), total_length=self.max_path_length)
             for path in paths
         ]).to(ptu.device)
-        
+
         returns = torch.stack([
             pad_to_last(tu.discount_cumsum(path['rewards'].reshape(-1),
                                            self.discount).copy(),
