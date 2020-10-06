@@ -9,25 +9,17 @@ from rlkit.torch.core import torch_ify
 from rlkit.core.eval_util import create_stats_ordered_dict
 import rlkit.pythonplusplus as ppp
 
-class SupTrainer(PPOTrainer):
-    """supervised learning.
+class SupOnlineTrainer(PPOTrainer):
+    """supervised learning with online data.
     """
 
     def __init__(self,
-                 replay_buffer,
+                 sup_weight,
                  exploration_bonus,
-                 sup_lr=1e-3,
-                 sup_batch_size=64,
-                 sup_train_num=1,
                  **kwargs):
         super().__init__(**kwargs)
-        self.replay_buffer = replay_buffer
-        self.sup_batch_size = sup_batch_size
-        self.sup_train_num = sup_train_num
+        self.sup_weight = sup_weight
         self.exploration_bonus = exploration_bonus
-        self._sup_optimizer = torch.optim.Adam(
-                                self.policy.parameters(),
-                                lr=sup_lr)
 
     def train_once(self, paths):
         """Train the algorithm once.
@@ -55,28 +47,22 @@ class SupTrainer(PPOTrainer):
         advs_flat = self._compute_advantage(rewards, valids, baselines)
         labels_flat = torch.cat(filter_valids(labels, valids))
 
-        self.replay_buffer.add_batch(obs_flat, labels_flat)
-
         with torch.no_grad():
             sup_loss_before = self._compute_sup_loss(obs_flat, labels_flat)
             policy_loss_before = self._compute_loss_with_adv(
-                obs_flat, actions_flat, rewards_flat, advs_flat)
+                obs_flat, actions_flat, rewards_flat, advs_flat, labels_flat)
             vf_loss_before = self._compute_vf_loss(
                 obs_flat, returns_flat)
             # kl_before = self._compute_kl_constraint(obs)
             kl_before = self._compute_kl_constraint(obs_flat)
 
-        # self._train(obs_flat, actions_flat, rewards_flat, returns_flat,
-        #             advs_flat)
-
-        for _ in range(self.sup_train_num):
-            sup_batch = self.replay_buffer.random_batch(self.sup_batch_size)
-            sup_loss = self._train_sup_learner(sup_batch['observations'],sup_batch['labels'])
+        self._train(obs_flat, actions_flat, rewards_flat, returns_flat,
+                    advs_flat, labels_flat)
 
         with torch.no_grad():
             sup_loss_after = self._compute_sup_loss(obs_flat, labels_flat)
             policy_loss_after = self._compute_loss_with_adv(
-                obs_flat, actions_flat, rewards_flat, advs_flat)
+                obs_flat, actions_flat, rewards_flat, advs_flat, labels_flat)
             vf_loss_after = self._compute_vf_loss(
                 obs_flat, returns_flat)
             # kl_after = self._compute_kl_constraint(obs)
@@ -97,30 +83,132 @@ class SupTrainer(PPOTrainer):
             self.eval_statistics['VF LossAfter'] = vf_loss_after.item()
             self.eval_statistics['VF dLoss'] = (vf_loss_before - vf_loss_after).item()
 
-            self.eval_statistics['SUP LossBefore'] = sup_loss_before.item()
-            self.eval_statistics['SUP LossAfter'] = sup_loss_after.item()
-            self.eval_statistics['SUP dLoss'] = (sup_loss_before - sup_loss_after).item()
+            self.eval_statistics['SUP LossBefore'] = sup_loss_before.mean().item()
+            self.eval_statistics['SUP LossAfter'] = sup_loss_after.mean().item()
+            self.eval_statistics['SUP dLoss'] = (sup_loss_before - sup_loss_after).mean().item()
 
         self._old_policy = copy.deepcopy(self.policy)
 
-    def _train_sup_learner(self, observations, labels):
-        observations = torch_ify(observations)
-        labels = torch_ify(labels)
-        self._sup_optimizer.zero_grad()
-        sup_loss = self._compute_sup_loss(observations, labels)
-        sup_loss.backward()
-        self._sup_optimizer.step()
-        return sup_loss
+    def _train(self, obs, actions, rewards, returns, advs, labels):
+        r"""Train the policy and value function with minibatch.
+
+        Args:
+            obs (torch.Tensor): Observation from the environment with shape
+                :math:`(N, O*)`.
+            actions (torch.Tensor): Actions fed to the environment with shape
+                :math:`(N, A*)`.
+            rewards (torch.Tensor): Acquired rewards with shape :math:`(N, )`.
+            returns (torch.Tensor): Acquired returns with shape :math:`(N, )`.
+            advs (torch.Tensor): Advantage value at each step with shape
+                :math:`(N, )`.
+            labels (torch.Tensor): Sup labels
+                :math:`(N, label_dim)`.
+        """
+        for dataset in self._policy_optimizer.get_minibatch(
+                obs, actions, rewards, advs, labels):
+            self._train_policy(*dataset)
+        for dataset in self._vf_optimizer.get_minibatch(obs, returns):
+            self._train_value_function(*dataset)
+
+    def _train_policy(self, obs, actions, rewards, advantages, labels):
+        r"""Train the policy.
+
+        Args:
+            obs (torch.Tensor): Observation from the environment
+                with shape :math:`(N, O*)`.
+            actions (torch.Tensor): Actions fed to the environment
+                with shape :math:`(N, A*)`.
+            rewards (torch.Tensor): Acquired rewards
+                with shape :math:`(N, )`.
+            advantages (torch.Tensor): Advantage value at each step
+                with shape :math:`(N, )`.
+
+        Returns:
+            torch.Tensor: Calculated mean scalar value of policy loss (float).
+
+        """
+        self._policy_optimizer.zero_grad()
+        loss = self._compute_loss_with_adv(obs, actions, rewards, advantages, labels)
+        loss.backward()
+        self._policy_optimizer.step()
+
+        return loss
+
+
+    def _compute_loss_with_adv(self, obs, actions, rewards, advantages, labels):
+        r"""Compute mean value of loss.
+
+        Args:
+            obs (torch.Tensor): Observation from the environment
+                with shape :math:`(N \dot [T], O*)`.
+            actions (torch.Tensor): Actions fed to the environment
+                with shape :math:`(N \dot [T], A*)`.
+            rewards (torch.Tensor): Acquired rewards
+                with shape :math:`(N \dot [T], )`.
+            advantages (torch.Tensor): Advantage value at each step
+                with shape :math:`(N \dot [T], )`.
+
+        Returns:
+            torch.Tensor: Calculated negative mean scalar value of objective.
+
+        """
+        objectives = self._compute_objective(advantages, obs, actions, rewards, labels)
+
+        if self._entropy_regularzied:
+            policy_entropies = self._compute_policy_entropy(obs)
+            objectives += self._policy_ent_coeff * policy_entropies
+
+        return -objectives.mean()
+
+    def _compute_objective(self, advantages, obs, actions, rewards, labels):
+        r"""Compute objective value.
+
+        Args:
+            advantages (torch.Tensor): Advantage value at each step
+                with shape :math:`(N \dot [T], )`.
+            obs (torch.Tensor): Observation from the environment
+                with shape :math:`(N \dot [T], O*)`.
+            actions (torch.Tensor): Actions fed to the environment
+                with shape :math:`(N \dot [T], A*)`.
+            rewards (torch.Tensor): Acquired rewards
+                with shape :math:`(N \dot [T], )`.
+
+        Returns:
+            torch.Tensor: Calculated objective values
+                with shape :math:`(N \dot [T], )`.
+
+        """
+        # Compute constraint
+        with torch.no_grad():
+            old_ll = self._old_policy.log_prob(obs, actions)
+        new_ll = self.policy.log_prob(obs, actions)
+
+        likelihood_ratio = (new_ll - old_ll).exp()
+
+        # Calculate surrogate
+        sup_loss = self._compute_sup_loss(obs, labels)
+        # objective = advantages - self.sup_weight*sup_loss
+        objective = -self.sup_weight*sup_loss
+        # surrogate = likelihood_ratio * (advantages - self.sup_weight*sup_loss)
+        surrogate = likelihood_ratio * objective
+
+        # Clipping the constraint
+        likelihood_ratio_clip = torch.clamp(likelihood_ratio,
+                                            min=1 - self._lr_clip_range,
+                                            max=1 + self._lr_clip_range)
+
+        # Calculate surrotate clip
+        surrogate_clip = likelihood_ratio_clip * objective
+
+        return torch.min(surrogate, surrogate_clip)
 
     def _compute_sup_loss(self, obs, labels):
         obs = torch_ify(obs)
-        labels = torch_ify(labels).clone()
-        valid_mask = ~torch.isnan(labels)
+        labels = torch_ify(labels)
+        valid_mask = ~torch.isnan(labels) # replay buffer!
         labels[~valid_mask] = 0     
         lls = self.policy.sup_log_prob(obs, labels)
-        lls[~valid_mask] = 0
-        # return -lls[valid_mask].mean()
-        return -lls.mean()
+        return -lls[valid_mask]
 
     def _add_exploration_bonus(self, paths):
         paths = copy.deepcopy(paths)
@@ -132,7 +220,6 @@ class SupTrainer(PPOTrainer):
                     labels1 = torch.tensor(path['env_infos']['sup_labels'][i])
                     valid_mask1 = ~torch.isnan(labels1)[None,:]
                     entropy_1 = self.policy.get_sup_distribution(torch_ify(obs1)[None,:]).entropy()
-                    # if self.attention_eb: # todo
                     entropy_1 = torch.mean(entropy_1[valid_mask1])
 
                     obs2 = path['observations'][i+1]
@@ -202,24 +289,8 @@ class SupTrainer(PPOTrainer):
                         total_length=self.max_path_length,
                         axis=0) for env_info in env_infos
         ])
+
         with torch.no_grad():
             baselines = self._value_function(obs).squeeze(-1)
 
         return obs, actions, rewards, returns, valids, baselines, labels
-
-    @property
-    def networks(self):
-        return [
-            self._value_function,
-            self._old_policy,
-            self.policy,
-            # self.sup_learner,
-        ]
-
-    def get_snapshot(self):
-        return dict(
-            policy=self.policy,
-            old_policy=self._old_policy,
-            value_function=self._value_function,
-            # sup_learner=self.sup_learner,
-        )

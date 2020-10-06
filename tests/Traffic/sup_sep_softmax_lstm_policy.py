@@ -46,6 +46,7 @@ class SupSepSoftmaxLSTMPolicy(Policy, nn.Module):
         obs = torch.reshape(obs_flat,(*obs_flat.shape[:-1], self.label_num+1, -1))
         valid_musk = (torch.sum(torch.abs(obs),dim=-1) != 0)
         valid_musk = torch.index_select(valid_musk,-1,torch.arange(1,self.label_num+1))
+
         with torch.no_grad():
             dist, sup_info = self.get_sup_distribution(obs_action, sup_latent=sup_latent, return_info=True)
         if labels is None:
@@ -105,7 +106,9 @@ class SupSepSoftmaxLSTMPolicy(Policy, nn.Module):
                                      latent=self.policy.latent_p,
                                      sup_latent=self.sup_learner.latent_p,
                                      return_info=True)
+            sup_probs = Categorical(logits=info['sup_preactivation']).probs
         pis = np_ify(pis[0,0,:])
+        sup_probs = np_ify(sup_probs[0,0,:,:])
         if deterministic:
             action = np.argmax(pis)
         else:
@@ -114,7 +117,8 @@ class SupSepSoftmaxLSTMPolicy(Policy, nn.Module):
         self.policy.latent_p = info['latent']
         self.sup_learner.a_p = torch_ify(np.array([action]))
         self.sup_learner.latent_p = info['sup_latent']
-        return action, {}
+        
+        return action, {'intentions': sup_probs}
 
     # def get_attention_weight(self, obs):
     #     if hasattr(self.policy[0], 'attentioner'):

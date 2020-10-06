@@ -28,23 +28,27 @@ label_num = env.label_num
 label_dim = env.label_dim
 
 def check_graph(obs):
-	obs_batch = torch.tensor([obs]).reshape(1,node_num,4)
-	valid_mask = gb.get_valid_node_mask(obs_batch)
-	print('valid_mask: ',valid_mask)
+    obs_batch = torch.tensor([obs]).reshape(1,node_num,4)
+    valid_mask = gb.get_valid_node_mask(obs_batch)
+    print('valid_mask: ',valid_mask)
 
-	x, edge_index = gb(obs_batch)
-	print('x: ',x)
-	print('edge_index: ',edge_index)
+    x, edge_index = gb(obs_batch)
+    print('x: ',x)
+    print('edge_index: ',edge_index)
 
-	data = Data(x=x, edge_index=edge_index)
-	ng = pyg_utils.to_networkx(data)
-	pos = {}
-	for node in ng.nodes:
-		pos[node] = obs_batch[0,node,:2].numpy()
+    data = Data(x=x, edge_index=edge_index)
+    ng = pyg_utils.to_networkx(data)
+    pos = {}
+    labels = {}
+    color_map = []
+    for node in ng.nodes:
+        pos[node] = obs_batch[0,node,:2].numpy()
+        labels[node] = str(node)
+        color_map.append('C'+str(node))
 
-	plt.figure()
-	networkx.draw(ng,pos)
-	plt.show()
+    plt.figure()
+    networkx.draw(ng,pos,node_color=color_map,labels=labels)
+    plt.show()
 
 from graph_builder import TrafficGraphBuilder
 node_num = env.max_veh_num+1
@@ -57,6 +61,6 @@ obs = env.reset()
 env.render()
 check_graph(obs)
 while True:
-	obs,r,done,info = env.step(1)
-	env.render()
-	check_graph(obs)
+    obs,r,done,info = env.step(1)
+    env.render()
+    check_graph(obs)

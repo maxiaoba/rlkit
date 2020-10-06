@@ -12,14 +12,14 @@ fields = [
             'evaluation/Average Returns',
             'evaluation/Actions Max',
             'evaluation/Actions Min',
-            # 'evaluation/Num Success',
+            'evaluation/Num Success',
             # 'evaluation/Num Timeout',
             # 'evaluation/Num Fail',
             'exploration/Average Returns',
             # 'exploration/Returns Max',
             # 'exploration/Returns Min',
             # 'exploration/Num Fail',
-            # 'exploration/Num Success',
+            'exploration/Num Success',
             'trainer/SUP LossAfter',
             'trainer/LossBefore',
             'trainer/LossAfter',
@@ -30,14 +30,14 @@ field_names = [
             'Eval Average Return',
             'Eval Action Max',
             'Eval Action Min',
-            # 'Eval Success',
+            'Eval Success',
             # 'Eval Timeout',
             # 'Eval Fail',
             'Expl Average Return',
             # 'Expl Max Return',
             # 'Expl Min Return',
             # 'Expl Fail',
-            # 'Expl Success',
+            'Expl Success',
             'Sup LossAfter',
             'LossBefore',
             'LossAfter',
@@ -53,8 +53,14 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'PPOlayer1hidden40ep5000',
-            'PPOllayer1hidden24GSagenode24glayer3actreluep5000',
+            'PPOlayer1hidden48ep5000',
+            'PPOGNNllayer1hidden32GSagenode24glayer3actreluep5000',
+            'PPOSuplayer1hidden48ep5000',
+            'PPOSupGNNllayer1hidden24GSagenode32glayer3actreluep5000',
+            'PPOSupGNNllayer1hidden32GSagenode24glayer3actreluep5000',
+            'PPOSupSep2layer1hidden28ep5000',
+            'PPOSupSep2GNNllayer1hidden16GSagenode24glayer3actreluep5000',
+            'PPOSupSep2GNNllayer1hidden24GSagenode16glayer3actreluep5000'
         ]
 policy_names = policies
 
@@ -107,7 +113,16 @@ for fid,field in enumerate(fields):
                             if itr > max_itr:
                                 break
                             try:
-                                loss.append(np.clip(float(row[entry_dict[field]]),
+                                if field == 'evaluation/Num Success':
+                                    num_path = float(row[entry_dict['evaluation/Num Paths']])
+                                    loss.append(np.clip(float(row[entry_dict[field]])/num_path,
+                                                    min_loss[fid],max_loss[fid]))
+                                elif field == 'exploration/Num Success':
+                                    num_path = float(row[entry_dict['exploration/Num Paths']])
+                                    loss.append(np.clip(float(row[entry_dict[field]])/num_path,
+                                                    min_loss[fid],max_loss[fid]))
+                                else:
+                                    loss.append(np.clip(float(row[entry_dict[field]]),
                                                     min_loss[fid],max_loss[fid]))
                             except:
                                 pass
@@ -126,8 +141,8 @@ for fid,field in enumerate(fields):
         y = np.mean(Losses,0)
         yerr = np.std(Losses,0)
         plot, = plt.plot(itrs,y,colors[policy_index])
-        plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
-                            facecolor=colors[policy_index],alpha=0.3)
+        # plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
+                            # facecolor=colors[policy_index],alpha=0.3)
         plts.append(plot)
         legends.append(policy_names[policy_index])
 

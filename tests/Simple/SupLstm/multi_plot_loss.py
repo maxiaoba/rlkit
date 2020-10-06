@@ -10,10 +10,10 @@ max_itr = 2e4
 
 fields = [
             'evaluation/Average Returns',
-            # 'evaluation/Actions Max',
-            # 'evaluation/Actions Min',
+            'evaluation/Actions Max',
+            'evaluation/Actions Min',
             'exploration/Average Returns',
-            # 'exploration/Returns Max',
+            'exploration/Returns Max',
             # 'exploration/Returns Min',
             'trainer/SUP LossAfter',
             # 'trainer/LossBefore',
@@ -23,10 +23,10 @@ fields = [
             ]
 field_names = [
             'Eval Average Return',
-            # 'Eval Action Max',
-            # 'Eval Action Min',
+            'Eval Action Max',
+            'Eval Action Min',
             'Expl Average Return',
-            # 'Expl Max Return',
+            'Expl Max Return',
             # 'Expl Min Return',
             'Sup LossAfter',
             # 'LossBefore',
@@ -37,21 +37,18 @@ field_names = [
 itr_name = 'epoch'
 min_loss = [-1000]*100
 max_loss = [1000]*100
-exp_name = "SimpleSupLSTMobs1int10"
+exp_name = "SimpleSupLSTMnode5dim2"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'PPOhidden16',
-            'PPOSuphidden16',
-            'PPOLSTMlayer1hidden16',
-            'PPOSupLSTMlayer1hidden16',
-            # 'PPOSupOnlineLSTMlayer1hidden16',
-            # 'PPOSupVanillaLSTMlayer1hidden16',
-            'PPOSupSepLSTMlayer1hidden16',
-            'PPOSupSep2LSTMlayer1hidden16',
-            'SupLSTMlayer1hidden16',
+            'PPOlayer1hidden48',
+            'PPOGNNllayer1hidden32GSagenode24glayer3actrelu',
+            'PPOSuplayer1hidden48',
+            'PPOSupGNNllayer1hidden32GSagenode24glayer3actrelu',
+            'PPOSupSep2layer1hidden28',
+            'PPOSupSep2GNNllayer1hidden24GSagenode16glayer3actrelu',
         ]
 policy_names = policies
 
@@ -123,8 +120,8 @@ for fid,field in enumerate(fields):
         y = np.mean(Losses,0)
         yerr = np.std(Losses,0)
         plot, = plt.plot(itrs,y,colors[policy_index])
-        plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
-                            facecolor=colors[policy_index],alpha=0.3)
+        # plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
+        #                     facecolor=colors[policy_index],alpha=0.3)
         plts.append(plot)
         legends.append(policy_names[policy_index])
 

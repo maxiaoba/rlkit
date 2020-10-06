@@ -576,20 +576,15 @@ class TIntersectionLSTM(TrafficEnv):
                         self.viewer.add_onetime(circle)
                     else:
                         self.viewer.draw_line(start, end, **attrs)
-            if ('intention' in extra_input.keys()) and (extra_input['intention'] is not None):
-                car_indices = [np.nan]*self.label_num
-                upper_indices, lower_indices = self.get_sorted_indices()
-                car_indices[0:len(lower_indices)] = lower_indices[:]
-                car_indices[int(self.max_veh_num/2):int(self.max_veh_num/2)+len(upper_indices)] = upper_indices[:]
-
-                for car_ind,intention in zip(car_indices,extra_input['intention']):
-                    if not np.isnan(car_ind):
-                        from traffic.rendering import make_circle, _add_attrs
-                        start = self._cars[car_ind].position - self.get_camera_center()
-                        attrs = {"color":(intention[0],intention[1],0.)}
-                        circle = make_circle(radius=0.5, res=15, filled=True, center=start)
-                        _add_attrs(circle, attrs)
-                        self.viewer.add_onetime(circle) 
+            if ('intentions' in extra_input.keys()) and (extra_input['intentions'] is not None):
+                for car in self._cars[1:]:
+                    from traffic.rendering import make_circle, _add_attrs
+                    intention = extra_input['intentions'][car._idx-1]
+                    start = car.position - self.get_camera_center()
+                    attrs = {"color":(intention[0],intention[1],0.)}
+                    circle = make_circle(radius=0.5, res=15, filled=True, center=start)
+                    _add_attrs(circle, attrs)
+                    self.viewer.add_onetime(circle) 
 
 if __name__ == '__main__':
     import time

@@ -1,4 +1,4 @@
-for seed in 1 2
+for seed in 0 1 2
 do
 	for obs in 1
 	do

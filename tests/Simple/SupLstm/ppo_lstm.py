@@ -19,31 +19,41 @@ def experiment(variant):
     eval_env = SimpleSupLSTMEnv(**variant['env_kwargs'])
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.n
+    label_num = expl_env.label_num
+    label_dim = expl_env.label_dim
 
-    hidden_dim = variant['lstm_kwargs']['hidden_dim']
-    num_layers = variant['lstm_kwargs']['num_layers']
-    a_0 = np.zeros(action_dim)
-    h_0 = np.zeros(hidden_dim*num_layers)
-    c_0 = np.zeros(hidden_dim*num_layers)
-    post_net = torch.nn.Linear(hidden_dim, action_dim)
-    from softmax_lstm_policy import SoftmaxLSTMPolicy
-    policy = SoftmaxLSTMPolicy(
-                a_0=a_0,
-                h_0=h_0,
-                c_0=c_0,
-                obs_dim=obs_dim,
-                action_dim=action_dim,
-                post_net=post_net,
-                **variant['lstm_kwargs']
-                )
-    print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
+    if variant['load_kwargs']['load']:
+        load_dir = variant['load_kwargs']['load_dir']
+        load_data = torch.load(load_dir+'/params.pkl',map_location='cpu')
+        policy = load_data['trainer/policy']
+        vf = load_data['trainer/value_function']
+    else:
+        hidden_dim = variant['lstm_kwargs']['hidden_dim']
+        num_layers = variant['lstm_kwargs']['num_layers']
+        a_0 = np.zeros(action_dim)
+        h_0 = np.zeros(hidden_dim*num_layers)
+        c_0 = np.zeros(hidden_dim*num_layers)
+        latent_0 = (h_0, c_0)
+        from lstm_net import LSTMNet
+        lstm_net = LSTMNet(obs_dim, action_dim, hidden_dim, num_layers)
+        post_net = torch.nn.Linear(hidden_dim, action_dim)
+        from softmax_lstm_policy import SoftmaxLSTMPolicy
+        policy = SoftmaxLSTMPolicy(
+                    a_0=a_0,
+                    latent_0=latent_0,
+                    obs_dim=obs_dim,
+                    action_dim=action_dim,
+                    lstm_net=lstm_net,
+                    post_net=post_net,
+                    )
+        print('parameters: ',np.sum([p.view(-1).shape[0] for p in policy.parameters()]))
 
-    vf = Mlp(
-        hidden_sizes=[16, 16],
-        input_size=obs_dim,
-        output_size=1,
-    )
-    
+        vf = Mlp(
+            hidden_sizes=[32, 32],
+            input_size=obs_dim,
+            output_size=1,
+        )
+        
     vf_criterion = nn.MSELoss()
     from rlkit.torch.policies.make_deterministic import MakeDeterministic
     eval_policy = MakeDeterministic(policy)
@@ -79,20 +89,21 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='SimpleSupLSTM')
-    parser.add_argument('--obs', type=int, default=1)
-    parser.add_argument('--int', type=int, default=10)
-    parser.add_argument('--log_dir', type=str, default='PPOLSTM')
+    parser.add_argument('--node_num', type=int, default=5)
+    parser.add_argument('--node_dim', type=int, default=2)
+    parser.add_argument('--log_dir', type=str, default='PPO')
     parser.add_argument('--layer', type=int, default=1)
-    parser.add_argument('--hidden', type=int, default=16)
+    parser.add_argument('--hidden', type=int, default=32)
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
+    parser.add_argument('--load', action='store_true', default=False)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--snapshot_mode', type=str, default="gap_and_last")
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
-    pre_dir = './Data/'+args.exp_name+'obs'+str(args.obs)+'int'+str(args.int)
+    pre_dir = './Data/'+args.exp_name+'node'+str(args.node_num)+'dim'+str(args.node_dim)
     main_dir = args.log_dir\
                 +('layer'+str(args.layer))\
                 +('hidden'+str(args.hidden))\
@@ -100,7 +111,7 @@ if __name__ == "__main__":
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
-    max_path_length = 10
+    max_path_length = 20
     # noinspection PyTypeChecker
     variant = dict(
         lstm_kwargs=dict(
@@ -108,11 +119,11 @@ if __name__ == "__main__":
             num_layers=args.layer,
         ),
         env_kwargs=dict(
-            obs_dim=args.obs,
-            num_interval=args.int,
+            node_num=args.node_num,
+            node_dim=args.node_dim
         ),
         algorithm_kwargs=dict(
-            num_epochs=(args.epoch if args.epoch else 2000),
+            num_epochs=(args.epoch if args.epoch else 1000),
             num_eval_steps_per_epoch=1000,
             num_train_loops_per_epoch=1,
             num_trains_per_train_loop=1,
@@ -126,8 +137,13 @@ if __name__ == "__main__":
             policy_lr=(args.lr if args.lr else 1e-4),
             vf_lr=(args.lr if args.lr else 1e-3),
         ),
+        load_kwargs=dict(
+            load=args.load,
+            load_dir=log_dir,
+        ),
     )
-
+    if args.load:
+        log_dir = log_dir + '_load'
     import os
     if not os.path.isdir(log_dir):
         os.makedirs(log_dir)

@@ -87,14 +87,16 @@ class SupSoftmaxLSTMPolicy(Policy, nn.Module):
         with torch.no_grad():
             obs_action = (torch_ify(obs)[None,None,:], self.a_p[None,None,:])
             pis, info = self.forward(obs_action, latent=self.latent_p, return_info=True)
+            sup_probs = self.sup_prob(obs_action, latent=self.latent_p)
         pis = np_ify(pis[0,0,:])
+        sup_probs = np_ify(sup_probs[0,0,:,:])
         if deterministic:
             action = np.argmax(pis)
         else:
             action = np.random.choice(np.arange(pis.shape[0]),p=pis)
         self.a_p = torch_ify(np.array([action]))
         self.latent_p = info['latent']
-        return action, {}
+        return action, {'intentions': sup_probs}
 
     def get_sup_distribution(self, obs_action, latent=None):
         _, info = self.forward(obs_action, latent=latent, post_net=self.sup_learner, return_info=True)
