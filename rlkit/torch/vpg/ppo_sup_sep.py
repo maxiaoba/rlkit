@@ -376,24 +376,25 @@ class PPOSupSepTrainer(PPOTrainer):
             pad_to_last(path['actions'],
                         total_length=self.max_path_length,
                         axis=0) for path in paths
-        ])
+        ]).to(ptu.device)
 
         rewards = torch.stack([
             pad_to_last(path['rewards'].reshape(-1), total_length=self.max_path_length)
             for path in paths
-        ])
+        ]).to(ptu.device)
+        
         returns = torch.stack([
             pad_to_last(tu.discount_cumsum(path['rewards'].reshape(-1),
                                            self.discount).copy(),
                         total_length=self.max_path_length) for path in paths
-        ])
+        ]).to(ptu.device)
         # batch x label_num x label_dim
         env_infos = [ppp.list_of_dicts__to__dict_of_lists(p['env_infos']) for p in paths]
         labels = torch.stack([
             pad_to_last(env_info['sup_labels'],
                         total_length=self.max_path_length,
                         axis=0) for env_info in env_infos
-        ])
+        ]).to(ptu.device)
         with torch.no_grad():
             baselines = self._value_function(obs).squeeze(-1)
 
