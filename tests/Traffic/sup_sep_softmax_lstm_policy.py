@@ -60,7 +60,7 @@ class SupSepSoftmaxLSTMPolicy(Policy, nn.Module):
         labels[~valid_musk] = 0
         onehot_labels = self.to_onehot_labels(labels)
         onehot_labels[~valid_musk] = 0.
-        ego_labels = torch.zeros(*onehot_labels.shape[:-2],1,self.label_dim)
+        ego_labels = torch.zeros(*onehot_labels.shape[:-2],1,self.label_dim).to(ptu.device)
         onehot_labels = torch.cat((ego_labels,onehot_labels),-2)
 
         obs = torch.cat((obs,onehot_labels),dim=-1).reshape(*obs.shape[:-2],-1)
