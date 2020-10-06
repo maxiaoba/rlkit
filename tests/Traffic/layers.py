@@ -1,5 +1,7 @@
 import torch
 from torch import nn as nn
+from rlkit.torch import pytorch_util as ptu
+from rlkit.torch.core import eval_np, np_ify, torch_ify
 
 class ReshapeLayer(torch.nn.Module):
     def __init__(self, shape, keep_dim=-1):
@@ -27,7 +29,7 @@ class SelectLayer(torch.nn.Module):
     def __init__(self, dim, index):
         super(SelectLayer, self).__init__()
         self.dim = dim
-        self.index = torch.tensor(index)
+        self.index = torch.tensor(index).to(ptu.device)
 
     def forward(self, x):
         return torch.index_select(x, self.dim, self.index)
