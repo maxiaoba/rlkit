@@ -192,7 +192,10 @@ class PPOSupSepTrainer(PPOTrainer):
         lls[~valids] = 0
         lls[~valid_mask] = 0
         # return -lls[valid_mask].mean()
-        print(lls.sum(),(valid_mask.unsqueeze(-1)*valids).float().sum())
+        print(lls.sum())
+        print(valid_mask,valids)
+        print((valid_mask.unsqueeze(-1)*valids).float())
+        print((valid_mask.unsqueeze(-1)*valids).float().sum())
         return -lls.sum()/(valid_mask.unsqueeze(-1)*valids).float().sum()
 
     def _compute_kl_constraint(self, obs, labels, valid_mask):
