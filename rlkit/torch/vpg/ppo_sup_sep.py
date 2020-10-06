@@ -9,6 +9,7 @@ from rlkit.torch.core import torch_ify
 from rlkit.core.eval_util import create_stats_ordered_dict
 import rlkit.pythonplusplus as ppp
 from rlkit.torch.pytorch_util import get_gradient_norm
+import rlkit.torch.pytorch_util as ptu
 
 class PPOSupSepTrainer(PPOTrainer):
     """PPO + supervised learning.
