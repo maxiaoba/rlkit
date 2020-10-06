@@ -35,7 +35,7 @@ class SupSepSoftmaxLSTMPolicy(Policy, nn.Module):
 
     def to_onehot_labels(self, labels):
         if labels.shape[-1] != self.label_dim:
-            labels_onehot = torch.zeros(*labels.shape,self.label_dim)
+            labels_onehot = torch.zeros(*labels.shape,self.label_dim).to(ptu.device)
             labels_onehot.scatter_(-1,labels.unsqueeze(-1).long(),1.)
         else:
             labels_onehot = labels
@@ -43,10 +43,9 @@ class SupSepSoftmaxLSTMPolicy(Policy, nn.Module):
 
     def to_policy_inputs(self, obs_action, labels, sup_latent, return_info=False):
         obs_flat, prev_actions = obs_action
-        print(obs_flat, prev_actions)
         obs = torch.reshape(obs_flat,(*obs_flat.shape[:-1], self.label_num+1, -1))
         valid_musk = (torch.sum(torch.abs(obs),dim=-1) != 0)
-        valid_musk = torch.index_select(valid_musk,-1,torch.arange(1,self.label_num+1))
+        valid_musk = torch.index_select(valid_musk,-1,torch.arange(1,self.label_num+1).to(ptu.device))
 
         with torch.no_grad():
             dist, sup_info = self.get_sup_distribution(obs_action, sup_latent=sup_latent, return_info=True)

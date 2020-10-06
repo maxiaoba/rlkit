@@ -1,20 +1,21 @@
 import torch
 import numpy as np
 import torch_geometric.utils as pyg_utils
+from rlkit.torch.core import eval_np, np_ify, torch_ify
 
 class TrafficGraphBuilder(torch.nn.Module):
     def __init__(self, 
                 input_dim,
                 node_num,
-                ego_init=torch.tensor([0.,1.]),
-                other_init=torch.tensor([1.,0.]),
+                ego_init=np.array([0.,1.]),
+                other_init=np.array([1.,0.]),
                 ):
         super(TrafficGraphBuilder, self).__init__()
 
         self.input_dim = input_dim
         self.node_num = node_num
-        self.ego_init = ego_init
-        self.other_init = other_init
+        self.ego_init = torch_ify(ego_init)
+        self.other_init = torch_ify(other_init)
 
         self.output_dim = input_dim + self.ego_init.shape[0]
         self.full_edges = self.get_full_edges()
@@ -26,14 +27,14 @@ class TrafficGraphBuilder(torch.nn.Module):
         
         batch_size, node_num, obs_dim = obs.shape
 
-        x = torch.zeros(batch_size,self.node_num, self.output_dim)
+        x = torch.zeros(batch_size,self.node_num, self.output_dim).to(ptu.device)
         x[:,:,:self.input_dim] = obs
         x[:,0,self.input_dim:] = self.ego_init[None,:]
         x[:,1:,self.input_dim:] = self.other_init[None,None,:]
         x = x.reshape(int(batch_size*self.node_num),self.output_dim)
 
         edge_index = self.full_edges[None,:].repeat(batch_size, 1, 1, 1) # batch x (node_num-1, 2, edge_num)
-        index_offsets = torch.arange(batch_size)
+        index_offsets = torch.arange(batch_size).to(ptu.device)
         index_offsets = index_offsets * self.node_num
         edge_index = edge_index + index_offsets[:,None,None,None]
         valid_musk = self.get_valid_node_mask(obs) # batch x node_num-1
@@ -83,7 +84,7 @@ class TrafficGraphBuilder(torch.nn.Module):
             else:
                 edges[i,:,2] = torch.tensor([idx,idx+1])
                 edges[i,:,3] = torch.tensor([idx,idx-1])
-        return edges
+        return edges.to(ptu.device)
 
 
 

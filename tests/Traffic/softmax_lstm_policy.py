@@ -38,7 +38,7 @@ class SoftmaxLSTMPolicy(Policy, nn.Module):
     def to_onehot_actions(self, prev_actions):
         assert len(prev_actions.shape) == 3
         if prev_actions.shape[-1] != self.action_dim:
-            prev_actions_onehot = torch.zeros(prev_actions.shape[0],prev_actions.shape[1],self.action_dim)
+            prev_actions_onehot = torch.zeros(prev_actions.shape[0],prev_actions.shape[1],self.action_dim).to(ptu.device)
             prev_actions_onehot.scatter_(-1,prev_actions.long(),1.)
         else:
             prev_actions_onehot = prev_actions
