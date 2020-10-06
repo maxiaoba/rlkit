@@ -29,7 +29,9 @@ dependencies:
   - zmq
   - shapely
   # torch, torchvision
-  # pip install --no-cache-dir torch-scatter
-  # pip install --no-cache-dir torch-sparse
-  # pip install --no-cache-dir torch-cluster
+  # check https://github.com/rusty1s/pytorch_geometric
+  # remember to change cuda and torch version
+  # pip install torch-scatter==latest+${CUDA} torch-sparse==latest+${CUDA} -f https://pytorch-geometric.com/whl/torch-1.4.0.html
+  # pip install torch-scatter==latest+${CUDA} torch-sparse==latest+${CUDA} -f https://pytorch-geometric.com/whl/torch-1.4.0.html
+  # pip install torch-scatter==latest+${CUDA} torch-sparse==latest+${CUDA} -f https://pytorch-geometric.com/whl/torch-1.4.0.html
   # pip install torch-geometric
