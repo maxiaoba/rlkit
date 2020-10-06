@@ -394,6 +394,7 @@ class PPOSupSepTrainer(PPOTrainer):
                         axis=0) for env_info in env_infos
         ])
         with torch.no_grad():
+            print(obs)
             baselines = self._value_function(obs).squeeze(-1)
 
         return obs, actions, rewards, returns, valids, baselines, labels
