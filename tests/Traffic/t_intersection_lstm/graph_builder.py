@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import torch_geometric.utils as pyg_utils
+from rlkit.torch import pytorch_util as ptu
 from rlkit.torch.core import eval_np, np_ify, torch_ify
 
 class TrafficGraphBuilder(torch.nn.Module):
