@@ -15,6 +15,7 @@ import gym
 import torch
 from torch import nn
 import torch.nn.functional as F
+import rlkit.torch.pytorch_util as ptu
 
 def compute_advantages(discount, gae_lambda, max_episode_length, baselines,
                        rewards):

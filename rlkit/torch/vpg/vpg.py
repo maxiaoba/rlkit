@@ -12,6 +12,7 @@ from rlkit.torch.torch_rl_algorithm import TorchOnlineTrainer
 from rlkit.torch.vpg.util import compute_advantages, filter_valids, pad_to_last
 from rlkit.torch.optimizers import OptimizerWrapper
 from rlkit.torch.pytorch_util import get_gradient_norm
+import rlkit.torch.pytorch_util as ptu
 
 class VPGTrainer(TorchOnlineTrainer):
     """Vanilla Policy Gradient (REINFORCE).
@@ -347,7 +348,7 @@ class VPGTrainer(TorchOnlineTrainer):
 
             return kl_constraint[valid_mask].mean()
         except NotImplementedError:
-            return torch.tensor(0.)
+            return torch.tensor(0.).to(ptu.device)
 
     def _compute_policy_entropy(self, obs):
         r"""Compute entropy value of probability distribution.
@@ -421,28 +422,29 @@ class VPGTrainer(TorchOnlineTrainer):
                 with shape :math:`(N, P)`.
 
         """
-        valids = torch.Tensor([len(path['actions']) for path in paths]).int()
+        valids = torch.Tensor([len(path['actions']) for path in paths]).int().to(ptu.device)
         obs = torch.stack([
             pad_to_last(path['observations'],
                         total_length=self.max_path_length,
                         axis=0) for path in paths
-        ])
+        ]).to(ptu.device)
 
         actions = torch.stack([
             pad_to_last(path['actions'],
                         total_length=self.max_path_length,
                         axis=0) for path in paths
-        ])
+        ]).to(ptu.device)
 
         rewards = torch.stack([
             pad_to_last(path['rewards'].reshape(-1), total_length=self.max_path_length)
             for path in paths
-        ])
+        ]).to(ptu.device)
+        
         returns = torch.stack([
             pad_to_last(tu.discount_cumsum(path['rewards'].reshape(-1),
                                            self.discount).copy(),
                         total_length=self.max_path_length) for path in paths
-        ])
+        ]).to(ptu.device)
 
         with torch.no_grad():
             baselines = self._value_function(obs).squeeze(-1)
