@@ -364,12 +364,12 @@ class PPOSupSepTrainer(PPOTrainer):
         """
         if self.exploration_bonus > 0.:
             paths = self._add_exploration_bonus(paths)
-        valids = torch.Tensor([len(path['actions']) for path in paths]).int()
+        valids = torch.Tensor([len(path['actions']) for path in paths]).int().to(ptu.device)
         obs = torch.stack([
             pad_to_last(path['observations'],
                         total_length=self.max_path_length,
                         axis=0) for path in paths
-        ])
+        ]).to(ptu.device)
 
         actions = torch.stack([
             pad_to_last(path['actions'],
@@ -394,7 +394,6 @@ class PPOSupSepTrainer(PPOTrainer):
                         axis=0) for env_info in env_infos
         ])
         with torch.no_grad():
-            print(obs)
             baselines = self._value_function(obs).squeeze(-1)
 
         return obs, actions, rewards, returns, valids, baselines, labels
