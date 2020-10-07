@@ -43,9 +43,9 @@ class GNNNet(torch.nn.Module):
             convs.append(conv)
         return convs
 
-    def forward(self, obs, **kwargs):
+    def forward(self, obs, valid_mask=None):
         batch_size = obs.shape[0]
-        x, edge_index = self.pre_graph_builder(obs)
+        x, edge_index = self.pre_graph_builder(obs, valid_mask)
         for l, conv in enumerate(self.convs):
             # self.check_input(x, edge_index)
             x = conv(x, edge_index)

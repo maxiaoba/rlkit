@@ -23,28 +23,20 @@ class GNNLSTMNet(torch.nn.Module):
         self.lstm_ego = lstm_ego
         self.lstm_other = lstm_other
 
-    def identity_match(self, obs, o ,h, c):
+    def step(self, obs, action, h, c, t, verbose=False):
         # obs: batch x n_num x dim
+        # action: batch x actio_dim
         # o: batch x n_num x dim
         # h: batch x n_num x (num_layer*dim)
         # c: batch x n_num x (num_layer*dim)
+        batch_size, n_num, _ = obs.shape
+
         valid_mask = (torch.sum(torch.abs(obs),dim=-1) != 0)
         # o[~valid_mask] = 0. # do not modify o
         h[~valid_mask] = 0.
         c[~valid_mask] = 0.
-
-        return obs, o, h, c, valid_mask
-
-    def step(self, obs, action, o, h, c, t, verbose=False):
-        # obs: batch x n_num x (dim+1)
-        # action: batch x actio_dim
-        # o: batch x n_num x (dim+1)
-        # h: batch x n_num x (num_layer*dim+1)
-        # c: batch x n_num x (num_layer*dim+1)
-        batch_size, n_num, _ = obs.shape
-
-        obs, o, h, c, valid_mask = self.identity_match(obs, o, h, c)
         # batch x n_num x dim
+
         gnn_input = torch.cat((obs,h),-1) # batch x n_num x dim
 
         if verbose:
@@ -98,15 +90,13 @@ class GNNLSTMNet(torch.nn.Module):
         return o_n, h_n, c_n
 
     def forward(self, obs_sequence, action_sequence, latent): 
-        # obs_sequence: batch x T x (n_num*(dim+1))
+        # obs_sequence: batch x T x (n_num*dim)
         # action_sequence: batch x T x action_dim
         # latent: (batch x n_num x dim, batch x n_num x dim)
         batch_size, T, _ = obs_sequence.shape
         obs_sequence = obs_sequence.reshape(batch_size, T, self.node_num, -1)
 
-        o, h, c = latent
-        if len(o.shape) == 2:
-            o = o[None,:,:].repeat(batch_size,1,1)
+        h, c = latent
         if len(h.shape) == 2:
             h = h[None,:,:].repeat(batch_size,1,1)
         if len(c.shape) == 2:
@@ -116,9 +106,9 @@ class GNNLSTMNet(torch.nn.Module):
         for t in range(T):
             obs = obs_sequence[:,t,:,:]
             action = action_sequence[:,t,:]
-            o, h, c = self.step(obs, action, o, h, c, t)
+            o, h, c = self.step(obs, action, h, c, t)
             o_sequence.append(o.unsqueeze(1))
 
         o_sequence = torch.cat(o_sequence,1)
-        return o_sequence, (o, h, c)
+        return o_sequence, (h, c)
 

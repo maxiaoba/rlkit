@@ -37,10 +37,9 @@ def experiment(variant):
 
         # policy module
         a_0 = np.zeros(action_dim)
-        o_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
         h_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
         c_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
-        latent_0 = (o_0, h_0, c_0)
+        latent_0 = (h_0, c_0)
         from lstm_net import LSTMNet
         lstm_ego = LSTMNet(node_dim, action_dim, hidden_dim, num_lstm_layers)
         lstm_other = LSTMNet(node_dim, 0, hidden_dim, num_lstm_layers)
@@ -78,10 +77,9 @@ def experiment(variant):
 
         # sup_learner module
         a_0 = np.zeros(action_dim)
-        o_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
         h_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
         c_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
-        latent_0 = (o_0, h_0, c_0)
+        latent_0 = (h_0, c_0)
         from lstm_net import LSTMNet
         lstm_ego = LSTMNet(node_dim, action_dim, hidden_dim, num_lstm_layers)
         lstm_other = LSTMNet(node_dim, 0, hidden_dim, num_lstm_layers)

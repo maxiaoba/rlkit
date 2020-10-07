@@ -35,15 +35,20 @@ def experiment(variant):
         node_dim = variant['gnn_kwargs']['node_dim']
 
         node_num = expl_env.max_veh_num+1
+        input_node_dim = int(obs_dim/node_num)
         a_0 = np.zeros(action_dim)
-        h_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
-        c_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
-        latent_0 = (h_0, c_0)
+        h1_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
+        c1_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
+        h2_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
+        c2_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
+        latent_0 = (h1_0, c1_0, h2_0, c2_0)
         from lstm_net import LSTMNet
-        lstm_ego = LSTMNet(node_dim, action_dim, hidden_dim, num_lstm_layers)
-        lstm_other = LSTMNet(node_dim, 0, hidden_dim, num_lstm_layers)
+        lstm1_ego = LSTMNet(input_node_dim, action_dim, hidden_dim, num_lstm_layers)
+        lstm1_other = LSTMNet(input_node_dim, 0, hidden_dim, num_lstm_layers)
+        lstm2_ego = LSTMNet(node_dim, 0, hidden_dim, num_lstm_layers)
+        lstm2_other = LSTMNet(node_dim, 0, hidden_dim, num_lstm_layers)
         from graph_builder import TrafficGraphBuilder
-        gb = TrafficGraphBuilder(input_dim=4+hidden_dim, node_num=node_num,
+        gb = TrafficGraphBuilder(input_dim=hidden_dim, node_num=node_num,
                                 ego_init=torch.tensor([0.,1.]),
                                 other_init=torch.tensor([1.,0.]),
                                 )
@@ -55,8 +60,10 @@ def experiment(variant):
                     num_conv_layers=variant['gnn_kwargs']['num_layers'],
                     hidden_activation=variant['gnn_kwargs']['activation'],
                     )
-        from gnn_lstm_net import GNNLSTMNet
-        policy_net = GNNLSTMNet(node_num,gnn,lstm_ego,lstm_other)
+        from gnn_lstm2_net import GNNLSTM2Net
+        policy_net = GNNLSTM2Net(node_num,gnn,
+                                lstm1_ego,lstm1_other,
+                                lstm2_ego,lstm2_other)
         from layers import FlattenLayer, SelectLayer
         post_net = nn.Sequential(
                     SelectLayer(-2,0),
@@ -120,7 +127,7 @@ if __name__ == "__main__":
     parser.add_argument('--noise', type=float, default=0.05)
     parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
-    parser.add_argument('--log_dir', type=str, default='PPOGNN')
+    parser.add_argument('--log_dir', type=str, default='PPOGNN2')
     parser.add_argument('--llayer', type=int, default=1)
     parser.add_argument('--hidden', type=int, default=32)
     parser.add_argument('--gnn', type=str, default='GSage')
