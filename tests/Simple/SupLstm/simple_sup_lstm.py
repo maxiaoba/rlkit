@@ -10,12 +10,11 @@ class SimpleSupLSTMEnv(gym.Env):
         self.seed()
         self.node_num = node_num
         self.node_dim = node_dim
-        self._old_state = np.zeros(node_num*node_dim)
-        self._state = np.zeros(node_num*node_dim)
+        self.reset()
 
         self._num_interval = num_interval
         self._intervals = np.linspace(-1,1,num_interval+1)
-        self._step = 2./float(num_interval)*2.
+        self._step = 2./float(num_interval)*3.
         self.label_num = self.node_num - 1
         self.label_dim = self._num_interval
 
@@ -33,9 +32,8 @@ class SimpleSupLSTMEnv(gym.Env):
         return spaces.Discrete(self._num_interval)
 
     def reset(self):
-        self._old_state = np.zeros(self.node_num*self.node_dim)
-        self._state = np.zeros(self.node_num*self.node_dim)
-        self.step(0)
+        self._old_state = -np.ones(self.node_num*self.node_dim)+1e-3 #np.zeros(node_num*node_dim)
+        self._state = -np.ones(self.node_num*self.node_dim)+1e-3 #np.zeros(node_num*node_dim)
         return self.observe()
 
     def step(self, action):
@@ -46,7 +44,8 @@ class SimpleSupLSTMEnv(gym.Env):
 
         self._old_state = self._state
         self._state = self._state \
-            + (self.np_random.rand(self.node_num*self.node_dim)*2.-1.)*self._step
+            + self.np_random.rand(self.node_num*self.node_dim)*self._step
+            # + (self.np_random.rand(self.node_num*self.node_dim)*2.-1.)*self._step
         self._state = np.clip(self._state, -(1-1e-3), 1.-1e-3)
         obs = self.observe()
         done = False

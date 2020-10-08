@@ -1,42 +1,47 @@
 import torch
 import numpy as np
 import torch_geometric.utils as pyg_utils
+from rlkit.torch import pytorch_util as ptu
+from rlkit.torch.core import eval_np, np_ify, torch_ify
 
 class TrafficGraphBuilder(torch.nn.Module):
     def __init__(self, 
                 input_dim,
                 node_num,
-                ego_init=torch.tensor([0.,1.]),
-                other_init=torch.tensor([1.,0.]),
+                ego_init=np.array([0.,1.]),
+                other_init=np.array([1.,0.]),
                 ):
         super(TrafficGraphBuilder, self).__init__()
 
         self.input_dim = input_dim
         self.node_num = node_num
-        self.ego_init = ego_init
-        self.other_init = other_init
+        self.ego_init = torch_ify(ego_init)
+        self.other_init = torch_ify(other_init)
 
         self.output_dim = input_dim + self.ego_init.shape[0]
         self.full_edges = self.get_full_edges()
 
-    def forward(self, obs):
+    def forward(self, obs, valid_musk=None):
         # x: (batch*num_node) x output_dim
         # edge_index: 2 x node_edge
         # messages from nodes in edge_index[0] are sent to nodes in edge_index[1]
         
         batch_size, node_num, obs_dim = obs.shape
 
-        x = torch.zeros(batch_size,self.node_num, self.output_dim)
+        x = torch.zeros(batch_size,self.node_num, self.output_dim).to(ptu.device)
         x[:,:,:self.input_dim] = obs
         x[:,0,self.input_dim:] = self.ego_init[None,:]
         x[:,1:,self.input_dim:] = self.other_init[None,None,:]
         x = x.reshape(int(batch_size*self.node_num),self.output_dim)
 
         edge_index = self.full_edges[None,:].repeat(batch_size, 1, 1, 1) # batch x (node_num-1, 2, edge_num)
-        index_offsets = torch.arange(batch_size)
+        index_offsets = torch.arange(batch_size).to(ptu.device)
         index_offsets = index_offsets * self.node_num
         edge_index = edge_index + index_offsets[:,None,None,None]
-        valid_musk = self.get_valid_node_mask(obs) # batch x node_num-1
+        if valid_musk is None:
+            valid_musk = self.get_valid_node_mask(obs)[:,1:] # batch x node_num-1
+        else:
+            valid_musk = valid_musk[:,1:]
         edge_index = edge_index[valid_musk] # valid_veh_num x 2 x per_edge_num
         edge_index = edge_index.transpose(0,1).reshape(2,-1)
         # edge_index = pyg_utils.remove_self_loops(edge_index)[0]
@@ -48,7 +53,7 @@ class TrafficGraphBuilder(torch.nn.Module):
         # shape: batch x node_num-1 (assume node 0 always valid)
         batch_size, node_num, obs_dim = obs.shape
         valid_musk = (torch.sum(torch.abs(obs),dim=-1) != 0)
-        return valid_musk[:,1:]
+        return valid_musk
         # valid_musk = valid_musk[:,1:]
         # lower_valid_nums = torch.sum(valid_musk[:,:int(node_num/2)],dim=-1)
         # upper_valid_nums = torch.sum(valid_musk[:,int(node_num/2):],dim=-1)
@@ -83,7 +88,7 @@ class TrafficGraphBuilder(torch.nn.Module):
             else:
                 edges[i,:,2] = torch.tensor([idx,idx+1])
                 edges[i,:,3] = torch.tensor([idx,idx-1])
-        return edges
+        return edges.to(ptu.device)
 
 
 

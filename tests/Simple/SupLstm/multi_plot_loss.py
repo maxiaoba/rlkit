@@ -44,11 +44,14 @@ plot_path = "./Data/"+exp_name
 
 policies = [
             'PPOlayer1hidden48',
-            'PPOGNNllayer1hidden32GSagenode24glayer3actrelu',
+            # 'PPOGNNllayer1hidden32GSagenode24glayer3actrelu',
+            'PPOGNN2llayer1hidden24GSagenode24glayer3actrelu',
             'PPOSuplayer1hidden48',
-            'PPOSupGNNllayer1hidden32GSagenode24glayer3actrelu',
+            # 'PPOSupGNNllayer1hidden32GSagenode24glayer3actrelu',
+            'PPOSupGNN2llayer1hidden24GSagenode24glayer3actrelu',
             'PPOSupSep2layer1hidden28',
-            'PPOSupSep2GNNllayer1hidden24GSagenode16glayer3actrelu',
+            # 'PPOSupSep2GNNllayer1hidden24GSagenode16glayer3actrelu',
+            'PPOSupSep2GNN2llayer1hidden16GSagenode20glayer3actrelu'
         ]
 policy_names = policies
 

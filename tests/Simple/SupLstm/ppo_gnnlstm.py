@@ -146,7 +146,7 @@ if __name__ == "__main__":
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
-    max_path_length = 20
+    max_path_length = 10
     # noinspection PyTypeChecker
     variant = dict(
         lstm_kwargs=dict(

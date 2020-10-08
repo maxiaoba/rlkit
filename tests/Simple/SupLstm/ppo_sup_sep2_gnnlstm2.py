@@ -32,19 +32,22 @@ def experiment(variant):
         num_lstm_layers = variant['lstm_kwargs']['num_layers']
         node_dim = variant['gnn_kwargs']['node_dim']
         node_num = expl_env.node_num
-        input_node_dim = expl_env.node_dim
-        
+
         # policy module
+        input_node_dim = int(obs_dim/node_num+label_dim)
         a_0 = np.zeros(action_dim)
-        o_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
-        h_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
-        c_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
-        latent_0 = (o_0, h_0, c_0)
+        h1_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
+        c1_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
+        h2_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
+        c2_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
+        latent_0 = (h1_0, c1_0, h2_0, c2_0)
         from lstm_net import LSTMNet
-        lstm_ego = LSTMNet(node_dim, action_dim, hidden_dim, num_lstm_layers)
-        lstm_other = LSTMNet(node_dim, 0, hidden_dim, num_lstm_layers)
+        lstm1_ego = LSTMNet(input_node_dim, action_dim, hidden_dim, num_lstm_layers)
+        lstm1_other = LSTMNet(input_node_dim, 0, hidden_dim, num_lstm_layers)
+        lstm2_ego = LSTMNet(node_dim, 0, hidden_dim, num_lstm_layers)
+        lstm2_other = LSTMNet(node_dim, 0, hidden_dim, num_lstm_layers)
         from graph_builder import TrafficGraphBuilder
-        gb = TrafficGraphBuilder(input_dim=input_node_dim+label_dim+hidden_dim, node_num=node_num,
+        gb = TrafficGraphBuilder(input_dim=hidden_dim, node_num=node_num,
                                 ego_init=torch.tensor([0.,1.]),
                                 other_init=torch.tensor([1.,0.]),
                                 )
@@ -56,8 +59,10 @@ def experiment(variant):
                     num_conv_layers=variant['gnn_kwargs']['num_layers'],
                     hidden_activation=variant['gnn_kwargs']['activation'],
                     )
-        from gnn_lstm_net import GNNLSTMNet
-        gnnlstm_net = GNNLSTMNet(node_num,gnn,lstm_ego,lstm_other)
+        from gnn_lstm2_net import GNNLSTM2Net
+        gnnlstm_net = GNNLSTM2Net(node_num,gnn,
+                                lstm1_ego,lstm1_other,
+                                lstm2_ego,lstm2_other)
         from layers import FlattenLayer, SelectLayer
         post_net = nn.Sequential(
                     SelectLayer(-2,0),
@@ -76,16 +81,20 @@ def experiment(variant):
                     )
 
         # sup_learner module
+        input_node_dim = int(obs_dim/node_num)
         a_0 = np.zeros(action_dim)
-        o_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
-        h_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
-        c_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
-        latent_0 = (o_0, h_0, c_0)
+        h1_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
+        c1_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
+        h2_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
+        c2_0 = np.zeros((node_num, hidden_dim*num_lstm_layers))
+        latent_0 = (h1_0, c1_0, h2_0, c2_0)
         from lstm_net import LSTMNet
-        lstm_ego = LSTMNet(node_dim, action_dim, hidden_dim, num_lstm_layers)
-        lstm_other = LSTMNet(node_dim, 0, hidden_dim, num_lstm_layers)
+        lstm1_ego = LSTMNet(input_node_dim, action_dim, hidden_dim, num_lstm_layers)
+        lstm1_other = LSTMNet(input_node_dim, 0, hidden_dim, num_lstm_layers)
+        lstm2_ego = LSTMNet(node_dim, 0, hidden_dim, num_lstm_layers)
+        lstm2_other = LSTMNet(node_dim, 0, hidden_dim, num_lstm_layers)
         from graph_builder import TrafficGraphBuilder
-        gb = TrafficGraphBuilder(input_dim=input_node_dim+hidden_dim, node_num=node_num,
+        gb = TrafficGraphBuilder(input_dim=hidden_dim, node_num=node_num,
                                 ego_init=torch.tensor([0.,1.]),
                                 other_init=torch.tensor([1.,0.]),
                                 )
@@ -97,8 +106,10 @@ def experiment(variant):
                     num_conv_layers=variant['gnn_kwargs']['num_layers'],
                     hidden_activation=variant['gnn_kwargs']['activation'],
                     )
-        from gnn_lstm_net import GNNLSTMNet
-        gnnlstm_net = GNNLSTMNet(node_num,gnn,lstm_ego,lstm_other)
+        from gnn_lstm2_net import GNNLSTM2Net
+        gnnlstm_net = GNNLSTM2Net(node_num,gnn,
+                                lstm1_ego,lstm1_other,
+                                lstm2_ego,lstm2_other)
         from layers import FlattenLayer, SelectLayer
         post_net = nn.Sequential(
                 SelectLayer(-2,np.arange(1,node_num)),
@@ -182,9 +193,10 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='SimpleSupLSTM')
+    parser.add_argument('--gpu', action='store_true', default=False)
     parser.add_argument('--node_num', type=int, default=5)
     parser.add_argument('--node_dim', type=int, default=2)
-    parser.add_argument('--log_dir', type=str, default='PPOSupSep2GNN')
+    parser.add_argument('--log_dir', type=str, default='PPOSupSep2GNN2')
     parser.add_argument('--llayer', type=int, default=1)
     parser.add_argument('--hidden', type=int, default=32)
     parser.add_argument('--gnn', type=str, default='GSage')
@@ -275,5 +287,6 @@ if __name__ == "__main__":
     import torch
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    # ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
+    if args.gpu:
+        ptu.set_gpu_mode(True)
     experiment(variant)
