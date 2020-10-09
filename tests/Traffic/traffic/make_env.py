@@ -17,6 +17,9 @@ def make_env(env_name, **kwargs):
 	elif env_name == 't_intersection_lstm':
 		from traffic.scenarios.t_intersection_lstm import TIntersectionLSTM
 		env = TIntersectionLSTM(**kwargs)
+	elif env_name == 't_intersection_lstm2':
+		from traffic.scenarios.t_intersection_lstm_2 import TIntersectionLSTM
+		env = TIntersectionLSTM(**kwargs)
 	else:
 		raise NotImplementedError
 	return env

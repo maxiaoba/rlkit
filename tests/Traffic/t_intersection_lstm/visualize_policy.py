@@ -63,7 +63,7 @@ while True:
 	# print("o: ",o)
 	# print('r: ',r)
 	print(done)
-	pdb.set_trace()
+	# pdb.set_trace()
 	time.sleep(0.1)
 	if path_length > max_path_length or done:
 		print('c_r: ',c_r)

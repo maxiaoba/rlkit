@@ -53,26 +53,40 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            # 'PPOlayer1hidden48ep5000',
-            'PPOGNNllayer1hidden32GSagenode24glayer3actreluep5000',
-            # 'PPOGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
-            # 'PPOSuplayer1hidden48ep5000',
-            'PPOSupGNNllayer1hidden24GSagenode32glayer3actreluep5000',
-            'PPOSupGNNllayer1hidden32GSagenode24glayer3actreluep5000',
-            # 'PPOSupGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
-            # 'PPOSupSep2layer1hidden28ep5000',
-            'PPOSupSep2GNNllayer1hidden16GSagenode24glayer3actreluep5000',
-            'PPOSupSep2GNNllayer1hidden24GSagenode16glayer3actreluep5000',
-            # 'PPOSupSep2GNN2llayer1hidden16GSagenode20glayer3actreluep5000'
+            'PPOlayer1hidden48ep5000',
+            # 'PPOGNNllayer1hidden32GSagenode24glayer3actreluep5000',
+            'PPOGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
+            'PPOSuplayer1hidden48ep5000',
+            # 'PPOSupGNNllayer1hidden24GSagenode32glayer3actreluep5000',
+            # 'PPOSupGNNllayer1hidden32GSagenode24glayer3actreluep5000',
+            'PPOSupGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
+            'PPOSupSep2layer1hidden28ep5000',
+            # 'PPOSupSep2GNNllayer1hidden16GSagenode24glayer3actreluep5000',
+            # 'PPOSupSep2GNNllayer1hidden24GSagenode16glayer3actreluep5000',
+            'PPOSupSep2GNN2llayer1hidden16GSagenode20glayer3actreluep5000',
+            'PPOSupSep2LSTMGNN2layer1hidden28GSagenode20glayer3suphidden16suplayer1actreluep5000',
         ]
-policy_names = policies
+policy_names = [
+            'LSTMHidden48',
+            # 'GNNHidden32Node24Layer3',
+            'GNN2Hidden24Node24Layer3',
+            'SupLSTMHidden48',
+            # 'SupGNNHidden24Node32Layer3',
+            # 'SupGNNHidden32Node24Layer3',
+            'SupGNN2Hidden24Node24Layer3',
+            'SupSep2LSTMHidden28',
+            # 'SupSep2GNNHidden16Node24Layer3',
+            # 'SupSep2GNNHidden24Node16Layer3',
+            'SupSep2GNN2Hidden16Node20Layer3',
+            'SupSep2LSTMGNN2Hidden16Node20Layer3',
+        ]
 
 seeds = [0,1,2]
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'gnnlstm'
+extra_name = ''
 
 pre_name = ''
 post_name = ''
@@ -150,6 +164,7 @@ for fid,field in enumerate(fields):
         legends.append(policy_names[policy_index])
 
     plt.legend(plts,legends,loc='best')
+    # plt.legend(plts,legends, bbox_to_anchor=(1, 1), loc='upper left')
     plt.xlabel('Itr')
     plt.ylabel(field_names[fid]) 
     fig.savefig(plot_path+'/'+plot_names[fid]+'.pdf')
