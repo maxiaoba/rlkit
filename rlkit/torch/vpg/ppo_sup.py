@@ -73,7 +73,7 @@ class PPOSupTrainer(PPOTrainer):
                 obs_input, returns_input, valid_mask)
             # kl_before = self._compute_kl_constraint(obs)
             kl_before = self._compute_kl_constraint(policy_input, valid_mask)
-            sup_loss_before = self._compute_sup_loss(obs_input, actions_input, labels_input, valid_mask)
+            sup_loss_before, sup_accuracy_before = self._compute_sup_loss(obs_input, actions_input, labels_input, valid_mask)
 
         self._train(policy_input, obs_input, actions_input, rewards_input, returns_input,
                     advs_input, valid_mask)
@@ -85,7 +85,7 @@ class PPOSupTrainer(PPOTrainer):
                 obs_input, returns_input, valid_mask)
             # kl_before = self._compute_kl_constraint(obs)
             kl_after = self._compute_kl_constraint(policy_input, valid_mask)
-            sup_loss_after = self._compute_sup_loss(obs_input, actions_input, labels_input, valid_mask)
+            sup_loss_after, sup_accuracy_after = self._compute_sup_loss(obs_input, actions_input, labels_input, valid_mask)
             policy_entropy = self._compute_policy_entropy(policy_input)
 
         if self._need_to_update_eval_statistics:
@@ -104,6 +104,9 @@ class PPOSupTrainer(PPOTrainer):
             self.eval_statistics['SUP LossBefore'] = sup_loss_before.item()
             self.eval_statistics['SUP LossAfter'] = sup_loss_after.item()
             self.eval_statistics['SUP dLoss'] = (sup_loss_before - sup_loss_after).item()
+            self.eval_statistics['SUP AccuracyBefore'] = sup_accuracy_before.item()
+            self.eval_statistics['SUP AccuracyAfter'] = sup_accuracy_after.item()
+            self.eval_statistics['SUP dAccuracy'] = (sup_accuracy_before - sup_accuracy_after).item()
 
         self._old_policy = copy.deepcopy(self.policy)
 
@@ -134,7 +137,7 @@ class PPOSupTrainer(PPOTrainer):
 
         # Calculate surrogate
         sup_batch = self.replay_buffer.random_batch(self.sup_batch_size)
-        sup_loss = self._compute_sup_loss(sup_batch['observations'],sup_batch['actions'],
+        sup_loss, sup_accuracy = self._compute_sup_loss(sup_batch['observations'],sup_batch['actions'],
                                             sup_batch['labels'],sup_batch['valids'])
         objective = advantages - self.sup_weight*sup_loss
         # surrogate = likelihood_ratio * (advantages - self.sup_weight*sup_loss)
@@ -162,11 +165,23 @@ class PPOSupTrainer(PPOTrainer):
             pre_actions = actions[:,:-1,:]  
             policy_input = (obs, pre_actions)
         else:
-            policy_input = obs       
-        lls = self.policy.sup_log_prob(policy_input, labels)
+            policy_input = obs     
+        # lls = self.policy.sup_log_prob(policy_input, labels)
+
+        valid_num = (valid_mask.unsqueeze(-1)*valids).float().sum()
+        dists =  self.policy.get_sup_distribution(policy_input)
+        lls =  dists.log_prob(labels)
         lls[~valids] = 0
         lls[~valid_mask] = 0
-        return -lls.sum()/(valid_mask.unsqueeze(-1)*valids).float().sum()
+        loss = -lls.sum()/valid_num
+
+        accuracy = (torch.argmax(dists.probs,-1)==labels).float()
+        accuracy[~valids] = 0.
+        accuracy[~valid_mask] = 0.
+        accuracy = accuracy.sum()/valid_num
+
+        # return -lls[valid_mask].mean()
+        return loss, accuracy
 
     def _add_exploration_bonus(self, paths):
         paths = copy.deepcopy(paths)

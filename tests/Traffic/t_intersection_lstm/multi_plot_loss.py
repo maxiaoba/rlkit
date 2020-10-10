@@ -10,8 +10,8 @@ max_itr = 2e4
 
 fields = [
             'evaluation/Average Returns',
-            # 'evaluation/Actions Max',
-            # 'evaluation/Actions Min',
+            'evaluation/Actions Max',
+            'evaluation/Actions Min',
             'evaluation/Num Success',
             # 'evaluation/Num Timeout',
             # 'evaluation/Num Fail',
@@ -28,8 +28,8 @@ fields = [
             ]
 field_names = [
             'Eval Average Return',
-            # 'Eval Action Max',
-            # 'Eval Action Min',
+            'Eval Action Max',
+            'Eval Action Min',
             'Eval Success',
             # 'Eval Timeout',
             # 'Eval Fail',
@@ -47,38 +47,32 @@ field_names = [
 itr_name = 'epoch'
 min_loss = [-1000]*100
 max_loss = [1000]*100
-exp_name = "t_intersection_lstmnoise0.05yld0.5ds0.1"
+exp_name = "t_intersection_lstm2noise0.05yld0.5ds0.1"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
             'PPOlayer1hidden48ep5000',
-            # 'PPOGNNllayer1hidden32GSagenode24glayer3actreluep5000',
             'PPOGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
             'PPOSuplayer1hidden48ep5000',
-            # 'PPOSupGNNllayer1hidden24GSagenode32glayer3actreluep5000',
-            # 'PPOSupGNNllayer1hidden32GSagenode24glayer3actreluep5000',
             'PPOSupGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
             'PPOSupSep2layer1hidden28ep5000',
-            # 'PPOSupSep2GNNllayer1hidden16GSagenode24glayer3actreluep5000',
-            # 'PPOSupSep2GNNllayer1hidden24GSagenode16glayer3actreluep5000',
-            'PPOSupSep2GNN2llayer1hidden16GSagenode20glayer3actreluep5000',
-            'PPOSupSep2LSTMGNN2layer1hidden28GSagenode20glayer3suphidden16suplayer1actreluep5000',
+            # 'PPOSupSep2GNN2llayer1hidden16GSagenode20glayer3actreluep5000',
+            # 'PPOSupSep2LSTMGNN2layer1hidden28GSagenode20glayer3suphidden16suplayer1actreluep5000',
+            'PPOSupSep2GNN2llayer1hidden18GSagenode18glayer3actreluep5000',
+            'PPOSupSep2LSTMGNN2layer1hidden28GSagenode18glayer3suphidden18suplayer1actreluep5000',
         ]
 policy_names = [
             'LSTMHidden48',
-            # 'GNNHidden32Node24Layer3',
-            'GNN2Hidden24Node24Layer3',
+            'GNN2Hidden24Node24',
             'SupLSTMHidden48',
-            # 'SupGNNHidden24Node32Layer3',
-            # 'SupGNNHidden32Node24Layer3',
-            'SupGNN2Hidden24Node24Layer3',
+            'SupGNN2Hidden24Node24',
             'SupSep2LSTMHidden28',
-            # 'SupSep2GNNHidden16Node24Layer3',
-            # 'SupSep2GNNHidden24Node16Layer3',
-            'SupSep2GNN2Hidden16Node20Layer3',
-            'SupSep2LSTMGNN2Hidden16Node20Layer3',
+            # 'SupSep2GNN2Hidden16Node20',
+            # 'SupSep2LSTMGNN2Hidden16Node20',
+            'SupSep2GNN2Hidden18Node18',
+            'SupSep2LSTMGNN2Hidden28Hidden18Node18',
         ]
 
 seeds = [0,1,2]

@@ -23,7 +23,8 @@ def experiment(variant):
     action_dim = eval_env.action_space.n
     label_num = expl_env.label_num
     label_dim = expl_env.label_dim
-
+    max_path_length = variant['trainer_kwargs']['max_path_length']
+    
     if variant['load_kwargs']['load']:
         load_dir = variant['load_kwargs']['load_dir']
         load_data = torch.load(load_dir+'/params.pkl',map_location='cpu')
@@ -31,7 +32,6 @@ def experiment(variant):
         vf = load_data['trainer/value_function']
     else:
         hidden_dim = variant['lstm_kwargs']['hidden_dim']
-        max_path_length = variant['trainer_kwargs']['max_path_length']
         num_layers = variant['lstm_kwargs']['num_layers']
         a_0 = np.zeros(action_dim)
         h_0 = np.zeros(hidden_dim*num_layers)
