@@ -60,7 +60,7 @@ class YNYDriver(XYSeperateDriver):
                 self.x_driver.set_v_des(v_front*1.5)
                 self.x_driver.s_des = self.s_des_0 * np.random.uniform(0.4,0.6)
         if  (ego_s < self.s_min) or (ego_t > self.t1)\
-             or ((ego_vy <= self.v_min) and (t > self.t2)): # normal drive
+             or ((ego_vy <= self.v_min) and (ego_t > self.t2)): # normal drive
             self.x_driver.observe(cars[1:], road)
             self.intention = 0
         else:
@@ -145,7 +145,7 @@ class EgoDriver(Driver):
                 as_max_safe=6.0,
                 at_max_safe=6.0,
                 concern_distance=1.0,
-                safe_distance=0.5,
+                safe_distance=0.8,
                 safe_speed=1.0,
                 **kwargs):
 
