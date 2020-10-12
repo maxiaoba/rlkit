@@ -7,7 +7,7 @@ from rlkit.torch.core import eval_np, np_ify
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--exp_name', type=str, default='t_intersection_lstm2')
+parser.add_argument('--exp_name', type=str, default='t_intersection_lstm3')
 parser.add_argument('--extra_name', type=str, default='noise0.05yld0.5ds0.1')
 parser.add_argument('--log_dir', type=str, default='PPO')
 parser.add_argument('--file', type=str, default='params')
@@ -63,7 +63,7 @@ while True:
 	# print("o: ",o)
 	# print('r: ',r)
 	print(done)
-	pdb.set_trace()
+	# pdb.set_trace()
 	time.sleep(0.1)
 	if path_length > max_path_length or done:
 		print('c_r: ',c_r)

@@ -52,13 +52,13 @@ class YNYDriver(XYSeperateDriver):
                 self.x_driver.set_v_des(self.v_des_0)
             else:
                 self.x_driver.set_v_des(v_front*1.5)
-                self.x_driver.s_des = self.s_des_0 * np.random.uniform(0.6,0.8)
+                self.x_driver.s_des = self.s_des_0 * np.random.uniform(0.5,0.8)
         else:
             if v_front is None:
                 self.x_driver.set_v_des(self.v_des_0)
             else:
                 self.x_driver.set_v_des(v_front*1.5)
-                self.x_driver.s_des = self.s_des_0 * np.random.uniform(0.4,0.6)
+                self.x_driver.s_des = self.s_des_0 * np.random.uniform(0.4,0.7)
         if  (ego_s < self.s_min) or (ego_t > self.t1)\
              or ((ego_vy <= self.v_min) and (ego_t > self.t2)): # normal drive
             self.x_driver.observe(cars[1:], road)
@@ -623,10 +623,10 @@ if __name__ == '__main__':
     while True:  #not done: 
         # pdb.set_trace()
         # action = actions[t][0]
-        # action = actions[t]
+        action = actions[t]
         # action = np.random.randint(env.action_space.n)
-        action = input("Action\n")
-        action = int(action)
+        # action = input("Action\n")
+        # action = int(action)
         while action < 0:
             t = 0
             cr = 0.

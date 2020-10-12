@@ -30,7 +30,7 @@ class TrajectoryAccelAction:
         car.set_velocity(np.array([v_x_new, v_y_new]))
         phi_new = np.arctan2(v_t_new, v_s_new)
 
-        max_ang = np.pi/18.
+        max_ang = car._max_rotation #np.pi/18.
         if phi_new > max_ang:
             car.set_rotation(theta_new+max_ang)
         elif phi_new < -max_ang:

@@ -21,6 +21,7 @@ fields = [
             # 'exploration/Num Fail',
             'exploration/Num Success',
             'trainer/SUP LossAfter',
+            'trainer/SUP AccuracyAfter',
             'trainer/LossBefore',
             'trainer/LossAfter',
             'trainer/KLBefore',
@@ -39,6 +40,7 @@ field_names = [
             # 'Expl Fail',
             'Expl Success',
             'Sup LossAfter',
+            'Sup AccuracyAfter',
             'LossBefore',
             'LossAfter',
             'KLBefore',
@@ -47,7 +49,7 @@ field_names = [
 itr_name = 'epoch'
 min_loss = [-1000]*100
 max_loss = [1000]*100
-exp_name = "t_intersection_lstm2noise0.05yld0.5ds0.1"
+exp_name = "t_intersection_lstm3noise0.05yld0.5ds0.1"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
@@ -58,8 +60,6 @@ policies = [
             'PPOSuplayer1hidden48ep5000',
             'PPOSupGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
             'PPOSupSep2layer1hidden28ep5000',
-            # 'PPOSupSep2GNN2llayer1hidden16GSagenode20glayer3actreluep5000',
-            # 'PPOSupSep2LSTMGNN2layer1hidden28GSagenode20glayer3suphidden16suplayer1actreluep5000',
             'PPOSupSep2GNN2llayer1hidden18GSagenode18glayer3actreluep5000',
             'PPOSupSep2LSTMGNN2layer1hidden28GSagenode18glayer3suphidden18suplayer1actreluep5000',
         ]
@@ -69,8 +69,6 @@ policy_names = [
             'SupLSTMHidden48',
             'SupGNN2Hidden24Node24',
             'SupSep2LSTMHidden28',
-            # 'SupSep2GNN2Hidden16Node20',
-            # 'SupSep2LSTMGNN2Hidden16Node20',
             'SupSep2GNN2Hidden18Node18',
             'SupSep2LSTMGNN2Hidden28Hidden18Node18',
         ]
@@ -142,8 +140,50 @@ for fid,field in enumerate(fields):
                                 loss = np.mean(loss)
                                 losses.append(loss)
                                 loss = []
-                    if len(losses) < min_itr:
-                        min_itr = len(losses)
+                ### load ###
+                load_file_path = prepath+'/'+policy_path+'/'+'seed'+str(trial)+'_load/progress.csv'
+                if os.path.exists(load_file_path):
+                    last_itr = itr
+                    print(policy+'_'+str(trial)+'_load')
+                    with open(load_file_path) as csv_file:
+                        if '\0' in open(load_file_path).read():
+                            print("you have null bytes in your input file")
+                            csv_reader = csv.reader(x.replace('\0', '') for x in csv_file)
+                        else:
+                            csv_reader = csv.reader(csv_file, delimiter=',')
+
+                        for (i,row) in enumerate(csv_reader):
+                            if i == 0:
+                                entry_dict = {}
+                                for index in range(len(row)):
+                                    entry_dict[row[index]] = index
+                                # print(entry_dict)
+                            else:
+                                itr = last_itr+i #int(float(row[entry_dict[itr_name]]))
+                                if itr > max_itr:
+                                    break
+                                try:
+                                    if field == 'evaluation/Num Success':
+                                        num_path = float(row[entry_dict['evaluation/Num Paths']])
+                                        loss.append(np.clip(float(row[entry_dict[field]])/num_path,
+                                                        min_loss[fid],max_loss[fid]))
+                                    elif field == 'exploration/Num Success':
+                                        num_path = float(row[entry_dict['exploration/Num Paths']])
+                                        loss.append(np.clip(float(row[entry_dict[field]])/num_path,
+                                                        min_loss[fid],max_loss[fid]))
+                                    else:
+                                        loss.append(np.clip(float(row[entry_dict[field]]),
+                                                        min_loss[fid],max_loss[fid]))
+                                except:
+                                    pass
+                                if itr % itr_interval == 0:
+                                    itrs.append(itr)
+                                    loss = np.mean(loss)
+                                    losses.append(loss)
+                                    loss = []
+                ### load ###
+                if len(losses) < min_itr:
+                    min_itr = len(losses)
                 Losses.append(losses)
         Losses = [losses[:min_itr] for losses in Losses]
         itrs = itrs[:min_itr]

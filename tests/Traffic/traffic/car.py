@@ -11,7 +11,7 @@ from traffic.constants import *
 
 class Car:
 
-    def __init__(self, idx, length, width, color, max_accel, max_speed, expose_level):
+    def __init__(self, idx, length, width, color, max_accel, max_speed, max_rotation, expose_level):
         self._idx = idx
         self._length = length
         self._width = width
@@ -19,6 +19,7 @@ class Car:
         self._arr_color = (0.8, 0.8, 0.8)
         self._max_accel = max_accel
         self._max_speed = max_speed
+        self._max_rotation = max_rotation
         self._expose_level = expose_level
 
         self._position = None
@@ -146,14 +147,7 @@ class Car:
     def check_collision(self,car):
         polygon1 = Polygon(self.get_vertices())
         polygon2 = Polygon(car.get_vertices())
-        return polygon1.intersects(polygon2)
-
-    def get_3p(self):
-        l = np.sqrt(self._width**2+self._length**2)/2.
-        x = self._position[0]
-        y = self._position[1]
-        theta = self._rotation
-        return np.array([[x-l*np.cos(theta),y-l*np.sin(theta)],[x,y],[x+l*np.cos(theta),y+l*np.sin(theta)]])    
+        return polygon1.intersects(polygon2)   
 
     def get_closest_points(self, car):
         polygon1 = Polygon(self.get_vertices())
