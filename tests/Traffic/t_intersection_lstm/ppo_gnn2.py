@@ -195,9 +195,16 @@ if __name__ == "__main__":
             load_dir=log_dir,
         ),
     )
-    if args.load:
-        log_dir = log_dir + '_load'
     import os
+    if args.load:
+        while os.path.isdir(log_dir):
+            print(log_dir)
+            load_dir = log_dir
+            log_dir = log_dir + '_load'
+        variant['load_kwargs']=dict(
+                                    load=args.load,
+                                    load_dir=load_dir,
+                                    )
     if not os.path.isdir(log_dir):
         os.makedirs(log_dir)
     with open(osp.join(log_dir,'variant.json'),'w') as out_json:

@@ -24,7 +24,7 @@ def experiment(variant):
     label_num = expl_env.label_num
     label_dim = expl_env.label_dim
     max_path_length = variant['trainer_kwargs']['max_path_length']
-    
+
     if variant['load_kwargs']['load']:
         load_dir = variant['load_kwargs']['load_dir']
         load_data = torch.load(load_dir+'/params.pkl',map_location='cpu')
@@ -222,9 +222,16 @@ if __name__ == "__main__":
             load_dir=log_dir,
         ),
     )
-    if args.load:
-        log_dir = log_dir + '_load'
     import os
+    if args.load:
+        while os.path.isdir(log_dir):
+            print(log_dir)
+            load_dir = log_dir
+            log_dir = log_dir + '_load'
+        variant['load_kwargs']=dict(
+                                    load=args.load,
+                                    load_dir=load_dir,
+                                    )
     if not os.path.isdir(log_dir):
         os.makedirs(log_dir)
     with open(osp.join(log_dir,'variant.json'),'w') as out_json:
