@@ -13,101 +13,80 @@ from traffic.constants import *
 
 class EnvDriver(XYSeperateDriver):
     def __init__(self, 
-                aggressive, min_front_x, min_back_x,
+                target_lane, min_front_x, min_back_x,
                 x_des, y_des,
                 x_sigma, y_sigma,
                 **kwargs):
-        self.aggressive = aggressive
-        self.target_lane = None
+        self.target_lane = target_lane
         self.min_front_x = min_front_x
         self.min_back_x = min_back_x
-        x_driver =  PDDriver(sigma=x_sigma, p_des=x_des, a_max=1.0, axis=0, k_p=2.0, k_d=5.0, **kwargs)
-        y_driver =  PDDriver(sigma=y_sigma,p_des=y_des, a_max=1.0, axis=1, k_p=2.0, k_d=5.0, **kwargs)
+        x_driver =  PDDriver(sigma=x_sigma, p_des=x_des, a_max=1.0, axis=0, **kwargs)
+        y_driver =  PDDriver(sigma=y_sigma,p_des=y_des, a_max=1.0, axis=1, **kwargs)
         self.on_target = True
         super(EnvDriver, self).__init__(x_driver,y_driver,**kwargs)
 
     def observe(self, cars, road):
         x, y = self.car.position
-        min_front_distance0 = np.inf
-        min_back_distance0 = np.inf
-        min_front_distance1 = np.inf
-        min_back_distance1 = np.inf
-        for car in cars:
-            if car is self.car:
-                continue
-            if car.position[1] <= 4.0:
-                if (car.position[0] > x) and (car.position[0]-x < min_front_distance0):
-                    min_front_distance0 = car.position[0] - x
-                elif (car.position[0] < x) and (x-car.position[0] < min_back_distance0):
-                    min_back_distance0 = x - car.position[0]
-            elif car.position[1] > 4.0:
-                if (car.position[0] > x) and (car.position[0]-x < min_front_distance1):
-                    min_front_distance1 = car.position[0] - x
-                elif (car.position[0] < x) and (x-car.position[0] < min_back_distance1):
-                    min_back_distance1 = x - car.position[0]
-        if not self.aggressive:
-            self.y_driver.p_des = y
-            if y > 4.0:
-                if min_front_distance1 == np.inf:
-                    self.x_driver.p_des = x
-                elif min_front_distance1 < self.min_front_x:
-                    self.x_driver.p_des = x + min_front_distance1 - self.min_front_x
-                # elif min_back_distance1 < self.min_back_x:
-                #     self.x_driver.p_des = x + self.min_back_x - min_front_distance1
-            else:
-                if min_front_distance0 == np.inf:
-                    self.x_driver.p_des = x
-                elif min_front_distance0 < self.min_front_x:
-                    self.x_driver.p_des = x + min_front_distance0 - self.min_front_x
-                # elif min_back_distance0 < self.min_back_x:
-                #     self.x_driver.p_des = x + self.min_back_x - min_front_distance0
-        else:
-            if min_front_distance0 > min_front_distance1:
-                self.target_lane = 0
-            else:
-                self.target_lane = 1
-
-            if self.target_lane == 1:
-                if y > 4.0: # on the target lane
-                    self.on_target = True
+        if self.target_lane == 1:
+            if y > 4.0: # on the target lane
+                self.on_target = True
+                self.y_driver.p_des = 6.0
+                self.x_driver.p_des = x
+            else: # need to merge
+                self.on_target = False
+                min_front_distance = np.inf
+                min_back_distance = np.inf
+                for car in cars:
+                    if car.position[1] > 4.0:
+                        if (car.position[0] > x) and (car.position[0]-x < min_front_distance):
+                            min_front_distance = car.position[0] - x
+                        elif (car.position[0] < x) and (x-car.position[0] < min_back_distance):
+                            min_back_distance = x - car.position[0]
+                safe_to_merge = False
+                if (min_front_distance > self.min_front_x) and (min_back_distance > self.min_back_x):
+                    safe_to_merge = True
+                if safe_to_merge:
                     self.y_driver.p_des = 6.0
-                    self.x_driver.p_des = x + np.minimum(min_front_distance1/2., min_front_distance1 - self.min_front_x)
-                else: # need to merge
-                    self.on_target = False
-                    if (min_front_distance1 > self.min_front_x) and (min_back_distance1 > self.min_back_x):
-                        self.y_driver.p_des = 6.0
-                        self.x_driver.p_des = x
-                    else:
-                        self.y_driver.p_des = y
-                        self.x_driver.p_des = x + np.minimum((min_front_distance1-min_back_distance1)/2.,
-                                                                min_front_distance0 - self.min_front_x)
-            elif self.target_lane == 0:
-                if y <= 4.0: # on the target lane
-                    self.on_target = True
+                    self.x_driver.p_des = x
+                else:
+                    self.y_driver.p_des = y
+                    self.x_driver.p_des = x + (min_front_distance-min_back_distance)/2.
+        elif self.target_lane == 0:
+            if y <= 4.0: # on the target lane
+                self.on_target = True
+                self.y_driver.p_des = 2.0
+                self.x_driver.p_des = x
+            else: # need to merge
+                self.on_target = False
+                min_front_distance = np.inf
+                min_back_distance = np.inf
+                for car in cars:
+                    if car.position[1] <= 4.0:
+                        if (car.position[0] > x) and (car.position[0]-x < min_front_distance):
+                            min_front_distance = car.position[0] - x
+                        elif (car.position[0] < x) and (x-car.position[0] < min_back_distance):
+                            min_back_distance = x - car.position[0]
+                safe_to_merge = False
+                if (min_front_distance > self.min_front_x) and (min_back_distance > self.min_back_x):
+                    safe_to_merge = True
+                if safe_to_merge:
                     self.y_driver.p_des = 2.0
-                    self.x_driver.p_des = x + np.minimum(min_front_distance0/2., min_front_distance0 - self.min_front_x)
-                else: # need to merge
-                    self.on_target = False
-                    if (min_front_distance0 > self.min_front_x) and (min_back_distance0 > self.min_back_x):
-                        self.y_driver.p_des = 2.0
-                        self.x_driver.p_des = x
-                    else:
-                        self.y_driver.p_des = y
-                        self.x_driver.p_des = x + np.minimum((min_front_distance0-min_back_distance0)/2.,
-                                                                min_front_distance1 - self.min_front_x)
-
+                    self.x_driver.p_des = x
+                else:
+                    self.y_driver.p_des = y
+                    self.x_driver.p_des = x + (min_front_distance-min_back_distance)/2.
         self.x_driver.observe(cars, road)
         self.y_driver.observe(cars, road)
 
     def setup_render(self, viewer):
-        if not self.aggressive:
+        if self.on_target:
             self.car._color = [*GREEN_COLORS[0],0.5]
         else:
             self.car._color = [*RED_COLORS[0],0.5]
         self.car._arr_color = [0.8, 0.8, 0.8, 0.5]
 
     def update_render(self, camera_center):
-        if not self.aggressive:
+        if self.on_target:
             self.car._color = [*GREEN_COLORS[0],0.5]
         else:
             self.car._color = [*RED_COLORS[0],0.5]
@@ -182,8 +161,8 @@ class HighWay(TrafficEnv):
         self.car_max_rotation = 0.
         self.car_expose_level = 4
         self.driver_sigma = driver_sigma
-        self.min_front_x = 7.
-        self.min_back_x = 7.
+        self.min_front_x = 6.
+        self.min_back_x = 6.
 
         super(HighWay, self).__init__(
             road=road,
@@ -198,7 +177,7 @@ class HighWay(TrafficEnv):
         labels = np.array([np.nan]*self.label_num)
         for driver in self._drivers[1:]:
             i = driver._idx - 1
-            labels[i] = int(driver.aggressive)
+            labels[i] = int(driver.on_target)
         return labels
 
     def update(self, action):
@@ -288,7 +267,7 @@ class HighWay(TrafficEnv):
             car.remove_render(self.viewer)
             driver.remove_render(self.viewer)
 
-    def add_car(self, x, y, vx, vy, x_des, y_des, aggressive, theta):
+    def add_car(self, x, y, vx, vy, x_des, y_des, target_lane, theta):
         if y <= 4.:
             idx = self._lower_lane_next_idx
             self._lower_lane_next_idx += 1
@@ -303,7 +282,7 @@ class HighWay(TrafficEnv):
                           max_accel=self.car_max_accel, max_speed=self.car_max_speed,
                           max_rotation=self.car_max_rotation,
                           expose_level=self.car_expose_level)
-        driver = EnvDriver(aggressive=aggressive, 
+        driver = EnvDriver(target_lane=target_lane, 
                             min_front_x=self.min_front_x, 
                             min_back_x=self.min_back_x,
                             x_des=x_des, y_des=y_des,
@@ -350,8 +329,8 @@ class HighWay(TrafficEnv):
         while (x < self.right_bound):
             x_des = x
             y_des = y
-            aggressive = np.random.choice([True,False])
-            self.add_car(x, y, 0., 0., x_des, y_des, aggressive, 0.)
+            target_lane = np.random.choice([0,1])
+            self.add_car(x, y, 0., 0., x_des, y_des, target_lane, 0.)
             x += (np.random.uniform(self.gap_min,self.gap_max) + self.car_length)
 
         # upper lane
@@ -363,8 +342,8 @@ class HighWay(TrafficEnv):
         while (x < self.right_bound):
             x_des = x
             y_des = np.random.choice([2.,6.])
-            aggressive = np.random.choice([True,False])
-            self.add_car(x, y, 0., 0., x_des, y_des, aggressive, 0.)
+            target_lane = np.random.choice([0,1])
+            self.add_car(x, y, 0., 0., x_des, y_des, target_lane, 0.)
             x += (np.random.uniform(self.gap_min,self.gap_max) + self.car_length)
 
         self._sup_labels = self.get_sup_labels()

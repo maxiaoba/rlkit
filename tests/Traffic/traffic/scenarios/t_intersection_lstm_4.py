@@ -454,7 +454,7 @@ class TIntersectionLSTM(TrafficEnv):
                 self._upper_lane_next_idx = int(self.max_veh_num/2.)+1
         car = Car(idx=idx, length=self.car_length, width=self.car_width, color=random.choice(RED_COLORS),
                           max_accel=self.car_max_accel, max_speed=self.car_max_speed,
-                          max_rotation=self.car_max_rotation,
+                          max_rotation=0.,
                           expose_level=self.car_expose_level)
         driver = YNYDriver(idx=idx, car=car, dt=self.dt,
                     x_driver=IDMDriver(idx=idx, car=car, sigma=self.driver_sigma, s_des=self.s_des, s_min=self.s_min, axis=0, min_overlap=self.min_overlap, dt=self.dt), 
