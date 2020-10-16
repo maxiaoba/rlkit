@@ -168,10 +168,8 @@ def experiment(variant):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp_name', type=str, default='t_intersection_lstm')
-    parser.add_argument('--gpu', action='store_true', default=False)
+    parser.add_argument('--exp_name', type=str, default='highway')
     parser.add_argument('--noise', type=float, default=0.05)
-    parser.add_argument('--yld', type=float, default=0.5)
     parser.add_argument('--ds', type=float, default=0.1)
     parser.add_argument('--log_dir', type=str, default='PPOSupSep2LSTMGNN2')
     parser.add_argument('--layer', type=int, default=1)
@@ -278,6 +276,5 @@ if __name__ == "__main__":
     import torch
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    if args.gpu:
-        ptu.set_gpu_mode(True)
+    # ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
     experiment(variant)
