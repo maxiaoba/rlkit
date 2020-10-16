@@ -26,6 +26,9 @@ def make_env(env_name, **kwargs):
 	elif env_name == 't_intersection_lstm4':
 		from traffic.scenarios.t_intersection_lstm_4 import TIntersectionLSTM
 		env = TIntersectionLSTM(**kwargs)
+	elif env_name == 'highway':
+		from traffic.scenarios.highway import HighWay
+		env = HighWay(**kwargs)
 	else:
 		raise NotImplementedError
 	return env

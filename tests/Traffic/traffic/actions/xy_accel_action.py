@@ -20,8 +20,8 @@ class XYAccelAction(Action):
         if abs(rotation_old) <= max_ang: # rotation close to 0
             if abs(rotation) > max_ang:
                 rotation = np.clip(max_ang,-max_ang,max_ang)
-        elif (rotation > 0.) and (np.pi-rotation > max_ang):
+        elif (rotation > 0.) and (np.pi-rotation >= max_ang):
             rotation = np.pi - max_ang
-        elif (rotation < 0.) and (rotation-(-np.pi) > max_ang):
+        elif (rotation < 0.) and (rotation-(-np.pi) >= max_ang):
             rotation = -np.pi + max_ang
         car.set_rotation(rotation)

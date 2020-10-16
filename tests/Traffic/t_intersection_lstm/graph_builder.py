@@ -50,14 +50,10 @@ class TrafficGraphBuilder(torch.nn.Module):
 
     def get_valid_node_mask(self, obs):
         # return a mask of all valid nodes
-        # shape: batch x node_num-1 (assume node 0 always valid)
+        # shape: batch x node_num
         batch_size, node_num, obs_dim = obs.shape
         valid_musk = (torch.sum(torch.abs(obs),dim=-1) != 0)
         return valid_musk
-        # valid_musk = valid_musk[:,1:]
-        # lower_valid_nums = torch.sum(valid_musk[:,:int(node_num/2)],dim=-1)
-        # upper_valid_nums = torch.sum(valid_musk[:,int(node_num/2):],dim=-1)
-        # return lower_valid_nums, upper_valid_nums
 
     def get_full_edges(self):
         # return edges if all vehicles are valid
