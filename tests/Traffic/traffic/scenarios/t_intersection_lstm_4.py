@@ -385,13 +385,19 @@ class TIntersectionLSTM(TrafficEnv):
 
         return info
 
-    def observe(self):
+    def observe(self, normalize=True, add_noise=True):
         obs = np.zeros(int(4*self.max_veh_num+4))
         for car in self._cars:
             i = int(car._idx*4)
-            obs[i:i+2] = car.position/self.right_bound + np.random.uniform(-1.,1.,2)*self.obs_noise
-            obs[i+2:i+4] = car.velocity/self.desire_speed + np.random.uniform(-1.,1.,2)*self.obs_noise
-
+            if normalize:
+                obs[i:i+2] = car.position/self.right_bound
+                obs[i+2:i+4] = car.velocity/self.desire_speed
+            else:
+                obs[i:i+2] = car.position
+                obs[i+2:i+4] = car.velocity
+            if add_noise:
+                obs[i:i+4] += np.random.uniform(-1.,1.,4)*self.obs_noise
+            
         obs = np.copy(obs)
         return obs
 
@@ -523,79 +529,49 @@ class TIntersectionLSTM(TrafficEnv):
         self.viewer.set_bounds(-30.0, 30.0, -20.0, 20.0)
 
     def update_extra_render(self, extra_input):
-        t1 = self._drivers[1].t1
-        t2 = self._drivers[1].t2
-        
-        start = np.array([self.left_bound,1.-t1]) - self.get_camera_center()
-        end = np.array([self.right_bound,1.-t1]) - self.get_camera_center()
-        attrs = {"color":(1.,1.,0.),"linewidth":2.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.left_bound,1.-t2]) - self.get_camera_center()
-        end = np.array([self.right_bound,1.-t2]) - self.get_camera_center()
-        attrs = {"color":(1.,0.,0.),"linewidth":2.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.left_bound,3.+t1]) - self.get_camera_center()
-        end = np.array([self.right_bound,3.+t1]) - self.get_camera_center()
-        attrs = {"color":(1.,1.,0.),"linewidth":2.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.left_bound,3.+t2]) - self.get_camera_center()
-        end = np.array([self.right_bound,3.+t2]) - self.get_camera_center()
-        attrs = {"color":(1.,0.,0.),"linewidth":2.}
+        start = np.array([self.left_bound,4.]) - self.get_camera_center()
+        end = np.array([self.right_bound,4.]) - self.get_camera_center()
+        attrs = {"color":(1.,1.,1.),"linewidth":2.}
         self.viewer.draw_line(start, end, **attrs)
 
-        start = np.array([self.left_bound,5.-t1]) - self.get_camera_center()
-        end = np.array([self.right_bound,5.-t1]) - self.get_camera_center()
-        attrs = {"color":(1.,1.,0.),"linewidth":2.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.left_bound,5.-t2]) - self.get_camera_center()
-        end = np.array([self.right_bound,5.-t2]) - self.get_camera_center()
-        attrs = {"color":(1.,0.,0.),"linewidth":2.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.left_bound,7.+t1]) - self.get_camera_center()
-        end = np.array([self.right_bound,7.+t1]) - self.get_camera_center()
-        attrs = {"color":(1.,1.,0.),"linewidth":2.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.left_bound,7.+t2]) - self.get_camera_center()
-        end = np.array([self.right_bound,7.+t2]) - self.get_camera_center()
-        attrs = {"color":(1.,0.,0.),"linewidth":2.}
-        self.viewer.draw_line(start, end, **attrs)
+        # t1 = self._drivers[1].t1
+        # t2 = self._drivers[1].t2
+        
+        # start = np.array([self.left_bound,1.-t1]) - self.get_camera_center()
+        # end = np.array([self.right_bound,1.-t1]) - self.get_camera_center()
+        # attrs = {"color":(1.,1.,0.),"linewidth":2.}
+        # self.viewer.draw_line(start, end, **attrs)
+        # start = np.array([self.left_bound,1.-t2]) - self.get_camera_center()
+        # end = np.array([self.right_bound,1.-t2]) - self.get_camera_center()
+        # attrs = {"color":(1.,0.,0.),"linewidth":2.}
+        # self.viewer.draw_line(start, end, **attrs)
+        # start = np.array([self.left_bound,3.+t1]) - self.get_camera_center()
+        # end = np.array([self.right_bound,3.+t1]) - self.get_camera_center()
+        # attrs = {"color":(1.,1.,0.),"linewidth":2.}
+        # self.viewer.draw_line(start, end, **attrs)
+        # start = np.array([self.left_bound,3.+t2]) - self.get_camera_center()
+        # end = np.array([self.right_bound,3.+t2]) - self.get_camera_center()
+        # attrs = {"color":(1.,0.,0.),"linewidth":2.}
+        # self.viewer.draw_line(start, end, **attrs)
+
+        # start = np.array([self.left_bound,5.-t1]) - self.get_camera_center()
+        # end = np.array([self.right_bound,5.-t1]) - self.get_camera_center()
+        # attrs = {"color":(1.,1.,0.),"linewidth":2.}
+        # self.viewer.draw_line(start, end, **attrs)
+        # start = np.array([self.left_bound,5.-t2]) - self.get_camera_center()
+        # end = np.array([self.right_bound,5.-t2]) - self.get_camera_center()
+        # attrs = {"color":(1.,0.,0.),"linewidth":2.}
+        # self.viewer.draw_line(start, end, **attrs)
+        # start = np.array([self.left_bound,7.+t1]) - self.get_camera_center()
+        # end = np.array([self.right_bound,7.+t1]) - self.get_camera_center()
+        # attrs = {"color":(1.,1.,0.),"linewidth":2.}
+        # self.viewer.draw_line(start, end, **attrs)
+        # start = np.array([self.left_bound,7.+t2]) - self.get_camera_center()
+        # end = np.array([self.right_bound,7.+t2]) - self.get_camera_center()
+        # attrs = {"color":(1.,0.,0.),"linewidth":2.}
+        # self.viewer.draw_line(start, end, **attrs)
 
         if extra_input:
-            if ('attention_weight' in extra_input.keys()) and (extra_input['attention_weight'] is not None):
-                edge_index = extra_input['attention_weight'][0]
-                attention_weight = extra_input['attention_weight'][1]
-                upper_indices, lower_indices = self.get_sorted_indices()
-                car_indices = [np.nan]*(1+self.max_veh_num)
-                car_indices[0] = 0
-                car_indices[1:len(lower_indices)+1] = lower_indices[:]
-                car_indices[int(self.max_veh_num/2)+1:int(self.max_veh_num/2)+1+len(upper_indices)] = upper_indices[:]
-                starts, ends, attentions = [], [], []
-                for i in range(edge_index.shape[1]):
-                    if np.isnan(car_indices[edge_index[0,i]]) or np.isnan(car_indices[edge_index[1,i]]):
-                        pass
-                    elif car_indices[edge_index[1,i]] == 0:
-                        attention = attention_weight[i].item()
-                        attentions.append(attention)
-                        car_i = car_indices[edge_index[0,i]]
-                        car_j = car_indices[edge_index[1,i]]
-                        start = self._cars[car_i].position - self.get_camera_center()
-                        end = self._cars[car_j].position - self.get_camera_center()
-                        starts.append(start)
-                        ends.append(end)
-                rank_index = np.argsort(attentions)
-                starts = np.array(starts)[rank_index]
-                ends = np.array(ends)[rank_index]
-                attentions = np.array(attentions)[rank_index]
-                assert np.isclose(np.sum(attentions),1.)
-                for start, end, attention in zip(starts[-3:],ends[-3:],attentions[-3:]):
-                    attrs = {"color":(1.,0.,1.),"linewidth":10.*attention}
-                    if (start == end).all():
-                        from traffic.rendering import make_circle, _add_attrs
-                        circle = make_circle(radius=1., res=15, filled=False, center=start)
-                        _add_attrs(circle, attrs)
-                        self.viewer.add_onetime(circle)
-                    else:
-                        self.viewer.draw_line(start, end, **attrs)
             if ('intentions' in extra_input.keys()) and (extra_input['intentions'] is not None):
                 for car in self._cars[1:]:
                     from traffic.rendering import make_circle, _add_attrs
@@ -605,6 +581,19 @@ class TIntersectionLSTM(TrafficEnv):
                     circle = make_circle(radius=0.5, res=15, filled=True, center=start)
                     _add_attrs(circle, attrs)
                     self.viewer.add_onetime(circle) 
+            if ('edges' in extra_input.keys()) and (extra_input['edges'] is not None):
+                edge_index = extra_input['edges']
+                obs = self.observe(normalize=False,add_noise=False)
+                obs = np.reshape(obs,(-1,4))
+                valid_mask = (np.sum(obs,-1)!=0)
+                for i in range(edge_index.shape[1]):
+                    start_indx = edge_index[0,i]
+                    end_indx = edge_index[1,i]
+                    if valid_mask[start_indx] and valid_mask[end_indx]:
+                        start = obs[start_indx,:2] - self.get_camera_center()
+                        end = obs[end_indx,:2] - self.get_camera_center()
+                        attrs = {"color":(0.7,0.3,0.5),"linewidth":2.}
+                        self.viewer.draw_line(start, end, **attrs)
 
 if __name__ == '__main__':
     import time

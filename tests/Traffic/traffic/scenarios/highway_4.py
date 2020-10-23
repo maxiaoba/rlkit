@@ -27,6 +27,7 @@ class EnvDriver(XYSeperateDriver):
                 x_sigma, y_sigma,
                 **kwargs):
         self.target_lane = target_lane
+        self.next_target_lane = None
         self.min_x = min_x
         self.min_y = min_y
         x_driver =  PDDriver(sigma=x_sigma, p_des=0., a_max=1.0, axis=0, k_p=2.0, k_d=5.0, **kwargs)
@@ -75,12 +76,9 @@ class EnvDriver(XYSeperateDriver):
         else:
             self.next_target_lane = current_lane
 
-        if (self.next_target_lane == current_lane) \
-            or (lane_back_distances[self.next_target_lane] == np.inf):
+        if self.next_target_lane == current_lane:
             self.y_driver.p_des = current_lane*4.0 + 2.0
-            # self.x_driver.p_des = x + 1.0
-            # print(self.car.position, current_lane, lane_front_distances)
-            self.x_driver.p_des = x + lane_front_distances[current_lane] - self.min_x
+            self.x_driver.p_des = x + 1.0
         else: # need to merge
             if (lane_front_distances[self.next_target_lane] > self.min_x) \
              and (lane_back_distances[self.next_target_lane] > self.min_x):
@@ -95,15 +93,11 @@ class EnvDriver(XYSeperateDriver):
         #     self.x_driver.p_des = np.minimum(self.x_driver.p_des, x+min_front_distance-self.min_x)
         # else:
         #     self.x_driver.p_des = np.maximum(self.x_driver.p_des, x-min_back_distance+self.min_x)
-        # only cares front
         self.x_driver.p_des = np.minimum(self.x_driver.p_des, x+min_front_distance-self.min_x)
-        # if min_up_distance < min_low_distance:
-        #     self.y_driver.p_des = np.minimum(self.y_driver.p_des, y+min_up_distance-self.min_y)
-        # else:
-        #     self.y_driver.p_des = np.maximum(self.y_driver.p_des, y-min_low_distance+self.min_y)
-        # only cares up
-        self.y_driver.p_des = np.minimum(self.y_driver.p_des, y+min_up_distance-self.min_y)
-
+        if min_up_distance < min_low_distance:
+            self.y_driver.p_des = np.minimum(self.y_driver.p_des, y+min_up_distance-self.min_y)
+        else:
+            self.y_driver.p_des = np.maximum(self.y_driver.p_des, y-min_low_distance+self.min_y)
         self.x_driver.observe(cars, road)
         self.y_driver.observe(cars, road)
 
@@ -127,13 +121,11 @@ class EnvDriver(XYSeperateDriver):
 
 class EgoDriver(XYSeperateDriver):
     def __init__(self, 
-                left_bound,
                 min_x,
                 min_y,
                 x_sigma, y_sigma,
                 **kwargs):
 
-        self.left_bound = left_bound
         self.min_x = min_x
         self.min_y = min_y
         x_driver = PDDriver(sigma=x_sigma, p_des=0., a_max=1.0, axis=0, k_p=2.0, k_d=5.0, **kwargs)
@@ -187,8 +179,8 @@ class EgoDriver(XYSeperateDriver):
 class HighWay(TrafficEnv):
     def __init__(self,
                  obs_noise=0.,
-                 x_actions=[-5, -1.,0., 1., 5.],
-                 y_actions=[0,1],
+                 x_actions=[-1.,0.,1.],
+                 y_actions=[0,1,2],
                  driver_sigma = 0.,
                  x_cost=0.01,
                  y_cost=0.01,
@@ -220,11 +212,11 @@ class HighWay(TrafficEnv):
         self.x_start = -20.
         self.x_goal = 20.
         self.lane_start = 0
-        self.lane_goal = 1
-        self.gap_min = 6. # 8.
-        self.gap_max = 10. # 12.
+        self.lane_goal = 2
+        self.gap_min = 18. # 8.
+        self.gap_max = 22. # 12.
         self.max_veh_num = 12 #18
-        self.label_dim = 2
+        self.label_dim = 3
         self.label_num = self.max_veh_num
 
         self._collision = False
@@ -237,11 +229,10 @@ class HighWay(TrafficEnv):
         self.car_width = 2.0
         self.car_max_accel = 5.0
         self.car_max_speed = 1.0
-        self.ego_max_speed = 2.0
         self.car_max_rotation = 0.
         self.car_expose_level = 4
         self.driver_sigma = driver_sigma
-        self.min_x = 6.
+        self.min_x = 7.
         self.min_y = 3.
         self.ego_min_x = 6.
         self.ego_min_y = 3.
@@ -257,7 +248,7 @@ class HighWay(TrafficEnv):
         labels = np.array([np.nan]*self.label_num)
         for driver in self._drivers[1:]:
             i = driver._idx - 1
-            labels[i] = int(driver.target_lane)-1
+            labels[i] = int(driver.next_target_lane)
         return labels
 
     def update(self, action):
@@ -285,34 +276,39 @@ class HighWay(TrafficEnv):
                     self._collision = True
                     return
 
-            # if (ego_car.position[0] >= self.x_goal) \
-            #     and (which_lane(ego_car) == self.lane_goal):
-            if ego_car.position[1] > 5.5:
+            if (ego_car.position[0] >= self.x_goal) \
+                and (which_lane(ego_car) == self.lane_goal):
                 self._goal = True
                 return
 
-            if (ego_car.position[0] >= self.x_goal) \
-                or (ego_car.position[0] <= self.x_start):
+            if ego_car.position[0] >= self.x_goal:
                 self._terminal = True
                 return
 
             # add cars when there is enough space
             min_xs = [np.inf]*3
             for car in self._cars:
-                lane_id = which_lane(car)
-                if car.position[0] < min_xs[lane_id]:
-                    min_xs[lane_id] = car.position[0]
+                # lane_id = which_lane(car)
+                # if car.position[0] < min_xs[lane_id]:
+                #     min_xs[lane_id] = car.position[0]
+                if (car.position[1] < 4.0 + 1.0) \
+                    and (car.position[0] < min_xs[0]):
+                    min_xs[0] = car.position[0]
+                if (car.position[1] > 4.0 - 1.0) and (car.position[1] < 8.0 + 1.0) \
+                    and (car.position[0] < min_xs[1]):
+                    min_xs[1] = car.position[0]
+                if (car.position[1] > 8.0 - 1.0) \
+                    and (car.position[0] < min_xs[2]):
+                    min_xs[2] = car.position[0]
 
             for lane_id, min_x in enumerate(min_xs):
-                if lane_id > 0:
-                    if min_x > (self.left_bound + self.gap_min + self.car_length):
-                        x, y = self.left_bound, lane_id*4.0 + 2.0
-                        target_lane = np.random.choice([1,2])
-                        car, driver = self.add_car(x, y, 0., 0., target_lane, 0.)
-                        driver.observe(self._cars,self._road)
-                        if hasattr(self, 'viewer') and self.viewer:
-                            car.setup_render(self.viewer)
-                            driver.setup_render(self.viewer)
+                if min_x > (self.left_bound + np.random.uniform(self.gap_min,self.gap_max) + self.car_length):
+                    x, y = self.left_bound, lane_id*4.0 + 2.0
+                    target_lane = np.random.choice([0,1,2])
+                    car, driver = self.add_car(x, y, 0., 0., target_lane, 0.)
+                    if hasattr(self, 'viewer') and self.viewer:
+                        car.setup_render(self.viewer)
+                        driver.setup_render(self.viewer)
 
             # remove cars that are out-of bound
             for car, driver in zip(self._cars[1:],self._drivers[1:]):
@@ -408,7 +404,7 @@ class HighWay(TrafficEnv):
 
         self._cars.append(car)
         self._drivers.append(driver)
-        # driver.observe(self._cars, self._road)
+        driver.observe(self._cars, self._road)
         return car, driver
 
     def _reset(self):
@@ -419,13 +415,13 @@ class HighWay(TrafficEnv):
         self._empty_indices = list(range(1,self.max_veh_num+1))
 
         self._cars, self._drivers = [], []
-        x_0 = (self.x_start + self.x_goal)/2.
+        x_0 = self.x_start
         y_0 = self.lane_start * 4.0 + 2.0
         car = Car(idx=0, length=self.car_length, width=self.car_width, color=random.choice(BLUE_COLORS),
-                          max_accel=self.car_max_accel, max_speed=self.ego_max_speed,
+                          max_accel=self.car_max_accel, max_speed=self.car_max_speed,
                           max_rotation=self.car_max_rotation,
                           expose_level=self.car_expose_level)
-        driver = EgoDriver(left_bound=self.x_start,min_x=self.min_x, min_y = self.min_y,
+        driver = EgoDriver(min_x=self.min_x, min_y = self.min_y,
                             x_sigma=self.driver_sigma, y_sigma=0.,
                             idx=0,car=car,dt=self.dt)
         car.set_position(np.array([x_0, y_0]))
@@ -434,11 +430,14 @@ class HighWay(TrafficEnv):
         self._cars.append(car)
         self._drivers.append(driver)
         # randomly generate surrounding cars and drivers
-        for lane_id in range(1,3):    
-            x = self.left_bound + np.random.uniform(self.gap_min,self.gap_max)
+        for lane_id in range(3):    
+            if lane_id == self.lane_start:
+                x = x_0 + np.random.uniform(self.gap_min,self.gap_max) + self.car_length
+            else:
+                x = self.left_bound + np.random.uniform(self.gap_min,self.gap_max)
             y = lane_id*4.0 + 2.0
             while (x <= self.right_bound):
-                target_lane = np.random.choice([1,2])
+                target_lane = np.random.choice([0,1,2])
                 self.add_car(x, y, 0., 0., target_lane, 0.)
                 x += (np.random.uniform(self.gap_min,self.gap_max) + self.car_length)
 
@@ -462,22 +461,6 @@ class HighWay(TrafficEnv):
         self.viewer.draw_line(start, end, **attrs)
         start = np.array([-100.,8.0]) - self.get_camera_center()
         end = np.array([100.,8.0]) - self.get_camera_center()
-        attrs = {"color":(1.,1.,1.),"linewidth":4.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.left_bound,0.0]) - self.get_camera_center()
-        end = np.array([self.left_bound,12.0]) - self.get_camera_center()
-        attrs = {"color":(1.,0.,0.),"linewidth":4.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.right_bound,0.0]) - self.get_camera_center()
-        end = np.array([self.right_bound,12.0]) - self.get_camera_center()
-        attrs = {"color":(1.,0.,0.),"linewidth":4.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.x_start,0.0]) - self.get_camera_center()
-        end = np.array([self.x_start,12.0]) - self.get_camera_center()
-        attrs = {"color":(1.,1.,1.),"linewidth":4.}
-        self.viewer.draw_line(start, end, **attrs)
-        start = np.array([self.x_goal,0.0]) - self.get_camera_center()
-        end = np.array([self.x_goal,12.0]) - self.get_camera_center()
         attrs = {"color":(1.,1.,1.),"linewidth":4.}
         self.viewer.draw_line(start, end, **attrs)
 
@@ -539,7 +522,7 @@ if __name__ == '__main__':
     maximum_step = 200
     t = 0
     cr = 0.
-    actions = [5]*(2*maximum_step)
+    actions = [3]*(2*maximum_step)
     # actions = np.load('/Users/xiaobaima/Dropbox/SISL/rlkit/tests/Traffic/Data/t_intersection/MyDQNcg0.1expl0.2/seed0/failure1.npy')
     while True:  #not done: 
         # pdb.set_trace()
