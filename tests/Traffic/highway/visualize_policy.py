@@ -27,11 +27,6 @@ data = torch.load(data_path,map_location='cpu')
 policy = data['trainer/policy']
 eval_policy = MakeDeterministic(policy)
 
-if 'trainer/sup_learner' in data.keys():
-	sup_learner = data['trainer/sup_learner']
-else:
-	sup_learner = None
-
 import sys
 from traffic.make_env import make_env
 import json

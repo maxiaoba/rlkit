@@ -41,7 +41,7 @@ class EnvDriver(XYSeperateDriver):
         min_back_distance = np.inf
         min_up_distance = (12.0 + self.min_y) - y
         min_low_distance = y - (0. - self.min_y)
-        for car in cars:
+        for car in cars[1:]:
             if car is self.car:
                 continue
             else:
@@ -297,22 +297,23 @@ class HighWay(TrafficEnv):
                 return
 
             # add cars when there is enough space
-            min_xs = [np.inf]*3
-            for car in self._cars:
-                lane_id = which_lane(car)
-                if car.position[0] < min_xs[lane_id]:
-                    min_xs[lane_id] = car.position[0]
+            if len(self._empty_indices) > 0:
+                min_xs = [np.inf]*3
+                for car in self._cars:
+                    lane_id = which_lane(car)
+                    if car.position[0] < min_xs[lane_id]:
+                        min_xs[lane_id] = car.position[0]
 
-            for lane_id, min_x in enumerate(min_xs):
-                if lane_id > 0:
-                    if min_x > (self.left_bound + self.gap_min + self.car_length):
-                        x, y = self.left_bound, lane_id*4.0 + 2.0
-                        target_lane = np.random.choice([1,2])
-                        car, driver = self.add_car(x, y, 0., 0., target_lane, 0.)
-                        driver.observe(self._cars,self._road)
-                        if hasattr(self, 'viewer') and self.viewer:
-                            car.setup_render(self.viewer)
-                            driver.setup_render(self.viewer)
+                for lane_id, min_x in enumerate(min_xs):
+                    if lane_id > 0:
+                        if min_x > (self.left_bound + self.gap_min + self.car_length):
+                            x, y = self.left_bound, lane_id*4.0 + 2.0
+                            target_lane = np.random.choice([1,2])
+                            car, driver = self.add_car(x, y, 0., 0., target_lane, 0.)
+                            driver.observe(self._cars,self._road)
+                            if hasattr(self, 'viewer') and self.viewer:
+                                car.setup_render(self.viewer)
+                                driver.setup_render(self.viewer)
 
             # remove cars that are out-of bound
             for car, driver in zip(self._cars[1:],self._drivers[1:]):
@@ -522,7 +523,7 @@ class HighWay(TrafficEnv):
                     from traffic.rendering import make_circle, _add_attrs
                     intention = extra_input['intentions'][car._idx-1]
                     start = car.position - self.get_camera_center()
-                    attrs = {"color":(intention[0],intention[1],intention[2])}
+                    attrs = {"color":(0.,intention[0],intention[1])}
                     circle = make_circle(radius=0.5, res=15, filled=True, center=start)
                     _add_attrs(circle, attrs)
                     self.viewer.add_onetime(circle) 

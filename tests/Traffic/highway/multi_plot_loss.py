@@ -10,41 +10,41 @@ max_itr = 2e4
 
 fields = [
             'evaluation/Average Returns',
-            'evaluation/Actions Max',
-            'evaluation/Actions Min',
+            # 'evaluation/Actions Max',
+            # 'evaluation/Actions Min',
             'evaluation/Num Success',
             # 'evaluation/Num Timeout',
             # 'evaluation/Num Fail',
-            'exploration/Average Returns',
+            # 'exploration/Average Returns',
             # 'exploration/Returns Max',
             # 'exploration/Returns Min',
             # 'exploration/Num Fail',
-            'exploration/Num Success',
-            'trainer/SUP LossAfter',
+            # 'exploration/Num Success',
+            # 'trainer/SUP LossAfter',
             'trainer/SUP AccuracyAfter',
-            'trainer/LossBefore',
-            'trainer/LossAfter',
-            'trainer/KLBefore',
-            'trainer/KL'
+            # 'trainer/LossBefore',
+            # 'trainer/LossAfter',
+            # 'trainer/KLBefore',
+            # 'trainer/KL'
             ]
 field_names = [
             'Eval Average Return',
-            'Eval Action Max',
-            'Eval Action Min',
+            # 'Eval Action Max',
+            # 'Eval Action Min',
             'Eval Success',
             # 'Eval Timeout',
             # 'Eval Fail',
-            'Expl Average Return',
+            # 'Expl Average Return',
             # 'Expl Max Return',
             # 'Expl Min Return',
             # 'Expl Fail',
-            'Expl Success',
-            'Sup LossAfter',
+            # 'Expl Success',
+            # 'Sup LossAfter',
             'Sup AccuracyAfter',
-            'LossBefore',
-            'LossAfter',
-            'KLBefore',
-            'KL',
+            # 'LossBefore',
+            # 'LossAfter',
+            # 'KLBefore',
+            # 'KL',
             ]
 itr_name = 'epoch'
 min_loss = [-1000]*100
@@ -55,30 +55,28 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'PPOlayer1hidden48ep5000',
-            'PPOGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
-            'PPOSuplayer1hidden48ep5000',
-            'PPOSupGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
-            'PPOSupSep2layer1hidden28ep5000',
-            'PPOSupSep2GNN2llayer1hidden18GSagenode18glayer3actreluep5000',
-            'PPOSupSep2LSTMGNN2layer1hidden28GSagenode18glayer3suphidden18suplayer1actreluep5000',
+            'PPOlayer1hidden48ep10000',
+            'PPOSupVanillalayer1hidden48ep10000',
+            'PPOSuplayer1hidden48ep10000',
+            'PPOSupSep2layer1hidden28ep10000',
+            'PPOSupSep2GNN2llayer1hidden18GSagenode18glayer3actreluep10000',
+            'PPOSupSep2LSTMGNN2layer1hidden28GSagenode18glayer3suphidden18suplayer1actreluep10000',
         ]
 policy_names = [
             'LSTMHidden48',
-            'GNN2Hidden24Node24',
+            'SupVanillaLSTMHidden48',
             'SupLSTMHidden48',
-            'SupGNN2Hidden24Node24',
             'SupSep2LSTMHidden28',
             'SupSep2GNN2Hidden18Node18',
             'SupSep2LSTMGNN2Hidden28Hidden18Node18',
         ]
 
-seeds = [0,1,2]
+seeds = [2]
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = ''
+extra_name = '2'
 
 pre_name = ''
 post_name = ''
