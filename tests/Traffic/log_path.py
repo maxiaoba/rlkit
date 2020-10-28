@@ -35,24 +35,25 @@ def get_traffic_path_information(paths, stat_prefix=''):
     statistics['Num Paths'] = len(paths)
     statistics[stat_prefix + 'Average Returns'] = get_average_returns(paths)
 
-    num_fail, num_outroad, num_success, num_timeout = 0, 0, 0, 0
+    num_collision, num_block, num_outroad, num_success, num_timeout = 0, 0, 0, 0, 0
     log_path = logger.get_snapshot_dir()
     for pid,path in enumerate(paths):
         event = path["env_infos"][-1]['event']
         if event == 'collision':
-            num_fail += 1
-            # np.save(osp.join(log_path,'failure'+'{}.npy'.format(num_fail)),path["actions"])
-            # assert False
+            num_collision += 1
+        elif event == 'block':
+            num_block +=1 1
         elif event == 'outroad':
             num_outroad += 1
         elif event == 'goal':
             num_success += 1
         else:
             num_timeout += 1
-    statistics['Num Fail'] = num_fail
+    statistics['Num Collision'] = num_collision
+    statistics['Num Block'] = num_block
     statistics['Num Outroad'] = num_outroad
-    statistics['Num Timeout'] = num_timeout
     statistics['Num Success'] = num_success
+    statistics['Num Timeout'] = num_timeout
 
     for info_key in ['agent_infos']:
         if info_key in paths[0]:

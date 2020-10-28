@@ -172,15 +172,15 @@ class EgoDriver(XYSeperateDriver):
                     min_back_distance = x - car.position[0]
 
         # safety
-        if min_front_distance < min_back_distance:
-            self.x_driver.p_des = np.minimum(self.x_driver.p_des, x+min_front_distance-self.min_x)
-        else:
-            self.x_driver.p_des = np.maximum(self.x_driver.p_des, x-min_back_distance+self.min_x)
-        # self.x_driver.p_des = np.minimum(self.x_driver.p_des, x+min_front_distance-self.min_x)
-        # if min_up_distance < min_low_distance:
-        #     self.y_driver.p_des = np.minimum(self.y_driver.p_des, y+min_up_distance-self.min_y)
+        # if min_front_distance < min_back_distance:
+        #     self.x_driver.p_des = np.minimum(self.x_driver.p_des, x+min_front_distance-self.min_x)
         # else:
-        #     self.y_driver.p_des = np.maximum(self.y_driver.p_des, y-min_low_distance+self.min_y)
+        #     self.x_driver.p_des = np.maximum(self.x_driver.p_des, x-min_back_distance+self.min_x)
+        self.x_driver.p_des = np.minimum(self.x_driver.p_des, x+min_front_distance-self.min_x)
+        if min_up_distance < min_low_distance:
+            self.y_driver.p_des = np.minimum(self.y_driver.p_des, y+min_up_distance-self.min_y)
+        else:
+            self.y_driver.p_des = np.maximum(self.y_driver.p_des, y-min_low_distance+self.min_y)
         self.x_driver.observe(cars, road)
         self.y_driver.observe(cars, road)
 
@@ -364,8 +364,7 @@ class HighWay(TrafficEnv):
         x, y = ego_car.position[0], ego_car.position[1]
         v_x, v_y = ego_car.velocity[0], ego_car.velocity[1]
 
-        # x_cost = -np.abs(self.x_goal-x)/(self.x_goal-self.x_start)
-        x_cost = 0.
+        x_cost = -np.abs(self.x_goal-x)/(self.x_goal-self.x_start)
         reward += self.x_cost*x_cost
 
         y_start = self.lane_start*4.0+2.0

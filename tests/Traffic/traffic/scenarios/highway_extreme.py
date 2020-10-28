@@ -172,7 +172,7 @@ class EgoDriver(XYSeperateDriver):
                     min_back_distance = x - car.position[0]
 
         # safety
-        if min_front_distance < min_back_distance:
+        if (min_front_distance < min_back_distance):
             self.x_driver.p_des = np.minimum(self.x_driver.p_des, x+min_front_distance-self.min_x)
         else:
             self.x_driver.p_des = np.maximum(self.x_driver.p_des, x-min_back_distance+self.min_x)
@@ -228,6 +228,7 @@ class HighWay(TrafficEnv):
         self.label_num = self.max_veh_num
 
         self._collision = False
+        self._block = False
         self._goal = False
         self._terminal = False
         self._intentions = []
@@ -271,6 +272,7 @@ class HighWay(TrafficEnv):
 
         self._goal = False
         self._collision = False
+        self._block = False
         self._terminal = False
         for i_update in range(self.num_updates):
             if i_update > 0:
@@ -280,10 +282,15 @@ class HighWay(TrafficEnv):
             [action.update(car, self.dt) for (car, action) in zip(self._cars, self._actions)]
 
             ego_car = self._cars[0]
-            for car in self._cars[1:]:
+            for car, driver in zip(self._cars[1:], self._drivers[1:]):
                 if ego_car.check_collision(car):
                     self._collision = True
                     return
+                if ego_car.position[1] > 4.0 \
+                   and (car.get_distance(ego_car,0) < 0) \
+                   and (driver.target_lane == 1):
+                   self._block = True
+                   return
 
             # if (ego_car.position[0] >= self.x_goal) \
             #     and (which_lane(ego_car) == self.lane_goal):
@@ -321,7 +328,7 @@ class HighWay(TrafficEnv):
                     self.remove_car(car, driver)
 
     def is_terminal(self):
-        return (self._collision or self._goal or self._terminal)
+        return (self._collision or self._block or self._goal or self._terminal)
 
     def get_info(self):
         info = {}
@@ -329,6 +336,8 @@ class HighWay(TrafficEnv):
 
         if self._collision:
             info['event']='collision'
+        elif self._block:
+            info['event']='block'
         elif self._goal:
             info['event']='goal'
         else:
@@ -378,6 +387,8 @@ class HighWay(TrafficEnv):
 
         if self._collision:
             reward -= self.collision_cost
+        elif self._block:
+            reward -= self.collision_cost
         elif self._goal:
             reward += self.goal_reward
         else:
@@ -415,6 +426,7 @@ class HighWay(TrafficEnv):
 
     def _reset(self):
         self._collision = False
+        self._block = False
         self._goal = False
         self._terminal = False
         self._intentions = []

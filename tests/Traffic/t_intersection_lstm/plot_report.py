@@ -66,9 +66,9 @@ plot_path = "./Data/"+exp_name
 # extra_name = 'Separated Inference'
 
 policies = [
-            'PPOGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
-            'PPOGNN2llayer1hidden26GCNnode26glayer3actreluep10000',
-            'PPOGNN2llayer1hidden26GATnode26glayer3actreluep10000',
+            # 'PPOGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
+            # 'PPOGNN2llayer1hidden26GCNnode26glayer3actreluep10000',
+            # 'PPOGNN2llayer1hidden26GATnode26glayer3actreluep10000',
             # 'PPOSupVanillaGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
             # 'PPOSupVanillaGNN2llayer1hidden26GCNnode26glayer3actreluep10000',
             # 'PPOSupVanillaGNN2llayer1hidden26GATnode26glayer3actreluep10000'
@@ -78,14 +78,14 @@ policies = [
             # 'PPOSupSep2GNN2llayer1hidden18GSagenode18glayer3actreluep5000',
             # 'PPOSupSep2GNN2llayer1hidden18GCNnode18glayer3actreluep10000',
             # 'PPOSupSep2GNN2llayer1hidden18GATnode18glayer3actreluep10000',
-            # 'PPOSupSep2LSTMGNN2layer1hidden28GSagenode18glayer3suphidden18suplayer1actreluep5000',
-            # 'PPOSupSep2LSTMGNN2layer1hidden28GCNnode18glayer3suphidden18suplayer1actreluep10000',
-            # 'PPOSupSep2LSTMGNN2layer1hidden28GATnode18glayer3suphidden18suplayer1actreluep10000',
+            'PPOSupSep2LSTMGNN2layer1hidden28GSagenode18glayer3suphidden18suplayer1actreluep5000',
+            'PPOSupSep2LSTMGNN2layer1hidden28GCNnode18glayer3suphidden18suplayer1actreluep10000',
+            'PPOSupSep2LSTMGNN2layer1hidden28GATnode18glayer3suphidden18suplayer1actreluep10000',
         ]
 policy_names = [
-            'PPO + STGSage',
-            'PPO + STGCN',
-            'PPO + STGAT',
+            # 'PPO + STGSage',
+            # 'PPO + STGCN',
+            # 'PPO + STGAT',
             # 'PPO + STGSage \nShared Inference + STGSage',
             # 'PPO + STGCN \nShared Inference + STGCN',
             # 'PPO + STGAT \nShared Inference + STGAT',
@@ -95,20 +95,20 @@ policy_names = [
             # 'PPO + STGSage \nSeparated Inference + STGSage',
             # 'PPO + STGCN \nSeparated Inference + STGCN',
             # 'PPO + STGAT \nSeparated Inference + STGAT',
-            # 'PPO + LSTM \nSeparated Inference + STGSage',
-            # 'PPO + LSTM \nSeparated Inference + STGSCN',
-            # 'PPO + LSTM \nSeparated Inference + STGSAT',
+            'PPO + LSTM \nSeparated Inference + STGage',
+            'PPO + LSTM \nSeparated Inference + STGCN',
+            'PPO + LSTM \nSeparated Inference + STGAT',
         ]
 colors = [
-        'C4',
+        # 'C4',
         # 'C5',
         # 'C6',
         # 'C7',
-        # 'C8',
+        'C8',
         'C9',
         'C10',
         ]
-extra_name = 'PPOGNN'
+extra_name = 'SupSepLSTMGNN'
 
 seeds = [0,1,2]
 pre_name = ''

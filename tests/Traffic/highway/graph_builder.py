@@ -74,18 +74,17 @@ def get_edge_index(obs):
         lane01_sort_index = sort_index[(lane0_sort_mask | lane1_sort_mask)]
         lane12_sort_index = sort_index[(lane1_sort_mask | lane2_sort_mask)]
 
-        lane0_edges = np.concatenate((np.expand_dims(np.concatenate((lane0_sort_index[:-1],lane0_sort_index[1:])),axis=0),
-                                np.expand_dims(np.concatenate((lane0_sort_index[1:],lane0_sort_index[:-1])),axis=0)),axis=0)
+
+        lane01_edges = np.concatenate((np.expand_dims(np.concatenate((np.zeros(len(lane1_sort_index)),lane1_sort_index)),axis=0),
+                                np.expand_dims(np.concatenate((lane1_sort_index,np.zeros(len(lane1_sort_index)))),axis=0)),axis=0)
         lane1_edges = np.concatenate((np.expand_dims(np.concatenate((lane1_sort_index[:-1],lane1_sort_index[1:])),axis=0),
                                 np.expand_dims(np.concatenate((lane1_sort_index[1:],lane1_sort_index[:-1])),axis=0)),axis=0)
         lane2_edges = np.concatenate((np.expand_dims(np.concatenate((lane2_sort_index[:-1],lane2_sort_index[1:])),axis=0),
                                 np.expand_dims(np.concatenate((lane2_sort_index[1:],lane2_sort_index[:-1])),axis=0)),axis=0)
-        lane01_edges = np.concatenate((np.expand_dims(np.concatenate((lane01_sort_index[:-1],lane01_sort_index[1:])),axis=0),
-                                np.expand_dims(np.concatenate((lane01_sort_index[1:],lane01_sort_index[:-1])),axis=0)),axis=0)
         lane12_edges = np.concatenate((np.expand_dims(np.concatenate((lane12_sort_index[:-1],lane12_sort_index[1:])),axis=0),
                                 np.expand_dims(np.concatenate((lane12_sort_index[1:],lane12_sort_index[:-1])),axis=0)),axis=0)
 
-        edges = np.concatenate((lane0_edges, lane1_edges, lane2_edges, lane01_edges, lane12_edges),axis=-1)+i*node_num
+        edges = np.concatenate((lane01_edges, lane1_edges, lane2_edges, lane12_edges),axis=-1)+i*node_num
         Edges[i,:,:edges.shape[1]] = edges
     return Edges
 

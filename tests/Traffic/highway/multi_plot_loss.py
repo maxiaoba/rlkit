@@ -10,8 +10,8 @@ max_itr = 2e4
 
 fields = [
             'evaluation/Average Returns',
-            # 'evaluation/Actions Max',
-            # 'evaluation/Actions Min',
+            'evaluation/Actions Max',
+            'evaluation/Actions Min',
             'evaluation/Num Success',
             # 'evaluation/Num Timeout',
             # 'evaluation/Num Fail',
@@ -29,8 +29,8 @@ fields = [
             ]
 field_names = [
             'Eval Average Return',
-            # 'Eval Action Max',
-            # 'Eval Action Min',
+            'Eval Action Max',
+            'Eval Action Min',
             'Eval Success',
             # 'Eval Timeout',
             # 'Eval Fail',
@@ -71,12 +71,12 @@ policy_names = [
             'SupSep2LSTMGNN2Hidden28Hidden18Node18',
         ]
 
-seeds = [2]
+seeds = [0,1,2]
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = '2'
+extra_name = ''
 
 pre_name = ''
 post_name = ''
