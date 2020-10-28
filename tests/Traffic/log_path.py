@@ -42,7 +42,7 @@ def get_traffic_path_information(paths, stat_prefix=''):
         if event == 'collision':
             num_collision += 1
         elif event == 'block':
-            num_block +=1 1
+            num_block += 1
         elif event == 'outroad':
             num_outroad += 1
         elif event == 'goal':
