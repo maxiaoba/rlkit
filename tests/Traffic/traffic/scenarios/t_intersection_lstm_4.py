@@ -592,7 +592,7 @@ class TIntersectionLSTM(TrafficEnv):
                     if valid_mask[start_indx] and valid_mask[end_indx]:
                         start = obs[start_indx,:2] - self.get_camera_center()
                         end = obs[end_indx,:2] - self.get_camera_center()
-                        attrs = {"color":(0.7,0.3,0.5),"linewidth":2.}
+                        attrs = {"color":(0.7,0.3,0.5),"linewidth":5.}
                         self.viewer.draw_line(start, end, **attrs)
 
 if __name__ == '__main__':

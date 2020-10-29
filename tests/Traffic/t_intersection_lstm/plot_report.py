@@ -1,7 +1,7 @@
 import csv
 import os.path
 import matplotlib 
-matplotlib.rcParams.update({'font.size': 15})
+matplotlib.rcParams.update({'font.size': 20})
 from matplotlib import pyplot as plt
 import numpy as np
 
@@ -30,85 +30,85 @@ exp_name = "t_intersection_lstm4noise0.05yld0.5ds0.1"
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
-# policies = [
-#             # 'PPOlayer1hidden48ep5000',
-#             # 'PPOSupVanillalayer1hidden48ep5000',
-#             # 'PPOSuplayer1hidden48ep5000',
-#             'PPOSupSep2layer1hidden28ep5000',
-#             # 'PPOGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
-#             # 'PPOSupVanillaGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
-#             # 'PPOSupGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
-#             'PPOSupSep2GNN2llayer1hidden18GSagenode18glayer3actreluep5000',
-#             'PPOSupSep2LSTMGNN2layer1hidden28GSagenode18glayer3suphidden18suplayer1actreluep5000',
-#         ]
-# policy_names = [
-#             # 'PPO + LSTM',
-#             # 'PPO + LSTM \nShared Inference + LSTM',
-#             # 'PPO + LSTM \nCoupled Inference + LSTM',
-#             'PPO + LSTM \nSeparated Inference + LSTM',
-#             # 'PPO + STGSage',
-#             # 'PPO + STGSage \nShared Inference + STGSage',
-#             # 'PPO + STGSage \nCoupled Inference + STGSage',
-#             'PPO + STGSage \nSeparated Inference + STGSage',
-#             'PPO + LSTM \nSeparated Inference + STGSage',
-#         ]
-# colors = [
-#         # 'C0',
-#         # 'C1',
-#         # 'C2',
-#         'C3',
-#         # 'C4',
-#         # 'C5',
-#         # 'C6',
-#         'C7',
-#         'C8',
-#         ]
-# extra_name = 'Separated Inference'
-
 policies = [
+            'PPOlayer1hidden48ep5000',
+            'PPOSupVanillalayer1hidden48ep5000',
+            'PPOSuplayer1hidden48ep5000',
+            'PPOSupSep2layer1hidden28ep5000',
             # 'PPOGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
-            # 'PPOGNN2llayer1hidden26GCNnode26glayer3actreluep10000',
-            # 'PPOGNN2llayer1hidden26GATnode26glayer3actreluep10000',
             # 'PPOSupVanillaGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
-            # 'PPOSupVanillaGNN2llayer1hidden26GCNnode26glayer3actreluep10000',
-            # 'PPOSupVanillaGNN2llayer1hidden26GATnode26glayer3actreluep10000'
             # 'PPOSupGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
-            # 'PPOSupGNN2llayer1hidden26GCNnode26glayer3actreluep10000',
-            # 'PPOSupGNN2llayer1hidden26GATnode26glayer3actreluep10000'
             # 'PPOSupSep2GNN2llayer1hidden18GSagenode18glayer3actreluep5000',
-            # 'PPOSupSep2GNN2llayer1hidden18GCNnode18glayer3actreluep10000',
-            # 'PPOSupSep2GNN2llayer1hidden18GATnode18glayer3actreluep10000',
-            'PPOSupSep2LSTMGNN2layer1hidden28GSagenode18glayer3suphidden18suplayer1actreluep5000',
-            'PPOSupSep2LSTMGNN2layer1hidden28GCNnode18glayer3suphidden18suplayer1actreluep10000',
-            'PPOSupSep2LSTMGNN2layer1hidden28GATnode18glayer3suphidden18suplayer1actreluep10000',
+            # 'PPOSupSep2LSTMGNN2layer1hidden28GSagenode18glayer3suphidden18suplayer1actreluep5000',
         ]
 policy_names = [
+            'PPO + LSTM',
+            'PPO + LSTM \nShared Inference + LSTM',
+            'PPO + LSTM \nCoupled Inference + LSTM',
+            'PPO + LSTM \nSeparated Inference + LSTM',
             # 'PPO + STGSage',
-            # 'PPO + STGCN',
-            # 'PPO + STGAT',
             # 'PPO + STGSage \nShared Inference + STGSage',
-            # 'PPO + STGCN \nShared Inference + STGCN',
-            # 'PPO + STGAT \nShared Inference + STGAT',
             # 'PPO + STGSage \nCoupled Inference + STGSage',
-            # 'PPO + STGCN \nCoupled Inference + STGCN',
-            # 'PPO + STGAT \nCoupled Inference + STGAT',
             # 'PPO + STGSage \nSeparated Inference + STGSage',
-            # 'PPO + STGCN \nSeparated Inference + STGCN',
-            # 'PPO + STGAT \nSeparated Inference + STGAT',
-            'PPO + LSTM \nSeparated Inference + STGage',
-            'PPO + LSTM \nSeparated Inference + STGCN',
-            'PPO + LSTM \nSeparated Inference + STGAT',
+            # 'PPO + LSTM \nSeparated Inference + STGSage',
         ]
 colors = [
+        'C0',
+        'C1',
+        'C2',
+        'C3',
         # 'C4',
         # 'C5',
         # 'C6',
         # 'C7',
-        'C8',
-        'C9',
-        'C10',
+        # 'C8',
         ]
-extra_name = 'SupSepLSTMGNN'
+extra_name = 'LSTM'
+
+# policies = [
+#             # 'PPOGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
+#             # 'PPOGNN2llayer1hidden26GCNnode26glayer3actreluep10000',
+#             # 'PPOGNN2llayer1hidden26GATnode26glayer3actreluep10000',
+#             # 'PPOSupVanillaGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
+#             # 'PPOSupVanillaGNN2llayer1hidden26GCNnode26glayer3actreluep10000',
+#             # 'PPOSupVanillaGNN2llayer1hidden26GATnode26glayer3actreluep10000'
+#             # 'PPOSupGNN2llayer1hidden24GSagenode24glayer3actreluep5000',
+#             # 'PPOSupGNN2llayer1hidden26GCNnode26glayer3actreluep10000',
+#             # 'PPOSupGNN2llayer1hidden26GATnode26glayer3actreluep10000'
+#             # 'PPOSupSep2GNN2llayer1hidden18GSagenode18glayer3actreluep5000',
+#             # 'PPOSupSep2GNN2llayer1hidden18GCNnode18glayer3actreluep10000',
+#             # 'PPOSupSep2GNN2llayer1hidden18GATnode18glayer3actreluep10000',
+#             'PPOSupSep2LSTMGNN2layer1hidden28GSagenode18glayer3suphidden18suplayer1actreluep5000',
+#             'PPOSupSep2LSTMGNN2layer1hidden28GCNnode18glayer3suphidden18suplayer1actreluep10000',
+#             'PPOSupSep2LSTMGNN2layer1hidden28GATnode18glayer3suphidden18suplayer1actreluep10000',
+#         ]
+# policy_names = [
+#             # 'PPO + STGSage',
+#             # 'PPO + STGCN',
+#             # 'PPO + STGAT',
+#             # 'PPO + STGSage \nShared Inference + STGSage',
+#             # 'PPO + STGCN \nShared Inference + STGCN',
+#             # 'PPO + STGAT \nShared Inference + STGAT',
+#             # 'PPO + STGSage \nCoupled Inference + STGSage',
+#             # 'PPO + STGCN \nCoupled Inference + STGCN',
+#             # 'PPO + STGAT \nCoupled Inference + STGAT',
+#             # 'PPO + STGSage \nSeparated Inference + STGSage',
+#             # 'PPO + STGCN \nSeparated Inference + STGCN',
+#             # 'PPO + STGAT \nSeparated Inference + STGAT',
+#             'PPO + LSTM \nSeparated Inference + STGage',
+#             'PPO + LSTM \nSeparated Inference + STGCN',
+#             'PPO + LSTM \nSeparated Inference + STGAT',
+#         ]
+# colors = [
+#         # 'C4',
+#         # 'C5',
+#         # 'C6',
+#         # 'C7',
+#         'C8',
+#         'C9',
+#         'C10',
+#         ]
+# extra_name = 'SupSepLSTMGNN'
 
 seeds = [0,1,2]
 pre_name = ''
@@ -116,7 +116,7 @@ post_name = ''
 
 plot_names = []
 
-fig = plt.figure(figsize=(20,5))
+fig = plt.figure(figsize=(10*len(fields),5))
 for fid,field in enumerate(fields):
     print(field)
     plt.subplot(1,len(fields),fid+1)

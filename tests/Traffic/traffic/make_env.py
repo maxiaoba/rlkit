@@ -32,6 +32,9 @@ def make_env(env_name, **kwargs):
 	elif env_name == 'highway_extreme':
 		from traffic.scenarios.highway_extreme import HighWay
 		env = HighWay(**kwargs)
+	elif env_name == 'highway_extreme2':
+		from traffic.scenarios.highway_extreme_2 import HighWay
+		env = HighWay(**kwargs)
 	else:
 		raise NotImplementedError
 	return env
