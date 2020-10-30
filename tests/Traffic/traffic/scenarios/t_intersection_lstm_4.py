@@ -13,6 +13,8 @@ from traffic.constants import *
 
 class YNYDriver(XYSeperateDriver):
     def __init__(self, yld=True, t1=1.0, t2=0., 
+                des_front_gap_difference = 0.1,
+                des_front_gap_interval = 0.3,
                 s_min=0., v_min=0.5,
                 dv_yld=-1.0, dv_nyld=1.0, 
                 ds_yld=1.0, ds_nyld=-1.0,
@@ -20,6 +22,8 @@ class YNYDriver(XYSeperateDriver):
         self.yld = yld
         self.t1 = t1
         self.t2 = t2
+        self.des_front_gap_difference = des_front_gap_difference
+        self.des_front_gap_interval = des_front_gap_interval
         self.s_min = s_min
         self.v_min = v_min
         self.dv_yld = dv_yld
@@ -52,13 +56,21 @@ class YNYDriver(XYSeperateDriver):
                 self.x_driver.set_v_des(self.v_des_0)
             else:
                 self.x_driver.set_v_des(v_front*1.5)
-                self.x_driver.s_des = self.s_des_0 * np.random.uniform(0.5,0.8)
+                # self.x_driver.s_des = self.s_des_0 * np.random.uniform(0.5,0.8)
+                # self.x_driver.s_des = self.s_des_0 * np.random.uniform(0.65-self.des_front_gap_interval/2.,
+                #                                                         0.65+self.des_front_gap_interval/2.)
+                self.x_driver.s_des = self.s_des_0 * np.random.uniform(0.6+self.des_front_gap_difference/2.-self.des_front_gap_interval/2.,
+                                                                        0.6+self.des_front_gap_difference/2.+self.des_front_gap_interval/2.)
         else:
             if v_front is None:
                 self.x_driver.set_v_des(self.v_des_0)
             else:
                 self.x_driver.set_v_des(v_front*1.5)
-                self.x_driver.s_des = self.s_des_0 * np.random.uniform(0.4,0.7)
+                # self.x_driver.s_des = self.s_des_0 * np.random.uniform(0.4,0.7)
+                # self.x_driver.s_des = self.s_des_0 * np.random.uniform(0.55-self.des_front_gap_interval/2.,
+                #                                                         0.55+self.des_front_gap_interval/2.)
+                self.x_driver.s_des = self.s_des_0 * np.random.uniform(0.6-self.des_front_gap_difference/2.-self.des_front_gap_interval/2.,
+                                                                        0.6-self.des_front_gap_difference/2.+self.des_front_gap_interval/2.)
         if  (ego_s < self.s_min) or (ego_t > self.t1)\
              or ((ego_vy <= self.v_min) and (ego_t > self.t2)): # normal drive
             self.x_driver.observe(cars[1:], road)
@@ -238,6 +250,8 @@ class TIntersectionLSTM(TrafficEnv):
                  max_veh_num = 12,
                  num_updates=1,
                  dt=0.1,
+                 des_front_gap_difference=0.1,
+                 des_front_gap_interval=0.3,
                  **kwargs):
 
         self.yld = yld
@@ -248,6 +262,8 @@ class TIntersectionLSTM(TrafficEnv):
         # we use target value instead of target change so system is Markovian
         self.rl_actions = list(itertools.product(vs_actions,t_actions))
         self.num_updates = num_updates
+        self.des_front_gap_difference = des_front_gap_difference
+        self.des_front_gap_interval = des_front_gap_interval
 
         self.desire_speed = desire_speed
         self.speed_cost = speed_cost
@@ -463,6 +479,8 @@ class TIntersectionLSTM(TrafficEnv):
                           max_rotation=0.,
                           expose_level=self.car_expose_level)
         driver = YNYDriver(idx=idx, car=car, dt=self.dt,
+                    des_front_gap_difference=self.des_front_gap_difference,
+                    des_front_gap_interval=self.des_front_gap_interval,
                     x_driver=IDMDriver(idx=idx, car=car, sigma=self.driver_sigma, s_des=self.s_des, s_min=self.s_min, axis=0, min_overlap=self.min_overlap, dt=self.dt), 
                     y_driver=PDDriver(idx=idx, car=car, sigma=0., axis=1, dt=self.dt)) 
         car.set_position(np.array([x, y]))

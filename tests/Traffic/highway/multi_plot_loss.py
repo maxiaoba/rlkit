@@ -10,16 +10,19 @@ max_itr = 2e4
 
 fields = [
             'evaluation/Average Returns',
-            'evaluation/Actions Max',
-            'evaluation/Actions Min',
+            # 'evaluation/Actions Max',
+            # 'evaluation/Actions Min',
+            'evaluation/Num Collision',
+            'evaluation/Num Block',
             'evaluation/Num Success',
             # 'evaluation/Num Timeout',
             # 'evaluation/Num Fail',
-            # 'exploration/Average Returns',
+            'exploration/Average Returns',
             # 'exploration/Returns Max',
             # 'exploration/Returns Min',
-            # 'exploration/Num Fail',
-            # 'exploration/Num Success',
+            'exploration/Num Collision',
+            'exploration/Num Block',
+            'exploration/Num Success',
             # 'trainer/SUP LossAfter',
             'trainer/SUP AccuracyAfter',
             # 'trainer/LossBefore',
@@ -29,16 +32,19 @@ fields = [
             ]
 field_names = [
             'Eval Average Return',
-            'Eval Action Max',
-            'Eval Action Min',
+            # 'Eval Action Max',
+            # 'Eval Action Min',
+            'Eval Collision',
+            'Eval Block',
             'Eval Success',
             # 'Eval Timeout',
             # 'Eval Fail',
-            # 'Expl Average Return',
+            'Expl Average Return',
             # 'Expl Max Return',
             # 'Expl Min Return',
-            # 'Expl Fail',
-            # 'Expl Success',
+            'Expl Collision',
+            'Expl Block',
+            'Expl Success',
             # 'Sup LossAfter',
             'Sup AccuracyAfter',
             # 'LossBefore',
@@ -49,7 +55,7 @@ field_names = [
 itr_name = 'epoch'
 min_loss = [-1000]*100
 max_loss = [1000]*100
-exp_name = "highwaynoise0.05ds0.1"
+exp_name = "highway_extremenoise0.05ds0.1"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
@@ -124,11 +130,11 @@ for fid,field in enumerate(fields):
                                 if itr > max_itr:
                                     break
                                 try:
-                                    if field == 'evaluation/Num Success':
+                                    if 'evaluation/Num ' in field:
                                         num_path = float(row[entry_dict['evaluation/Num Paths']])
                                         loss.append(np.clip(float(row[entry_dict[field]])/num_path,
                                                         min_loss[fid],max_loss[fid]))
-                                    elif field == 'exploration/Num Success':
+                                    elif 'exploration/Num ' in field:
                                         num_path = float(row[entry_dict['exploration/Num Paths']])
                                         loss.append(np.clip(float(row[entry_dict[field]])/num_path,
                                                         min_loss[fid],max_loss[fid]))
