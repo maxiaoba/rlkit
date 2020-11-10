@@ -98,6 +98,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='zero_sum')
     parser.add_argument('--log_dir', type=str, default='MADDPG')
+    parser.add_argument('--hidden', type=int, default=16)
     parser.add_argument('--oa', action='store_true', default=False) # online action
     parser.add_argument('--dq', action='store_true', default=False) # doube q
     parser.add_argument('--re', action='store_true', default=False) # random exploration
@@ -111,6 +112,7 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
+                +('hidden'+str(args.hidden))
                 +('oa' if args.oa else '')\
                 +('dq' if args.dq else '')\
                 +('re' if args.re else '')\
@@ -140,10 +142,10 @@ if __name__ == "__main__":
             double_q=args.dq,
         ),
         qf_kwargs=dict(
-            hidden_sizes=[16,16],
+            hidden_sizes=[args.hidden]*2,
         ),
         policy_kwargs=dict(
-            hidden_sizes=[16,16],
+            hidden_sizes=[args.hidden]*2,
         ),
         replay_buffer_size=int(1E6),
     )

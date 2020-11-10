@@ -9,6 +9,10 @@ itr_interval = 1
 max_itr = 100
 
 fields = [
+            # 'exploration/Actions 0 Max',
+            # 'exploration/Actions 0 Min',
+            'exploration/Actions 1 Max',
+            'exploration/Actions 1 Min',
             'evaluation/Actions 0 Mean',
             'evaluation/Actions 1 Mean',
             # 'trainer/Raw Cactor Loss 0',
@@ -17,6 +21,10 @@ fields = [
             'evaluation/Average Returns 1',
             ]
 field_names = [
+            # 'expl a0 max',
+            # 'expl a0 min',
+            'expl a1 max',
+            'expl a1 min',
             'a0',
             'a1',
             # 'cactor0_loss',
@@ -27,20 +35,23 @@ field_names = [
 use_abs = True
 plot_err = False
 itr_name = 'epoch'
-min_loss = [-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]
-max_loss = [np.inf,np.inf,np.inf,np.inf,np.inf]
+min_loss = [-np.inf]*100
+max_loss = [np.inf]*100
 exp_name = "max2"
 
 prepath = "./Data/"+exp_name
 
 policies = [
-            'MADDPG',
-            'MADDPGoa',
-            'MASAC',
-            'MASACoa',
-            'PRGGaussiank1ce',
-            'PRGGaussiank1oace',
-            'PRGGaussiank1tace',
+            # 'MADDPG',
+            # 'MADDPGoa',
+            'MADDPGoare',
+            # 'MASAC',
+            # 'MASACoa',
+            'MASACoare',
+            # 'PRGGaussiank1ce',
+            # 'PRGGaussiank1oace',
+            # 'PRGGaussiank1tace',
+            'PRGGaussiank1oacere'
         ]
 policy_names = policies
 seeds = [0,1,2,3,4]

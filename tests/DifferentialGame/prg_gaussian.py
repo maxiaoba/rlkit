@@ -103,6 +103,7 @@ if __name__ == "__main__":
     parser.add_argument('--gpu', action='store_true', default=False)
     parser.add_argument('--log_dir', type=str, default='PRGGaussian')
     parser.add_argument('--k', type=int, default=1)
+    parser.add_argument('--hidden', type=int, default=16)
     parser.add_argument('--oa', action='store_true', default=False) # online action
     parser.add_argument('--ta', action='store_true', default=False) # target action
     parser.add_argument('--ona', action='store_true', default=False) # online next action
@@ -119,6 +120,7 @@ if __name__ == "__main__":
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
                 +'k'+str(args.k)\
+                +('hidden'+str(args.hidden))
                 +('oa' if args.oa else '')\
                 +('ta' if args.ta else '')\
                 +('ona' if args.ona else '')\
@@ -155,13 +157,13 @@ if __name__ == "__main__":
             online_next_action=args.ona,
         ),
         qf_kwargs=dict(
-            hidden_sizes=[16,16],
+            hidden_sizes=[args.hidden]*2,
         ),
         cactor_kwargs=dict(
-            hidden_sizes=[16,16],
+            hidden_sizes=[args.hidden]*2,
         ),
         policy_kwargs=dict(
-            hidden_sizes=[16,16],
+            hidden_sizes=[args.hidden]*2,
         ),
         replay_buffer_size=int(1E6),
     )
