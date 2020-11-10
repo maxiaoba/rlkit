@@ -31,11 +31,18 @@ def experiment(variant):
         target_policy = copy.deepcopy(policy)
         eval_policy = policy
         from rlkit.exploration_strategies.base import PolicyWrappedWithExplorationStrategy
-        from rlkit.exploration_strategies.ou_strategy import OUStrategy
-        expl_policy = PolicyWrappedWithExplorationStrategy(
-            exploration_strategy=OUStrategy(action_space=expl_env.action_space),
-            policy=policy,
-        )
+        if variant['random_exploration']:
+            from rlkit.exploration_strategies.epsilon_greedy import EpsilonGreedy
+            expl_policy = PolicyWrappedWithExplorationStrategy(
+                exploration_strategy=EpsilonGreedy(expl_env.action_space, prob_random_action=1.0),
+                policy=policy,
+            )
+        else:
+            from rlkit.exploration_strategies.ou_strategy import OUStrategy
+            expl_policy = PolicyWrappedWithExplorationStrategy(
+                exploration_strategy=OUStrategy(action_space=expl_env.action_space),
+                policy=policy,
+            )
         
         qf_n.append(qf)
         policy_n.append(policy)
@@ -93,6 +100,7 @@ if __name__ == "__main__":
     parser.add_argument('--log_dir', type=str, default='MADDPG')
     parser.add_argument('--oa', action='store_true', default=False) # online action
     parser.add_argument('--dq', action='store_true', default=False) # doube q
+    parser.add_argument('--re', action='store_true', default=False) # random exploration
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -105,12 +113,14 @@ if __name__ == "__main__":
     main_dir = args.log_dir\
                 +('oa' if args.oa else '')\
                 +('dq' if args.dq else '')\
+                +('re' if args.re else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
         num_agent=2,
+        random_exploration=args.re,
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 100),
             num_eval_steps_per_epoch=100,

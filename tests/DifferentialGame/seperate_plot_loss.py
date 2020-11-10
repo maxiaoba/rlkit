@@ -29,7 +29,7 @@ plot_err = False
 itr_name = 'epoch'
 min_loss = [-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]
 max_loss = [np.inf,np.inf,np.inf,np.inf,np.inf]
-exp_name = "zero_sum"
+exp_name = "max2"
 
 prepath = "./Data/"+exp_name
 

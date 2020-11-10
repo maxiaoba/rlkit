@@ -6,10 +6,11 @@ from matplotlib import pyplot as plt
 import numpy as np
 import torch
 import argparse
+from rlkit.torch import pytorch_util as ptu
 # Logger Params
 parser = argparse.ArgumentParser()
-parser.add_argument('--exp_name', type=str, default='zero_sum')
-parser.add_argument('--log_dir', type=str, default='PRGGaussiank1online_action')
+parser.add_argument('--exp_name', type=str, default='max2')
+parser.add_argument('--log_dir', type=str, default='PRGGaussiank1oace')
 parser.add_argument('--seed', type=int, default=0)
 args = parser.parse_args()
 
@@ -38,7 +39,7 @@ q22net = data['trainer/qf2_n'][1]
 for i,x in enumerate(xs):
     for j,y in enumerate(ys):
         o_n = env.reset()
-        q_input = torch.tensor([float(o_n[0][0]),float(o_n[1][0]),x,y])[None,:]
+        q_input = torch.tensor([o_n[0][0],o_n[1][0],x,y]).float()[None,:]
         q11 = q11net(q_input)
         q12 = q12net(q_input)
         z11s[j,i] = q11[0]

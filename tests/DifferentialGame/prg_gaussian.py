@@ -41,7 +41,15 @@ def experiment(variant):
         target_policy = copy.deepcopy(policy)
         from rlkit.torch.policies.make_deterministic import MakeDeterministic
         eval_policy = MakeDeterministic(policy)
-        expl_policy = policy
+        from rlkit.exploration_strategies.base import PolicyWrappedWithExplorationStrategy
+        if variant['random_exploration']:
+            from rlkit.exploration_strategies.epsilon_greedy import EpsilonGreedy
+            expl_policy = PolicyWrappedWithExplorationStrategy(
+                exploration_strategy=EpsilonGreedy(expl_env.action_space, prob_random_action=1.0),
+                policy=policy,
+            )
+        else:
+            expl_policy = policy
         
         qf1_n.append(qf1)
         qf2_n.append(qf2)
@@ -99,6 +107,7 @@ if __name__ == "__main__":
     parser.add_argument('--ta', action='store_true', default=False) # target action
     parser.add_argument('--ona', action='store_true', default=False) # online next action
     parser.add_argument('--ce', action='store_true', default=False) # cactor entropy
+    parser.add_argument('--re', action='store_true', default=False) # random exploration
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -114,12 +123,14 @@ if __name__ == "__main__":
                 +('ta' if args.ta else '')\
                 +('ona' if args.ona else '')\
                 +('ce' if args.ce else '')\
+                +('re' if args.re else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
         num_agent=2,
+        random_exploration=args.re,
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 100),
             num_eval_steps_per_epoch=100,
