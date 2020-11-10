@@ -1,18 +1,6 @@
 import copy
-
-from rlkit.data_management.ma_env_replay_buffer import MAEnvReplayBuffer
-# from rlkit.envs.wrappers import NormalizedBoxEnv
-from rlkit.exploration_strategies.base import (
-    PolicyWrappedWithExplorationStrategy
-)
-from rlkit.exploration_strategies.ou_strategy import OUStrategy
 from rlkit.launchers.launcher_util import setup_logger
-from rlkit.samplers.data_collector.ma_path_collector import MAMdpPathCollector
-from rlkit.torch.networks import FlattenMlp
-from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy, MakeDeterministic
-from rlkit.torch.masac.masac import MASACTrainer
 import rlkit.torch.pytorch_util as ptu
-from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 from rlkit.core.ma_eval_util import get_generic_ma_path_information
 
 def experiment(variant):
@@ -23,15 +11,19 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
-    policy_n, eval_policy_n, qf1_n, target_qf1_n, qf2_n, target_qf2_n = \
-        [], [], [], [], [], []
+    policy_n, eval_policy_n, eval_policy_n, qf1_n, target_qf1_n, qf2_n, target_qf2_n = \
+        [], [], [], [], [], [], []
     for i in range(num_agent):
+        from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy
         policy = TanhGaussianPolicy(
             obs_dim=obs_dim,
             action_dim=action_dim,
             **variant['policy_kwargs']
         )
+        from rlkit.torch.policies.make_deterministic import MakeDeterministic
         eval_policy = MakeDeterministic(policy)
+        expl_policy = policy
+        from rlkit.torch.networks import FlattenMlp
         qf1 = FlattenMlp(
             input_size=(obs_dim*num_agent+action_dim*num_agent),
             output_size=1,
@@ -46,14 +38,20 @@ def experiment(variant):
         target_qf2 = copy.deepcopy(qf2)
         policy_n.append(policy)
         eval_policy_n.append(eval_policy)
+        expl_policy_n.append(expl_policy)
         qf1_n.append(qf1)
         target_qf1_n.append(target_qf1)
         qf2_n.append(qf2)
         target_qf2_n.append(target_qf2)
 
+    from rlkit.samplers.data_collector.ma_path_collector import MAMdpPathCollector
     eval_path_collector = MAMdpPathCollector(eval_env, eval_policy_n)
-    expl_path_collector = MAMdpPathCollector(expl_env, policy_n)
+    expl_path_collector = MAMdpPathCollector(expl_env, expl_policy_n)
+
+    from rlkit.data_management.ma_env_replay_buffer import MAEnvReplayBuffer
     replay_buffer = MAEnvReplayBuffer(variant['replay_buffer_size'], expl_env, num_agent=num_agent)
+
+    from rlkit.torch.masac.masac import MASACTrainer
     trainer = MASACTrainer(
         env = expl_env,
         qf1_n=qf1_n,
@@ -63,6 +61,8 @@ def experiment(variant):
         policy_n=policy_n,
         **variant['trainer_kwargs']
     )
+
+    from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
     algorithm = TorchBatchRLAlgorithm(
         trainer=trainer,
         exploration_env=expl_env,
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='zero_sum')
     parser.add_argument('--log_dir', type=str, default='MASAC')
-    parser.add_argument('--online_action', action='store_true', default=False)
+    parser.add_argument('--oa', action='store_true', default=False) # online action
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
-                +('online_action' if args.online_action else '')\
+                +('oa' if args.oa else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
@@ -115,13 +115,13 @@ if __name__ == "__main__":
             discount=0.99,
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
-            online_action=args.online_action,
+            online_action=args.oa,
         ),
         qf_kwargs=dict(
-            hidden_sizes=[64, 64],
+            hidden_sizes=[16,16],
         ),
         policy_kwargs=dict(
-            hidden_sizes=[64, 64],
+            hidden_sizes=[16,16],
         ),
         replay_buffer_size=int(1E6),
     )

@@ -55,7 +55,7 @@ field_names = [
 itr_name = 'epoch'
 min_loss = [-1000]*100
 max_loss = [1000]*100
-exp_name = "highway_extremenoise0.05ds0.1"
+exp_name = "highway_extreme2noise0.05ds0.1"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name

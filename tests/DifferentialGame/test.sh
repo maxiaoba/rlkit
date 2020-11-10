@@ -1,11 +1,13 @@
-for seed in 0 1 2 3 4
-# for seed in 5 6 7 8 9
+for seed in 0
 do
-	# python prg.py --online_action --exp_name zero_sum --seed $seed
-	# python prg_gaussian.py --online_action --centropy --exp_name zero_sum --seed $seed
-	# python prg_gaussian.py --online_action --exp_name zero_sum --seed $seed
-	# python prg_gaussian.py --online_action --exp_name cooperative --seed $seed
-	python prg.py --online_action --exp_name cooperative --seed $seed
-	python maddpg.py --online_action --exp_name cooperative --seed $seed
-	python masac.py --online_action --exp_name cooperative --seed $seed
+	for exp_name in zero_sum cooperative max2
+	do
+		python prg_gaussian.py --oa --ce --exp_name $exp_name --seed $seed
+		python maddpg.py --oa --exp_name $exp_name --seed $seed --epoch 5
+		python masac.py --oa --exp_name $exp_name --seed $seed --epoch 5
+		python prg_gaussian.py --ce --exp_name $exp_name --seed $seed
+		python maddpg.py --exp_name $exp_name --seed $seed --epoch 5
+		python masac.py --exp_name $exp_name --seed $seed --epoch 5
+		python prg_gaussian.py --ta --ce --exp_name $exp_name --seed $seed
+	done
 done

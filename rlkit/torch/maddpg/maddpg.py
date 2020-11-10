@@ -101,14 +101,16 @@ class MADDPGTrainer(TorchTrainer):
         whole_obs = obs_n.view(batch_size, -1)
         whole_actions = actions_n.view(batch_size, -1)
         whole_next_obs = next_obs_n.view(batch_size, -1)
-        if self.online_action:
-            online_actions_n = [self.policy_n[agent](obs_n[:,agent,:]).detach() for agent in range(num_agent)]
-            online_actions_n = torch.stack(online_actions_n) # num_agent x batch x a_dim
-            online_actions_n = online_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim     
 
-        next_target_actions_n = [self.target_policy_n[agent](next_obs_n[:,agent,:]).detach() for agent in range(num_agent)]
-        next_target_actions_n = torch.stack(next_target_actions_n) # num_agent x batch x a_dim
-        next_target_actions_n = next_target_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
+        with torch.no_grad():
+            if self.online_action:
+                online_actions_n = [self.policy_n[agent](obs_n[:,agent,:]) for agent in range(num_agent)]
+                online_actions_n = torch.stack(online_actions_n) # num_agent x batch x a_dim
+                online_actions_n = online_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim     
+
+            next_target_actions_n = [self.target_policy_n[agent](next_obs_n[:,agent,:]) for agent in range(num_agent)]
+            next_target_actions_n = torch.stack(next_target_actions_n) # num_agent x batch x a_dim
+            next_target_actions_n = next_target_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
 
         for agent in range(num_agent):
             """
@@ -140,24 +142,28 @@ class MADDPGTrainer(TorchTrainer):
                     pre_activation_policy_loss * self.policy_pre_activation_weight
             )
 
+            self.policy_optimizer_n[agent].zero_grad()
+            policy_loss.backward()
+            self.policy_optimizer_n[agent].step()
+
             """
             Critic operations.
             """
-            # speed up computation by not backpropping these gradients
-            next_target_q_values = self.target_qf_n[agent](
-                whole_next_obs,
-                next_target_actions_n.view(batch_size,-1),
-            )
-            if self.double_q:
-                next_target_q2_values = self.target_qf2_n[agent](
+            with torch.no_grad():
+                next_target_q_values = self.target_qf_n[agent](
                     whole_next_obs,
                     next_target_actions_n.view(batch_size,-1),
                 )
-                next_target_q_values = torch.min(next_target_q_values, next_target_q2_values)
+                if self.double_q:
+                    next_target_q2_values = self.target_qf2_n[agent](
+                        whole_next_obs,
+                        next_target_actions_n.view(batch_size,-1),
+                    )
+                    next_target_q_values = torch.min(next_target_q_values, next_target_q2_values)
 
-            q_target = self.reward_scale*rewards_n[:,agent,:] + (1. - terminals_n[:,agent,:]) * self.discount * next_target_q_values
-            q_target = q_target.detach()
-            q_target = torch.clamp(q_target, self.min_q_value, self.max_q_value)
+                q_target = self.reward_scale*rewards_n[:,agent,:] + (1. - terminals_n[:,agent,:]) * self.discount * next_target_q_values
+                q_target = torch.clamp(q_target, self.min_q_value, self.max_q_value)
+
             q_pred = self.qf_n[agent](whole_obs, whole_actions)
             bellman_errors = (q_pred - q_target) ** 2
             raw_qf_loss = self.qf_criterion(q_pred, q_target)
@@ -182,14 +188,6 @@ class MADDPGTrainer(TorchTrainer):
                     qf2_loss = raw_qf2_loss + reg_loss2
                 else:
                     qf2_loss = raw_qf2_loss
-
-            """
-            Update Networks
-            """
-
-            self.policy_optimizer_n[agent].zero_grad()
-            policy_loss.backward()
-            self.policy_optimizer_n[agent].step()
 
             self.qf_optimizer_n[agent].zero_grad()
             qf_loss.backward()

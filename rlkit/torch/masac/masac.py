@@ -111,14 +111,16 @@ class MASACTrainer(TorchTrainer):
         whole_obs = obs_n.view(batch_size, -1)
         whole_actions = actions_n.view(batch_size, -1)
         whole_next_obs = next_obs_n.view(batch_size, -1)
-        if self.online_action:
-            online_actions_n = [self.policy_n[agent](obs_n[:,agent,:]).detach() for agent in range(num_agent)]
-            online_actions_n = torch.stack(online_actions_n) # num_agent x batch x a_dim
-            online_actions_n = online_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim     
 
-        next_actions_n = [self.policy_n[agent](next_obs_n[:,agent,:]).detach() for agent in range(num_agent)]
-        next_actions_n = torch.stack(next_actions_n) # num_agent x batch x a_dim
-        next_actions_n = next_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
+        with torch.no_grad():
+            if self.online_action:
+                online_actions_n = [self.policy_n[agent](obs_n[:,agent,:]) for agent in range(num_agent)]
+                online_actions_n = torch.stack(online_actions_n) # num_agent x batch x a_dim
+                online_actions_n = online_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim     
+
+            next_actions_n = [self.policy_n[agent](next_obs_n[:,agent,:]) for agent in range(num_agent)]
+            next_actions_n = torch.stack(next_actions_n) # num_agent x batch x a_dim
+            next_actions_n = next_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
 
         for agent in range(num_agent):
             """
@@ -148,43 +150,40 @@ class MASACTrainer(TorchTrainer):
             min_q_output = torch.min(q1_output,q2_output)
             policy_loss = (alpha*log_pi - min_q_output).mean()
 
+            self.policy_optimizer_n[agent].zero_grad()
+            policy_loss.backward()
+            self.policy_optimizer_n[agent].step()
+
             """
             Critic operations.
             """
-            # speed up computation by not backpropping these gradients
-            new_actions, new_info = self.policy_n[agent](
-                next_obs_n[:,agent,:], return_info=True,
-            )
-            new_log_pi = new_info['log_prob']
-            new_actions = new_actions.detach()
-            new_log_pi = new_log_pi.detach()
-            next_current_actions = next_actions_n.clone()
-            next_current_actions[:,agent,:] = new_actions
-            next_target_q1_values = self.target_qf1_n[agent](
-                whole_next_obs,
-                next_current_actions.view(batch_size,-1),
-            )
-            next_target_q2_values = self.target_qf2_n[agent](
-                whole_next_obs,
-                next_current_actions.view(batch_size,-1),
-            )
-            next_target_min_q_values = torch.min(next_target_q1_values,next_target_q2_values)
-            next_target_q_values =  next_target_min_q_values - alpha * new_log_pi
-            q_target = self.reward_scale*rewards_n[:,agent,:] + (1. - terminals_n[:,agent,:]) * self.discount * next_target_q_values
-            q_target = q_target.detach()
-            q_target = torch.clamp(q_target, self.min_q_value, self.max_q_value)
+            with torch.no_grad():
+                new_actions, new_info = self.policy_n[agent](
+                    next_obs_n[:,agent,:], return_info=True,
+                )
+                new_log_pi = new_info['log_prob']
+                new_actions = new_actions
+                new_log_pi = new_log_pi
+                next_current_actions = next_actions_n.clone()
+                next_current_actions[:,agent,:] = new_actions
+                next_target_q1_values = self.target_qf1_n[agent](
+                    whole_next_obs,
+                    next_current_actions.view(batch_size,-1),
+                )
+                next_target_q2_values = self.target_qf2_n[agent](
+                    whole_next_obs,
+                    next_current_actions.view(batch_size,-1),
+                )
+                next_target_min_q_values = torch.min(next_target_q1_values,next_target_q2_values)
+                next_target_q_values =  next_target_min_q_values - alpha * new_log_pi
+                q_target = self.reward_scale*rewards_n[:,agent,:] + (1. - terminals_n[:,agent,:]) * self.discount * next_target_q_values
+                q_target = torch.clamp(q_target, self.min_q_value, self.max_q_value)
+
             q1_pred = self.qf1_n[agent](whole_obs, whole_actions)
             q2_pred = self.qf2_n[agent](whole_obs, whole_actions)
 
             qf1_loss = self.qf_criterion(q1_pred, q_target)
             qf2_loss = self.qf_criterion(q2_pred, q_target)
-            """
-            Update Networks
-            """
-
-            self.policy_optimizer_n[agent].zero_grad()
-            policy_loss.backward()
-            self.policy_optimizer_n[agent].step()
 
             self.qf1_optimizer_n[agent].zero_grad()
             qf1_loss.backward()

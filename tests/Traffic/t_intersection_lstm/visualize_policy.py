@@ -14,6 +14,7 @@ parser.add_argument('--plot_graph', action='store_true', default=False)
 parser.add_argument('--file', type=str, default='params')
 parser.add_argument('--epoch', type=int, default=None)
 parser.add_argument('--seed', type=int, default=0)
+parser.add_argument('--env_seed', type=int, default=0)
 args = parser.parse_args()
 
 pre_dir = './Data/'+args.exp_name+args.extra_name
@@ -28,6 +29,7 @@ data = torch.load(data_path,map_location='cpu')
 policy = data['trainer/policy']
 eval_policy = MakeDeterministic(policy)
 
+np.random.seed(args.env_seed)
 import sys
 from traffic.make_env import make_env
 import json
@@ -35,6 +37,8 @@ with open('{}/{}/seed{}/variant.json'.format(pre_dir,args.log_dir,args.seed)) as
   variant = json.load(f)
 env = make_env(args.exp_name,**variant['env_kwargs'])
 o = env.reset()
+env.render()
+pdb.set_trace()
 policy.reset()
 
 if args.plot_graph:
@@ -73,7 +77,7 @@ while True:
 	# print("o: ",o)
 	# print('r: ',r)
 	print(done)
-	pdb.set_trace()
+	# pdb.set_trace()
 	time.sleep(0.1)
 	if path_length > max_path_length or done:
 		print('c_r: ',c_r)

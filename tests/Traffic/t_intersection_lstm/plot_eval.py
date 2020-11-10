@@ -29,22 +29,35 @@ prepath = "./Data/"+exp_name+"/Eval"
 plot_path = "./Data/"+exp_name+"/Eval"
 
 # result_paths = [
-#                 'noise0.05yld0.2ds0.1df0.3epoch500',
-#                 'noise0.05yld0.4ds0.1df0.3epoch500',
-#                 'noise0.05yld0.6ds0.1df0.3epoch500',
-#                 'noise0.05yld0.8ds0.1df0.3epoch500',]
-# xlabel = 'P(conservative)'
+#                 'noise0.05yld0.2ds0.1dfd0.1dfi0.3epoch500',
+#                 'noise0.05yld0.4ds0.1dfd0.1dfi0.3epoch500',
+#                 'noise0.05yld0.6ds0.1dfd0.1dfi0.3epoch500',
+#                 'noise0.05yld0.8ds0.1dfd0.1dfi0.3epoch500',]
+# ylabels = ['Reletive Success Rate','Reletive Inference Accuracy']
+# xlabel = 'P(CONSERVATIVE)'
 # xs = [0.2,0.4,0.6,0.8]
 # extra_name = 'yld_drift'
 
 result_paths = [
-                'noise0.05yld0.5ds0.1df0.1epoch500',
-                'noise0.05yld0.5ds0.1df0.3epoch500',
-                'noise0.05yld0.5ds0.1df0.5epoch500',
+                'noise0.05yld0.5ds0.1dfd0.1dfi0.1epoch500',
+                'noise0.05yld0.5ds0.1dfd0.1dfi0.3epoch500',
+                'noise0.05yld0.5ds0.1dfd0.1dfi0.5epoch500',
                 ]
-xlabel = 'Front Gap Interval'
+ylabels = ['Reletive Success Rate','Reletive Inference Accuracy']
+xlabel = 'Front Gap Sample Interval'
 xs = [0.1,0.3,0.5]
-extra_name = 'frontgap_drift'
+extra_name = 'dfi_drift'
+
+# result_paths = [
+#                 'noise0.05yld0.5ds0.1dfd0.05dfi0.3epoch500',
+#                 'noise0.05yld0.5ds0.1dfd0.1dfi0.3epoch500',
+#                 'noise0.05yld0.5ds0.1dfd0.3dfi0.3epoch500',
+#                 'noise0.05yld0.5ds0.1dfd0.5dfi0.3epoch500',
+#                 ]
+# ylabels = ['Reletive Success Rate','Reletive Inference Accuracy']
+# xlabel = 'Front Gap Mean Difference'
+# xs = [0.05,0.1,0.3,0.5]
+# extra_name = 'dfd_drift'
 
 policies = [
             'PPOlayer1hidden48ep5000',
@@ -114,6 +127,15 @@ for result_path in result_paths:
 
 fig = plt.figure(figsize=(10*len(fields),5))
 plot_names = []
+avg_losses = {}
+for field in fields:
+    Base_Losses = []
+    for p in policies:
+        if np.sum(results[p][field]) == 0:
+            continue
+        Base_Losses.append(np.reshape(results[p][field],(len(xs),len(seeds))).transpose())
+    avg_losses[field] = np.mean(np.mean(Base_Losses, 0), 0)
+
 for fid,field in enumerate(fields):
     print(field)
     plt.subplot(1,len(fields),fid+1)
@@ -123,6 +145,10 @@ for fid,field in enumerate(fields):
     plot_names.append(extra_name+field_names[fid])
     for (policy_index,policy) in enumerate(policies):
         Losses = np.reshape(results[policy][field],(len(xs),len(seeds))).transpose()
+        Losses = Losses/avg_losses[field]
+        if np.sum(Losses) == 0:
+            continue
+
         # print(policy,field,Losses)
         y = np.mean(Losses,0)
         yerr = np.std(Losses,0)
@@ -136,12 +162,14 @@ for fid,field in enumerate(fields):
     # if fid == len(fields)-1:
     #     plt.legend(plts,legends, bbox_to_anchor=(1.01, 1), loc='upper left')
     plt.xlabel(xlabel)
-    plt.ylabel(field_names[fid]) 
+    plt.ylabel(ylabels[fid]) 
     # fig.savefig(plot_path+'/'+plot_names[fid]+'.pdf',bbox_inches='tight')
     # plt.close(fig)
 
 ax = plt.gca()
 handles, labels = ax.get_legend_handles_labels()
-fig.legend(handles, labels, bbox_to_anchor=(0.5, 1.1), loc='upper center', ncol=len(labels))
+# plt.legend(handles, labels, bbox_to_anchor=(1.01, 1), loc='upper left')
+# fig.legend(handles, labels, bbox_to_anchor=(0.5, 1.1), loc='upper center', ncol=len(labels))
+fig.legend(handles, labels, bbox_to_anchor=(0.5, 1.3), loc='upper center', ncol=4)
 fig.savefig(plot_path+'/'+extra_name+'.pdf',bbox_inches='tight')
 plt.close(fig)

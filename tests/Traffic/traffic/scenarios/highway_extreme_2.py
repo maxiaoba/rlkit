@@ -304,7 +304,7 @@ class HighWay(TrafficEnv):
                 return
 
             # add cars when there is enough space
-            if len(self._empty_indices) > 0:
+            if len(self._empty_indices) > 0: # TODO: bug here!
                 min_xs = [np.inf]*3
                 for car in self._cars:
                     lane_id = which_lane(car)
