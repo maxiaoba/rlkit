@@ -103,7 +103,7 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
-                +('hidden'+str(args.hidden))
+                +('hidden'+str(args.hidden))\
                 +('oa' if args.oa else '')\
                 +('re' if args.re else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\

@@ -120,7 +120,7 @@ if __name__ == "__main__":
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
                 +'k'+str(args.k)\
-                +('hidden'+str(args.hidden))
+                +('hidden'+str(args.hidden))\
                 +('oa' if args.oa else '')\
                 +('ta' if args.ta else '')\
                 +('ona' if args.ona else '')\
