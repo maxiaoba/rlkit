@@ -11,7 +11,7 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
-    policy_n, eval_policy_n, eval_policy_n, qf1_n, target_qf1_n, qf2_n, target_qf2_n = \
+    policy_n, eval_policy_n, expl_policy_n, qf1_n, target_qf1_n, qf2_n, target_qf2_n = \
         [], [], [], [], [], [], []
     for i in range(num_agent):
         from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy

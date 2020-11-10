@@ -29,27 +29,20 @@ plot_err = False
 itr_name = 'epoch'
 min_loss = [-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]
 max_loss = [np.inf,np.inf,np.inf,np.inf,np.inf]
-exp_name = "cooperative"
+exp_name = "zero_sum"
 
 prepath = "./Data/"+exp_name
 
 policies = [
-            # 'MADDPG',
-            'MADDPGonline_action',
-            # 'MASAC',
-            'MASAConline_action',
-            'PRGk1online_action',
-            'PRGGaussiank1online_action',
+            'MADDPG',
+            'MADDPGoa',
+            'MASAC',
+            'MASACoa',
+            'PRGGaussiank1ce',
+            'PRGGaussiank1oace',
+            'PRGGaussiank1tace',
         ]
-# policy_names = policies
-policy_names = [
-                # 'MADDPG',
-                'MADDPGonline',
-                # 'MASAC',
-                'MASAConline',
-                'PRGk1online',
-                'PRGGaussiank1online',
-            ]
+policy_names = policies
 seeds = [0,1,2,3,4]
 
 colors = []
