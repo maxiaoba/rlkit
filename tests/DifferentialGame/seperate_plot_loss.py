@@ -37,21 +37,12 @@ plot_err = False
 itr_name = 'epoch'
 min_loss = [-np.inf]*100
 max_loss = [np.inf]*100
-exp_name = "max2"
+exp_name = "zero_sum"
 
 prepath = "./Data/"+exp_name
 
 policies = [
-            # 'MADDPG',
-            # 'MADDPGoa',
-            'MADDPGoare',
-            # 'MASAC',
-            # 'MASACoa',
-            'MASACoare',
-            # 'PRGGaussiank1ce',
-            # 'PRGGaussiank1oace',
-            # 'PRGGaussiank1tace',
-            'PRGGaussiank1oacere'
+            'PRGGaussiank1hidden16oa'
         ]
 policy_names = policies
 seeds = [0,1,2,3,4]

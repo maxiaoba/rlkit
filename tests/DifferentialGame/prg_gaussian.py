@@ -1,4 +1,5 @@
 import copy
+import torch.nn as nn
 from rlkit.launchers.launcher_util import setup_logger
 import rlkit.torch.pytorch_util as ptu
 from rlkit.core.ma_eval_util import get_generic_ma_path_information
@@ -18,26 +19,36 @@ def experiment(variant):
         qf1 = FlattenMlp(
             input_size=(obs_dim*num_agent+action_dim*num_agent),
             output_size=1,
-            **variant['qf_kwargs']
+            hidden_sizes=[variant['qf_kwargs']['hidden_dim']]*2,
         )
         target_qf1 = copy.deepcopy(qf1)
         qf2 = FlattenMlp(
             input_size=(obs_dim*num_agent+action_dim*num_agent),
             output_size=1,
-            **variant['qf_kwargs']
+            hidden_sizes=[variant['qf_kwargs']['hidden_dim']]*2,
         )
         target_qf2 = copy.deepcopy(qf2)
+        from rlkit.torch.layers import SplitLayer
+        cactor = nn.Sequential(
+            nn.Linear((obs_dim*num_agent+action_dim*(num_agent-1)),variant['cactor_kwargs']['hidden_dim']),
+            nn.ReLU(),
+            nn.Linear(variant['cactor_kwargs']['hidden_dim'],variant['cactor_kwargs']['hidden_dim']),
+            nn.ReLU(),
+            SplitLayer(layers=[nn.Linear(variant['cactor_kwargs']['hidden_dim'],action_dim),
+                                nn.Linear(variant['cactor_kwargs']['hidden_dim'],action_dim)])
+            )
         from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy
-        cactor = TanhGaussianPolicy(
-            obs_dim=(obs_dim*num_agent+action_dim*(num_agent-1)),
-            action_dim=action_dim,
-            **variant['cactor_kwargs']
-        )
-        policy = TanhGaussianPolicy(
-            obs_dim=obs_dim,
-            action_dim=action_dim,
-            **variant['policy_kwargs']
-        )
+        cactor = TanhGaussianPolicy(module=cactor)
+
+        policy = nn.Sequential(
+            nn.Linear(obs_dim,variant['policy_kwargs']['hidden_dim']),
+            nn.ReLU(),
+            nn.Linear(variant['policy_kwargs']['hidden_dim'],variant['policy_kwargs']['hidden_dim']),
+            nn.ReLU(),
+            SplitLayer(layers=[nn.Linear(variant['policy_kwargs']['hidden_dim'],action_dim),
+                                nn.Linear(variant['policy_kwargs']['hidden_dim'],action_dim)])
+            )
+        policy = TanhGaussianPolicy(module=policy)
         target_policy = copy.deepcopy(policy)
         from rlkit.torch.policies.make_deterministic import MakeDeterministic
         eval_policy = MakeDeterministic(policy)
@@ -157,13 +168,13 @@ if __name__ == "__main__":
             online_next_action=args.ona,
         ),
         qf_kwargs=dict(
-            hidden_sizes=[args.hidden]*2,
+            hidden_dim=args.hidden,
         ),
         cactor_kwargs=dict(
-            hidden_sizes=[args.hidden]*2,
+            hidden_dim=args.hidden,
         ),
         policy_kwargs=dict(
-            hidden_sizes=[args.hidden]*2,
+            hidden_dim=args.hidden,
         ),
         replay_buffer_size=int(1E6),
     )

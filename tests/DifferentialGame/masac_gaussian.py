@@ -12,25 +12,22 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
-    qf_n, policy_n, target_qf_n, target_policy_n, eval_policy_n, expl_policy_n = \
-        [], [], [], [], [], []
-    qf2_n, target_qf2_n = [], []
+    policy_n, eval_policy_n, expl_policy_n, qf1_n, target_qf1_n, qf2_n, target_qf2_n = \
+        [], [], [], [], [], [], []
     for i in range(num_agent):
-        from rlkit.torch.networks import FlattenMlp
-        qf = FlattenMlp(
-            input_size=(obs_dim*num_agent+action_dim*num_agent),
-            output_size=1,
-            hidden_sizes=[variant['qf_kwargs']['hidden_dim']]*2,
-        )
-        target_qf = copy.deepcopy(qf)
-        from rlkit.torch.policies.deterministic_policies import TanhMlpPolicy
-        policy = TanhMlpPolicy(
-            input_size=obs_dim,
-            output_size=action_dim,
-            hidden_sizes=[variant['policy_kwargs']['hidden_dim']]*2,
-        )
-        target_policy = copy.deepcopy(policy)
-        eval_policy = policy
+        from rlkit.torch.layers import SplitLayer
+        policy = nn.Sequential(
+            nn.Linear(obs_dim,variant['policy_kwargs']['hidden_dim']),
+            nn.ReLU(),
+            nn.Linear(variant['policy_kwargs']['hidden_dim'],variant['policy_kwargs']['hidden_dim']),
+            nn.ReLU(),
+            SplitLayer(layers=[nn.Linear(variant['policy_kwargs']['hidden_dim'],action_dim),
+                                nn.Linear(variant['policy_kwargs']['hidden_dim'],action_dim)])
+            )
+        from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy
+        policy = TanhGaussianPolicy(module=policy)
+        from rlkit.torch.policies.make_deterministic import MakeDeterministic
+        eval_policy = MakeDeterministic(policy)
         from rlkit.exploration_strategies.base import PolicyWrappedWithExplorationStrategy
         if variant['random_exploration']:
             from rlkit.exploration_strategies.epsilon_greedy import EpsilonGreedy
@@ -39,27 +36,27 @@ def experiment(variant):
                 policy=policy,
             )
         else:
-            from rlkit.exploration_strategies.ou_strategy import OUStrategy
-            expl_policy = PolicyWrappedWithExplorationStrategy(
-                exploration_strategy=OUStrategy(action_space=expl_env.action_space),
-                policy=policy,
-            )
-        
-        qf_n.append(qf)
+            expl_policy = policy
+        from rlkit.torch.networks import FlattenMlp
+        qf1 = FlattenMlp(
+            input_size=(obs_dim*num_agent+action_dim*num_agent),
+            output_size=1,
+            hidden_sizes=[variant['qf_kwargs']['hidden_dim']]*2,
+        )
+        target_qf1 = copy.deepcopy(qf1)
+        qf2 = FlattenMlp(
+            input_size=(obs_dim*num_agent+action_dim*num_agent),
+            output_size=1,
+            hidden_sizes=[variant['qf_kwargs']['hidden_dim']]*2,
+        )
+        target_qf2 = copy.deepcopy(qf2)
         policy_n.append(policy)
-        target_qf_n.append(target_qf)
-        target_policy_n.append(target_policy)
         eval_policy_n.append(eval_policy)
         expl_policy_n.append(expl_policy)
-        if variant['trainer_kwargs']['double_q']:
-            qf2 = FlattenMlp(
-                input_size=(obs_dim*num_agent+action_dim*num_agent),
-                output_size=1,
-                hidden_sizes=[variant['qf_kwargs']['hidden_dim']]*2,
-            )
-            target_qf2 = copy.deepcopy(qf2)
-            qf2_n.append(qf2)
-            target_qf2_n.append(target_qf2)
+        qf1_n.append(qf1)
+        target_qf1_n.append(target_qf1)
+        qf2_n.append(qf2)
+        target_qf2_n.append(target_qf2)
 
     from rlkit.samplers.data_collector.ma_path_collector import MAMdpPathCollector
     eval_path_collector = MAMdpPathCollector(eval_env, eval_policy_n)
@@ -68,14 +65,14 @@ def experiment(variant):
     from rlkit.data_management.ma_env_replay_buffer import MAEnvReplayBuffer
     replay_buffer = MAEnvReplayBuffer(variant['replay_buffer_size'], expl_env, num_agent=num_agent)
 
-    from rlkit.torch.maddpg.maddpg import MADDPGTrainer
-    trainer = MADDPGTrainer(
-        qf_n=qf_n,
-        target_qf_n=target_qf_n,
+    from rlkit.torch.masac.masac import MASACTrainer
+    trainer = MASACTrainer(
+        env = expl_env,
+        qf1_n=qf1_n,
+        target_qf1_n=target_qf1_n,
+        qf2_n=qf2_n,
+        target_qf2_n=target_qf2_n,
         policy_n=policy_n,
-        target_policy_n=target_policy_n,
-        qf2_n = qf2_n,
-        target_qf2_n = target_qf2_n,
         **variant['trainer_kwargs']
     )
 
@@ -98,10 +95,9 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='zero_sum')
-    parser.add_argument('--log_dir', type=str, default='MADDPG')
+    parser.add_argument('--log_dir', type=str, default='MASACGaussian')
     parser.add_argument('--hidden', type=int, default=16)
     parser.add_argument('--oa', action='store_true', default=False) # online action
-    parser.add_argument('--dq', action='store_true', default=False) # doube q
     parser.add_argument('--re', action='store_true', default=False) # random exploration
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
@@ -115,7 +111,6 @@ if __name__ == "__main__":
     main_dir = args.log_dir\
                 +('hidden'+str(args.hidden))\
                 +('oa' if args.oa else '')\
-                +('dq' if args.dq else '')\
                 +('re' if args.re else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
@@ -140,7 +135,6 @@ if __name__ == "__main__":
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
             online_action=args.oa,
-            double_q=args.dq,
         ),
         qf_kwargs=dict(
             hidden_dim=args.hidden,

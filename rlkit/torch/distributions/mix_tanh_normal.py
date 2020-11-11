@@ -1,9 +1,10 @@
 import torch
-from torch.distributions import Distribution, Normal
+from torch.distributions import Distribution, Normal, Categorical, Independent
+from torch.distributions.mixture_same_family import MixtureSameFamily
 import rlkit.torch.pytorch_util as ptu
 
 
-class TanhNormal(Distribution):
+class MixTanhNormal(Distribution):
     """
     Represent distribution of X where
         X ~ tanh(Z)
@@ -11,19 +12,17 @@ class TanhNormal(Distribution):
 
     Note: this is not very numerically stable.
     """
-    def __init__(self, normal_mean, normal_std, epsilon=1e-6):
-        """
-        :param normal_mean: Mean of the normal distribution
-        :param normal_std: Std of the normal distribution
-        :param epsilon: Numerical stability epsilon when computing log-prob.
-        """
+    def __init__(self, weight, normal_mean, normal_std, epsilon=1e-6):
+        self.weight = weight
         self.normal_mean = normal_mean
         self.normal_std = normal_std
-        self.normal = Normal(normal_mean, normal_std)
+        self.mix = Categorical(logits=self.weight)
+        self.comp = Independent(Normal(normal_mean, normal_std),1)
+        self.gmm = MixtureSameFamily(self.mix, self.comp)
         self.epsilon = epsilon
 
     def sample_n(self, n, return_pre_tanh_value=False):
-        z = self.normal.sample_n(n)
+        z = self.gmm.sample_n(n)
         if return_pre_tanh_value:
             return torch.tanh(z), z
         else:
@@ -40,7 +39,7 @@ class TanhNormal(Distribution):
             pre_tanh_value = torch.log(
                 (1+value) / (1-value)
             ) / 2
-        return self.normal.log_prob(pre_tanh_value) - torch.log(
+        return self.gmm.log_prob(pre_tanh_value) - torch.log(
             1 - value * value + self.epsilon
         )
 
@@ -50,7 +49,7 @@ class TanhNormal(Distribution):
 
         See https://github.com/pytorch/pytorch/issues/4620 for discussion.
         """
-        z = self.normal.sample().detach()
+        z = self.gmm.sample().detach()
 
         if return_pretanh_value:
             return torch.tanh(z), z
@@ -61,16 +60,10 @@ class TanhNormal(Distribution):
         """
         Sampling in the reparameterization case.
         """
-        # z = (
-        #     self.normal_mean +
-        #     self.normal_std *
-        #     Normal(
-        #         ptu.zeros(self.normal_mean.size()),
-        #         ptu.ones(self.normal_std.size())
-        #     ).sample()
-        # )
-        # z.requires_grad_()
-        z = self.normal.rsample()
+        ind = torch.nn.functional.gumbel_softmax(self.weight,tau=1, hard=True)
+        # onehot batch x num_d
+        normal = Normal(self.normal_mean[ind.bool()],self.normal_std[ind.bool()])
+        z = normal.rsample()
 
         if return_pretanh_value:
             return torch.tanh(z), z
@@ -84,4 +77,4 @@ class TanhNormal(Distribution):
             torch.Tensor: entropy of the underlying normal distribution.
 
         """
-        return self.normal.entropy()
+        raise NotImplementedError
