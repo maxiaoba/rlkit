@@ -6,13 +6,13 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 itr_interval = 1
-max_itr = 100
+max_itr = 1000
 
 fields = [
             # 'exploration/Actions 0 Max',
             # 'exploration/Actions 0 Min',
-            'exploration/Actions 1 Max',
-            'exploration/Actions 1 Min',
+            # 'exploration/Actions 1 Max',
+            # 'exploration/Actions 1 Min',
             'evaluation/Actions 0 Mean',
             'evaluation/Actions 1 Mean',
             # 'trainer/Raw Cactor Loss 0',
@@ -23,8 +23,8 @@ fields = [
 field_names = [
             # 'expl a0 max',
             # 'expl a0 min',
-            'expl a1 max',
-            'expl a1 min',
+            # 'expl a1 max',
+            # 'expl a1 min',
             'a0',
             'a1',
             # 'cactor0_loss',
@@ -32,17 +32,21 @@ field_names = [
             'r0',
             'r1',
             ]
-use_abs = True
+use_abs = False
 plot_err = False
 itr_name = 'epoch'
 min_loss = [-np.inf]*100
 max_loss = [np.inf]*100
-exp_name = "zero_sum"
+exp_name = "max2"
 
 prepath = "./Data/"+exp_name
 
 policies = [
-            'PRGGaussiank1hidden16oa'
+            'MADDPGhidden32oa',
+            'MASACGaussianhidden32oa',
+            'MASACMixGaussianm2hidden32oa',
+            'PRGGaussiank1hidden32oace',
+            'PRGMixGaussiank1m2hidden32oace'
         ]
 policy_names = policies
 seeds = [0,1,2,3,4]

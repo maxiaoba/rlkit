@@ -6,54 +6,43 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 itr_interval = 1
-max_itr = 100
+max_itr = 1000
 
 fields = [
             'evaluation/Actions 0 Mean',
-            # 'evaluation/Actions 1 Mean',
-            # 'evaluation/Average Returns 0',
+            'evaluation/Actions 1 Mean',
+            'evaluation/Average Returns 0',
             ]
 field_names = [
-            'Average absolute action value'
+            'a0',
+            'a1',
+            'Eval Average Return'
             ]
-use_abs = True
-plot_err = False
+use_abs = False
+plot_err = True
 itr_name = 'epoch'
 min_loss = [-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]
 max_loss = [np.inf,np.inf,np.inf,np.inf,np.inf]
-exp_name = "zero_sum"
+exp_name = "max2"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'MADDPG',
-            'MADDPGonline_action',
-            'MASAC',
-            'MASAConline_action',
-            # 'PRGk1online_action',
-            # 'PRGGaussiank1online_action',
-            'PRGGaussiank1online_actioncentropy',
+            'MADDPGhidden32oa',
+            'MASACGaussianhidden32oa',
+            'MASACMixGaussianm2hidden32oa',
+            'PRGGaussiank1hidden32oace',
+            'PRGMixGaussiank1m2hidden32oace'
         ]
-# policy_names = policies
-policy_names = [
-                'MADDPG',
-                'MADDPGonline',
-                'MASAC',
-                'MASAConline',
-                'PRG'
-                # 'PRGk1online',
-                # 'PRGGaussiank1',
-                # 'PRGGaussiank1online',
-                # 'PRGGaussiank1onlinecentropy',
-            ]
+policy_names = policies
 seeds = [0,1,2,3,4]
 
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'show'
+extra_name = 'reward'
 
 pre_name = ''
 post_name = ''
@@ -125,10 +114,10 @@ for fid,(field,field_name) in enumerate(zip(fields,field_names)):
             #     plot, = plt.plot(itrs,y,colors[policy_index],label=policy_names[policy_index])
             # else:
             #     plot, = plt.plot(itrs,y,colors[policy_index])
-
-    plt.legend(plts,legends,loc='best')
-    # plt.legend()
     plt.xlabel('Itr')
-    plt.ylabel(field_name) 
+    plt.ylabel(field_name)
+    if field == fields[-1]:
+        plt.legend(plts,legends,loc='best')
+        # plt.legend() 
 fig.savefig(plot_path+'/'+plot_name+'.pdf')
 plt.close(fig)

@@ -9,7 +9,7 @@ import argparse
 # Logger Params
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='max2')
-parser.add_argument('--log_dir', type=str, default='PRGMixGaussiank1m2hidden32oa')
+parser.add_argument('--log_dir', type=str, default='PRGMixGaussiank1m2hidden32oace')
 parser.add_argument('--seed', type=int, default=0)
 args = parser.parse_args()
 
