@@ -9,26 +9,26 @@ itr_interval = 1
 max_itr = 1000
 
 fields = [
-            'exploration/Actions 0 Max',
-            'exploration/Actions 0 Min',
-            'evaluation/Actions 0 Max',
-            'evaluation/Actions 0 Min',
+            # 'exploration/Actions 0 Max',
+            # 'exploration/Actions 0 Min',
+            # 'evaluation/Actions 0 Max',
+            # 'evaluation/Actions 0 Min',
             # 'exploration/Returns 0 Max',
             # 'exploration/Returns 0 Min',
-            # 'evaluation/Average Returns 0',
+            'evaluation/Average Returns 0',
             # 'trainer/Q1 Predictions 0 Max',
             # 'trainer/Q1 Predictions 0 Min',
             # 'trainer/Q2 Predictions 0 Max',
             # 'trainer/Q2 Predictions 0 Min',
             ]
 field_names = [
-            'Expl a0 max',
-            'Expl a0 min',
-            'Eval a0 max',
-            'Eval a0 min',
+            # 'Expl a0 max',
+            # 'Expl a0 min',
+            # 'Eval a0 max',
+            # 'Eval a0 min',
             # 'Expl Return Max',
             # 'Expl Return Min',
-            # 'Eval Average Return',
+            'Eval Average Return',
             # 'Q1 max',
             # 'Q1 min',
             # 'Q2 max',
@@ -39,13 +39,13 @@ plot_err = True
 itr_name = 'epoch'
 min_loss = [-np.inf]*100
 max_loss = [np.inf]*100
-exp_name = "max2"
+exp_name = "zero_sum"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            # 'MADDPGhidden32oa',
+            'MADDPGhidden32oa',
             'MASACGaussianhidden32oa',
             'MASACMixGaussianm2hidden32oa',
             'PRGGaussiank1hidden32oace',

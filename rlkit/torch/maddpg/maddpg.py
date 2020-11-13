@@ -30,7 +30,7 @@ class MADDPGTrainer(TorchTrainer):
 
             policy_learning_rate=1e-4,
             qf_learning_rate=1e-3,
-            qf_weight_decay=0,
+            qf_weight_decay=0.,
             target_hard_update_period=1000,
             tau=1e-2,
             use_soft_update=False,

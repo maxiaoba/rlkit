@@ -39,7 +39,8 @@ class PRGTrainer(TorchTrainer):
 
             policy_learning_rate=1e-4,
             qf_learning_rate=1e-3,
-            qf_weight_decay=0,
+            qf_weight_decay=0.,
+            init_alpha=1.,
             cactor_learning_rate=1e-4,
             target_hard_update_period=1000,
             tau=1e-2,
@@ -106,6 +107,7 @@ class PRGTrainer(TorchTrainer):
                 lr=self.cactor_learning_rate,
             ) for i in range(len(self.cactor_n))]
 
+        self.init_alpha = init_alpha
         self.use_entropy_loss = use_entropy_loss
         self.use_cactor_entropy_loss = use_cactor_entropy_loss
         self.use_automatic_entropy_tuning = use_automatic_entropy_tuning
@@ -115,7 +117,7 @@ class PRGTrainer(TorchTrainer):
             else:
                 self.target_entropy = -np.prod(self.env.action_space.shape).item()  # heuristic value from Tuomas
             if self.use_entropy_loss:
-                self.log_alpha_n = [ptu.zeros(1, requires_grad=True) for i in range(len(self.policy_n))]
+                self.log_alpha_n = [ptu.zeros(self.init_alpha, requires_grad=True) for i in range(len(self.policy_n))]
                 self.alpha_optimizer_n = [
                     optimizer_class(
                         [self.log_alpha_n[i]],
@@ -123,7 +125,7 @@ class PRGTrainer(TorchTrainer):
                     ) for i in range(len(self.log_alpha_n))]
 
             if self.use_cactor_entropy_loss:
-                self.log_calpha_n = [ptu.zeros(1, requires_grad=True) for i in range(len(self.policy_n))]
+                self.log_calpha_n = [ptu.zeros(self.init_alpha, requires_grad=True) for i in range(len(self.policy_n))]
                 self.calpha_optimizer_n = [
                     optimizer_class(
                         [self.log_calpha_n[i]],
@@ -188,7 +190,7 @@ class PRGTrainer(TorchTrainer):
                     alpha = self.log_alpha_n[agent].exp()
                 else:
                     alpha_loss = torch.tensor(0.).to(ptu.device)
-                    alpha = torch.tensor(1.).to(ptu.device)
+                    alpha = torch.tensor(self.init_alpha).to(ptu.device)
                 entropy_loss = (alpha*log_pi).mean()
             else:
                 entropy_loss = torch.tensor(0.).to(ptu.device)
@@ -311,7 +313,7 @@ class PRGTrainer(TorchTrainer):
                     calpha = self.log_calpha_n[agent].exp()
                 else:
                     calpha_loss = torch.tensor(0.).to(ptu.device)
-                    calpha = torch.tensor(1.).to(ptu.device)
+                    calpha = torch.tensor(self.init_alpha).to(ptu.device)
                 cactor_entropy_loss = (calpha*cactor_log_pi).mean()
             else:
                 cactor_entropy_loss = torch.tensor(0.).to(ptu.device)
@@ -326,7 +328,7 @@ class PRGTrainer(TorchTrainer):
                     pre_activation_cactor_loss * self.pre_activation_weight +
                     cactor_entropy_loss
             )
-            
+
             self.cactor_optimizer_n[agent].zero_grad()
             cactor_loss.backward()
             self.cactor_optimizer_n[agent].step()

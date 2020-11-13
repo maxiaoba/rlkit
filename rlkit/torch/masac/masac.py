@@ -29,7 +29,8 @@ class MASACTrainer(TorchTrainer):
 
             policy_learning_rate=1e-4,
             qf_learning_rate=1e-3,
-            qf_weight_decay=0,
+            qf_weight_decay=0.,
+            init_alpha=1.,
             target_hard_update_period=1000,
             tau=1e-2,
             use_soft_update=False,
@@ -65,13 +66,14 @@ class MASACTrainer(TorchTrainer):
         self.min_q_value = min_q_value
         self.max_q_value = max_q_value
 
+        self.init_alpha = init_alpha
         self.use_automatic_entropy_tuning = use_automatic_entropy_tuning
         if self.use_automatic_entropy_tuning:
             if target_entropy:
                 self.target_entropy = target_entropy
             else:
                 self.target_entropy = -np.prod(self.env.action_space.shape).item()  # heuristic value from Tuomas
-            self.log_alpha_n = [ptu.zeros(1, requires_grad=True) for i in range(len(self.policy_n))]
+            self.log_alpha_n = [ptu.zeros(self.init_alpha, requires_grad=True) for i in range(len(self.policy_n))]
             self.alpha_optimizer_n = [
                 optimizer_class(
                     [self.log_alpha_n[i]],
@@ -138,7 +140,7 @@ class MASACTrainer(TorchTrainer):
                 alpha = self.log_alpha_n[agent].exp()
             else:
                 alpha_loss = 0
-                alpha = 1
+                alpha = torch.tensor(self.init_alpha).to(ptu.device)
 
             if self.online_action:
                 current_actions = online_actions_n.clone()
