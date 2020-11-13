@@ -208,6 +208,9 @@ class MASACTrainer(TorchTrainer):
                 self.eval_statistics['Alpha Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
                     alpha_loss
                 ))
+                self.eval_statistics['Alpha {}'.format(agent)] = np.mean(ptu.get_numpy(
+                    alpha
+                ))
                 self.eval_statistics.update(create_stats_ordered_dict(
                     'Q1 Predictions {}'.format(agent),
                     ptu.get_numpy(q1_pred),
