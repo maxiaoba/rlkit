@@ -99,6 +99,8 @@ if __name__ == "__main__":
     parser.add_argument('--hidden', type=int, default=16)
     parser.add_argument('--oa', action='store_true', default=False) # online action
     parser.add_argument('--re', action='store_true', default=False) # random exploration
+    parser.add_argument('--alpha', type=float, default=None) # init alpha
+    parser.add_argument('--fa', action='store_true', default=False) # fix alpha
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -112,6 +114,8 @@ if __name__ == "__main__":
                 +('hidden'+str(args.hidden))\
                 +('oa' if args.oa else '')\
                 +('re' if args.re else '')\
+                +(('alpha'+str(args.alpha)) if args.alpha else '')\
+                +('fa' if args.fa else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
@@ -135,6 +139,8 @@ if __name__ == "__main__":
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
             online_action=args.oa,
+            init_alpha=(args.alpha if args.alpha else 1.),
+            use_automatic_entropy_tuning=(not args.fa),
         ),
         qf_kwargs=dict(
             hidden_dim=args.hidden,

@@ -37,11 +37,27 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'MADDPGhidden32oa',
-            'MASACGaussianhidden32oa',
-            'MASACMixGaussianm2hidden32oa',
-            'PRGGaussiank1hidden32oace',
-            'PRGMixGaussiank1m2hidden32oace'
+            # 'MADDPGhidden32oa',
+            # 'MASACGaussianhidden32oa',
+            # 'MASACMixGaussianm2hidden32oa',
+            # 'PRGGaussiank1hidden32oace',
+            # 'PRGMixGaussiank1m2hidden32oace'
+            # 'MASACGaussianhidden32oaalpha3.0',
+            # 'MASACGaussianhidden32oaalpha3.0fa',
+            # 'MASACGaussianhidden32oaalpha5.0',
+            # 'MASACGaussianhidden32oaalpha5.0fa',
+            # 'MASACMixGaussianm2hidden32oaalpha3.0',
+            # 'MASACMixGaussianm2hidden32oaalpha3.0fa',
+            # 'MASACMixGaussianm2hidden32oaalpha5.0',
+            # 'MASACMixGaussianm2hidden32oaalpha5.0fa',
+            # 'PRGGaussiank1hidden32oacealpha3.0',
+            # 'PRGGaussiank1hidden32oacealpha3.0fa',
+            # 'PRGGaussiank1hidden32oacealpha5.0',
+            # 'PRGGaussiank1hidden32oacealpha5.0fa',
+            'PRGMixGaussiank1m2hidden32oacealpha3.0',
+            'PRGMixGaussiank1m2hidden32oacealpha3.0fa',
+            'PRGMixGaussiank1m2hidden32oacealpha5.0',
+            'PRGMixGaussiank1m2hidden32oacealpha5.0fa'
         ]
 policy_names = policies
 seeds = [0,1,2,3,4]
@@ -50,7 +66,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'reward'
+extra_name = 'prgmixgaussian_alpha_reward'
 
 pre_name = ''
 post_name = ''
