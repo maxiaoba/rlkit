@@ -140,7 +140,7 @@ class MASACTrainer(TorchTrainer):
                 self.alpha_optimizer_n[agent].step()
                 alpha = self.log_alpha_n[agent].exp()
             else:
-                alpha_loss = 0
+                alpha_loss = torch.tensor(0.).to(ptu.device)
                 alpha = torch.tensor(self.init_alpha).to(ptu.device)
 
             if self.online_action:
