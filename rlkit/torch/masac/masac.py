@@ -73,7 +73,8 @@ class MASACTrainer(TorchTrainer):
                 self.target_entropy = target_entropy
             else:
                 self.target_entropy = -np.prod(self.env.action_space.shape).item()  # heuristic value from Tuomas
-            self.log_alpha_n = [ptu.zeros(self.init_alpha, requires_grad=True) for i in range(len(self.policy_n))]
+            # self.log_alpha_n = [ptu.zeros(1, requires_grad=True) for i in range(len(self.policy_n))]
+            self.log_alpha_n = [ptu.tensor([self.init_alpha], requires_grad=True) for i in range(len(self.policy_n))]
             self.alpha_optimizer_n = [
                 optimizer_class(
                     [self.log_alpha_n[i]],
