@@ -39,7 +39,7 @@ class MixTanhNormal(Distribution):
             pre_tanh_value = torch.log(
                 (1+value) / (1-value)
             ) / 2
-        return self.gmm.log_prob(pre_tanh_value) - torch.log(
+        return self.gmm.log_prob(pre_tanh_value).unsqueeze(-1) - torch.log(
             1 - value * value + self.epsilon
         )
 

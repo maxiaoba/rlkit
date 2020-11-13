@@ -9,39 +9,45 @@ itr_interval = 1
 max_itr = 1000
 
 fields = [
-            'evaluation/Actions 0 Mean',
-            'evaluation/Actions 1 Mean',
-            'evaluation/Average Returns 0',
-            # 'trainer/Q1 Predictions 0 Max',
-            # 'trainer/Q1 Predictions 0 Min',
-            # 'trainer/Q2 Predictions 0 Max',
-            # 'trainer/Q2 Predictions 0 Min',
+            # 'evaluation/Actions 0 Mean',
+            # 'evaluation/Actions 1 Mean',
+            # 'exploration/Returns 0 Max',
+            # 'exploration/Returns 0 Min',
+            # 'evaluation/Average Returns 0',
+            'trainer/Q1 Predictions 0 Max',
+            'trainer/Q1 Predictions 0 Min',
+            'trainer/Q2 Predictions 0 Max',
+            'trainer/Q2 Predictions 0 Min',
             ]
 field_names = [
-            'a0',
-            'a1',
-            'Eval Average Return'
-            # 'Q1 max',
-            # 'Q1 min',
-            # 'Q2 max',
-            # 'Q2 min'
+            # 'a0',
+            # 'a1',
+            # 'Expl Return Max',
+            # 'Expl Return Min',
+            # 'Eval Average Return',
+            'Q1 max',
+            'Q1 min',
+            'Q2 max',
+            'Q2 min'
             ]
 use_abs = False
 plot_err = True
 itr_name = 'epoch'
-min_loss = [-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]
-max_loss = [np.inf,np.inf,np.inf,np.inf,np.inf]
+min_loss = [-np.inf]*100
+max_loss = [np.inf]*100
 exp_name = "max2"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'MADDPGhidden32oa',
+            # 'MADDPGhidden32oa',
             'MASACGaussianhidden32oa',
             'MASACMixGaussianm2hidden32oa',
             'PRGGaussiank1hidden32oace',
-            'PRGMixGaussiank1m2hidden32oace'
+            'PRGGaussiank1hidden32oaonace',
+            'PRGMixGaussiank1m2hidden32oace',
+            'PRGMixGaussiank1m2hidden32oaonace'
         ]
 policy_names = policies
 seeds = [0,1,2,3,4]
@@ -50,7 +56,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'reward'
+extra_name = 'q'
 
 pre_name = ''
 post_name = ''

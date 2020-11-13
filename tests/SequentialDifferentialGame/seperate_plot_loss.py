@@ -9,18 +9,26 @@ itr_interval = 1
 max_itr = 1000
 
 fields = [
-            'evaluation/Actions 0 Mean',
-            'evaluation/Actions 1 Mean',
-            'evaluation/Average Returns 0',
+            'exploration/Actions 0 Max',
+            'exploration/Actions 0 Min',
+            'evaluation/Actions 0 Max',
+            'evaluation/Actions 0 Min',
+            # 'exploration/Returns 0 Max',
+            # 'exploration/Returns 0 Min',
+            # 'evaluation/Average Returns 0',
             # 'trainer/Q1 Predictions 0 Max',
             # 'trainer/Q1 Predictions 0 Min',
             # 'trainer/Q2 Predictions 0 Max',
             # 'trainer/Q2 Predictions 0 Min',
             ]
 field_names = [
-            'a0',
-            'a1',
-            'Eval Average Return'
+            'Expl a0 max',
+            'Expl a0 min',
+            'Eval a0 max',
+            'Eval a0 min',
+            # 'Expl Return Max',
+            # 'Expl Return Min',
+            # 'Eval Average Return',
             # 'Q1 max',
             # 'Q1 min',
             # 'Q2 max',
@@ -29,19 +37,21 @@ field_names = [
 use_abs = False
 plot_err = True
 itr_name = 'epoch'
-min_loss = [-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]
-max_loss = [np.inf,np.inf,np.inf,np.inf,np.inf]
+min_loss = [-np.inf]*100
+max_loss = [np.inf]*100
 exp_name = "max2"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'MADDPGhidden32oa',
+            # 'MADDPGhidden32oa',
             'MASACGaussianhidden32oa',
             'MASACMixGaussianm2hidden32oa',
             'PRGGaussiank1hidden32oace',
-            'PRGMixGaussiank1m2hidden32oace'
+            'PRGGaussiank1hidden32oaonace',
+            'PRGMixGaussiank1m2hidden32oace',
+            'PRGMixGaussiank1m2hidden32oaonace'
         ]
 policy_names = policies
 seeds = [0,1,2,3,4]
@@ -50,24 +60,12 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'reward'
-
 pre_name = ''
 post_name = ''
 
-plot_name = extra_name
-
-fig = plt.figure()
 for fid,(field,field_name) in enumerate(zip(fields,field_names)):
-    print(field)
-    plt.subplot(len(fields),1,fid+1)
-    legends = []
-    plts = []
     for (policy_index,policy) in enumerate(policies):
         policy_path = pre_name+policy+post_name
-        Itrs = []
-        Losses = []
-        min_itr = np.inf
         for trial in seeds:
             file_path = prepath+'/'+policy_path+'/'+'seed'+str(trial)+'/progress.csv'
             print(file_path)
@@ -100,32 +98,11 @@ for fid,(field,field_name) in enumerate(zip(fields,field_names)):
                                 loss = np.mean(loss)
                                 losses.append(loss)
                                 loss = []
-                    if len(losses) < min_itr:
-                        min_itr = len(losses)
-            Losses.append(losses)
-        Losses = [losses[:min_itr] for losses in Losses]
-        itrs = itrs[:min_itr]
-        Losses = np.array(Losses)
-        if use_abs:
-            Losses = np.abs(Losses)
-        print(Losses.shape)
-        y = np.mean(Losses,0)
-        yerr = np.std(Losses,0)
-        plot, = plt.plot(itrs,y,colors[policy_index])
-        if plot_err:
-            plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
-                                facecolor=colors[policy_index],alpha=0.3)
-        plts.append(plot)
-        legends.append(policy_names[policy_index])
-            # y = np.array(losses)
-            # if trial == 0:
-            #     plot, = plt.plot(itrs,y,colors[policy_index],label=policy_names[policy_index])
-            # else:
-            #     plot, = plt.plot(itrs,y,colors[policy_index])
-    plt.xlabel('Itr')
-    plt.ylabel(field_name)
-    if field == fields[-1]:
-        plt.legend(plts,legends,loc='best')
-        # plt.legend() 
-fig.savefig(plot_path+'/'+plot_name+'.pdf')
-plt.close(fig)
+                y = np.array(losses)
+                fig = plt.figure()
+                plot, = plt.plot(itrs,y,colors[policy_index])
+                plt.xlabel('Itr')
+                plt.ylabel(field_name) 
+                plot_path = prepath+'/'+policy_path+'/'+'seed'+str(trial)
+                fig.savefig(plot_path+'/'+field_name+'.png')
+                plt.close(fig)
