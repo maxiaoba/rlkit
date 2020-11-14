@@ -7,8 +7,8 @@ from rlkit.core.ma_eval_util import get_generic_ma_path_information
 def experiment(variant):
     num_agent = variant['num_agent']
     from sequential_differential_game import SequentialDifferentialGame
-    expl_env = SequentialDifferentialGame(game_name=args.exp_name)
-    eval_env = SequentialDifferentialGame(game_name=args.exp_name)
+    expl_env = SequentialDifferentialGame(**variant['env_kwargs'])
+    eval_env = SequentialDifferentialGame(**variant['env_kwargs'])
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
@@ -111,6 +111,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='zero_sum')
+    parser.add_argument('--ar', type=float, default=10.) # action range
     parser.add_argument('--gpu', action='store_true', default=False)
     parser.add_argument('--log_dir', type=str, default='PRGGaussian')
     parser.add_argument('--k', type=int, default=1)
@@ -130,7 +131,7 @@ if __name__ == "__main__":
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
-    pre_dir = './Data/'+args.exp_name
+    pre_dir = './Data/'+args.exp_name+'ar'+str(args.ar)
     main_dir = args.log_dir\
                 +'k'+str(args.k)\
                 +('hidden'+str(args.hidden))\
@@ -148,6 +149,10 @@ if __name__ == "__main__":
     variant = dict(
         num_agent=2,
         random_exploration=args.re,
+        env_kwargs=dict(
+            game_name=args.exp_name, 
+            action_range=args.ar,
+        ),
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 1000),
             num_eval_steps_per_epoch=500,

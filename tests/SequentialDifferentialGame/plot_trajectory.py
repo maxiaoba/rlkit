@@ -38,23 +38,24 @@ if args.eval:
         p2 = MakeDeterministic(data['trainer/trained_policy_n'][1])
 
 plt.figure()
-for _ in range(args.num):
-    o_n = env.reset()
-    xs = [o_n[0][0]]
-    ys = [o_n[0][1]]
-    obs1 = torch.tensor(o_n[0]).float()
-    obs2 = torch.tensor(o_n[1]).float()
-    for i in range(5):
-        a1, _ = p1.get_action(obs1)
-        a2, _ = p2.get_action(obs2)
-        o_n, r_n, done, info = env.step([a1,a2])
-        xs.append(o_n[0][0])
-        ys.append(o_n[0][1])
+with torch.no_grad():
+    for _ in range(args.num):
+        o_n = env.reset()
+        xs = [o_n[0][0]]
+        ys = [o_n[0][1]]
         obs1 = torch.tensor(o_n[0]).float()
         obs2 = torch.tensor(o_n[1]).float()
-    plt.plot(xs, ys,'o-')
-    plt.plot(xs[0],ys[0],'o',color='green')
-    plt.plot(xs[-1],ys[-1],'o',color='black')
+        for i in range(5):
+            a1, _ = p1.get_action(obs1)
+            a2, _ = p2.get_action(obs2)
+            o_n, r_n, done, info = env.step([a1,a2])
+            xs.append(o_n[0][0])
+            ys.append(o_n[0][1])
+            obs1 = torch.tensor(o_n[0]).float()
+            obs2 = torch.tensor(o_n[1]).float()
+        plt.plot(xs, ys,'o-')
+        plt.plot(xs[0],ys[0],'o',color='green')
+        plt.plot(xs[-1],ys[-1],'o',color='black')
 
 plt.gca().set_aspect('equal', 'box')
 plt.xlim(-1,1)

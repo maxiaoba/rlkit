@@ -16,8 +16,8 @@ args = parser.parse_args()
 pre_path = './Data/'+args.exp_name+'/'+args.log_dir
 plot_file = pre_path+'/'+'seed'+str(args.seed)+'/actor.png'
 
-from differential_game import DifferentialGame
-env = DifferentialGame(game_name=args.exp_name)
+from sequential_differential_game import SequentialDifferentialGame
+env = SequentialDifferentialGame(game_name=args.exp_name)
 
 a1s = np.linspace(-1,1,100)
 a2s = np.linspace(-1,1,100)
@@ -30,19 +30,20 @@ data = torch.load(d_path,map_location='cpu')
 p1 = data['trainer/trained_policy_n'][0]
 p2 = data['trainer/trained_policy_n'][1]
 
-for a1 in a1s:
-    o_n = env.reset()
-    obs = torch.tensor([o_n[0]]).float()
-    action = torch.tensor([[a1]])
-    logprob1 = p1.log_prob(obs,action)[0].item()
-    logprobs1.append(logprob1)
-    
-for a2 in a2s:
-    o_n = env.reset()
-    obs = torch.tensor([o_n[1]]).float()
-    action = torch.tensor([[a2]])
-    logprob2 = p2.log_prob(obs,action)[0].item()
-    logprobs2.append(logprob2)
+with torch.no_grad():
+    for a1 in a1s:
+        o_n = env.reset()
+        obs = torch.tensor([o_n[0]]).float()
+        action = torch.tensor([[a1]])
+        logprob1 = p1.log_prob(obs,action)[0].item()
+        logprobs1.append(logprob1)
+        
+    for a2 in a2s:
+        o_n = env.reset()
+        obs = torch.tensor([o_n[1]]).float()
+        action = torch.tensor([[a2]])
+        logprob2 = p2.log_prob(obs,action)[0].item()
+        logprobs2.append(logprob2)
 
 plt.figure()
 plt.subplot(1,2,1)

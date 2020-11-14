@@ -16,8 +16,8 @@ args = parser.parse_args()
 pre_path = './Data/'+args.exp_name+'/'+args.log_dir
 plot_file = pre_path+'/'+'seed'+str(args.seed)+'/cactor.png'
 
-from differential_game import DifferentialGame
-env = DifferentialGame(game_name=args.exp_name)
+from sequential_differential_game import SequentialDifferentialGame
+env = SequentialDifferentialGame(game_name=args.exp_name)
 
 a1s = np.linspace(-1,1,100)
 a2s = np.linspace(-1,1,100)
@@ -33,17 +33,18 @@ from rlkit.torch.policies.make_deterministic import MakeDeterministic
 c1net = MakeDeterministic(c1net)
 c2net = MakeDeterministic(c2net)
 
-for a2 in a2s:
-    o_n = env.reset()
-    c1_input = torch.tensor([o_n[0][0],o_n[1][0],a2]).float()
-    c1, _ = c1net.get_action(c1_input)
-    c1s.append(c1[0])
-    
-for a1 in a1s:
-    o_n = env.reset()
-    c2_input = torch.tensor([o_n[0][0],o_n[1][0],a1]).float()
-    c2, _ = c2net.get_action(c2_input)
-    c2s.append(c2[0])
+with torch.no_grad():
+	for a2 in a2s:
+	    o_n = env.reset()
+	    c1_input = torch.tensor([*o_n[0],*o_n[1],a2]).float()
+	    c1, _ = c1net.get_action(c1_input)
+	    c1s.append(c1[0])
+	    
+	for a1 in a1s:
+	    o_n = env.reset()
+	    c2_input = torch.tensor([*o_n[0],*o_n[1],a1]).float()
+	    c2, _ = c2net.get_action(c2_input)
+	    c2s.append(c2[0])
 
 plt.figure()
 plt.subplot(1,2,1)
