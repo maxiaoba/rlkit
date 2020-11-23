@@ -6,7 +6,8 @@ import matplotlib
 matplotlib.rcParams.update({'font.family': 'serif'})
 import matplotlib.pyplot as plt
 
-from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy, MakeDeterministic
+from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy
+from rlkit.torch.policies.make_deterministic import MakeDeterministic
 from rlkit.torch.policies.gumbel_softmax_policy import GumbelSoftmaxMlpPolicy
 from rlkit.policies.argmax import ArgmaxDiscretePolicy
 
@@ -27,26 +28,16 @@ print('groups: ',groups)
 
 seeds = [0,1,2]
 P_paths = [
-            'MADDPG',
-            # 'MADDPGonline_action',
-            'MASAC',
-            # 'MASAConline_action',
-            # 'PRGk1',
-            # 'PRGk1online_action',
-            # 'PRGGaussiank1',
-            # 'PRGGaussiank1online_action',
-            'PRGGaussiank1online_actioncentropy'
+            'MADDPGlayer2hidden64oa',
+            'MASACGaussianlayer2hidden64oa',
+            'PRGGaussiank1hidden64oaonacedcigdnapna',
+            'PRGGaussiank1hidden64oaonacealpha3.0fadcigdnapna',
             ]
 policy_names = [
                 'MADDPG',
-                # 'MADDPGonline',
                 'MASAC',
-                # 'MASAConline',
-                # 'PRGk1',
-                # 'PRGk1online',
-                # 'PRGGaussiank1',
-                # 'PRGGaussiank1online',
-                'PRGGaussiank1onlinecentropy'
+                'PRG',
+                'PRGalpha3.0fa',
             ]
 
 extra_name = args.extra_name
@@ -78,7 +69,7 @@ with open(log_dir+'/'+csv_name, mode='w') as csv_file:
     for p1id in range(len(P_paths)):
         for p2id in range(len(P_paths)):
             fieldnames1.append('p1'+str(p1id)+'p2'+str(p2id)+'_1')
-            fieldnames1.append('p1'+str(p1id)+'p2'+str(p2id)+'_2')
+            fieldnames2.append('p1'+str(p1id)+'p2'+str(p2id)+'_2')
 
     writer = csv.DictWriter(csv_file, fieldnames=fieldnames0+fieldnames1+fieldnames2)
     writer.writeheader()

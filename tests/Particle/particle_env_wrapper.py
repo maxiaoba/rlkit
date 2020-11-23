@@ -1,7 +1,7 @@
 import numpy as np
 from gym.spaces import Box
 from gym.spaces import Discrete
-
+import copy
 from rlkit.envs.wrappers import ProxyEnv
 
 class ParticleEnv(ProxyEnv):
@@ -24,6 +24,7 @@ class ParticleEnv(ProxyEnv):
         self.obs_dim = obs_dim
 
     def step(self, action_n):
+        action_n = copy.deepcopy(action_n)
         obs_n_list, reward_n, done_n, info_n = self._wrapped_env.step(action_n)
         obs_n = self.convert_obs(obs_n_list)
         return obs_n, np.array(reward_n), np.array(done_n), {}

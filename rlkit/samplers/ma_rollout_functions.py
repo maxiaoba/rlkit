@@ -45,7 +45,9 @@ def marollout(
             a_n.append(a)
             for key in agent_info.keys():
                 agent_info_n[key+' '+str(i)] = agent_info[key]
+        # print('a_n before: ',a_n)
         next_o_n, r_n, d_n, env_info = env.step(a_n)
+        # print('a_n after: ',a_n)
         observations.append(o_n)
         rewards.append(r_n)
         terminals.append(d_n)

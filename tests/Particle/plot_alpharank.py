@@ -13,26 +13,16 @@ parser.add_argument('--extra_name', type=str, default='')
 args = parser.parse_args()
 
 P_paths = [
-            'MADDPG',
-            # 'MADDPGonline_action',
-            'MASAC',
-            # 'MASAConline_action',
-            # 'PRGk1',
-            # 'PRGk1online_action',
-            # 'PRGGaussiank1',
-            # 'PRGGaussiank1online_action',
-            'PRGGaussiank1online_actioncentropy'
+            'MADDPGlayer2hidden64oa',
+            'MASACGaussianlayer2hidden64oa',
+            'PRGGaussiank1hidden64oaonacedcigdnapna',
+            'PRGGaussiank1hidden64oaonacealpha3.0fadcigdnapna',
             ]
 policy_names = [
                 'MADDPG',
-                # 'MADDPGonline',
                 'MASAC',
-                # 'MASAConline',
-                # 'PRGk1',
-                # 'PRGk1online',
-                # 'PRGGaussiank1',
-                # 'PRGGaussiank1online',
-                'PRGGaussiank1onlinecentropy'
+                'PRG',
+                'PRGalpha3.0fa',
             ]
 
 extra_name = args.extra_name

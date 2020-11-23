@@ -2,13 +2,14 @@ import torch
 import numpy as np
 import time
 import pdb
-from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy, MakeDeterministic
+from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy
+from rlkit.torch.policies.make_deterministic import MakeDeterministic
 from rlkit.torch.policies.gumbel_softmax_policy import GumbelSoftmaxMlpPolicy
 from rlkit.policies.argmax import ArgmaxDiscretePolicy
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--exp_name', type=str, default='simple')
+parser.add_argument('--exp_name', type=str, default='simple_spread')
 parser.add_argument('--log_dir', type=str, default='MASAC')
 parser.add_argument('--epoch', type=int, default=None)
 parser.add_argument('--seed', type=int, default=0)
