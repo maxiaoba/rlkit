@@ -10,11 +10,12 @@ from rlkit.torch import pytorch_util as ptu
 # Logger Params
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='max2')
+parser.add_argument('--ar', type=float, default=10.) # action range
 parser.add_argument('--log_dir', type=str, default='PRGMixGaussiank1m2hidden32oace')
 parser.add_argument('--seed', type=int, default=0)
 args = parser.parse_args()
 
-pre_path = './Data/'+args.exp_name+'/'+args.log_dir
+pre_path = './Data/'+args.exp_name+'ar'+str(args.ar)+'/'+args.log_dir
 plot_file1 = pre_path+'/'+'seed'+str(args.seed)+'/q1.png'
 plot_file2 = pre_path+'/'+'seed'+str(args.seed)+'/q2.png'
 
@@ -34,8 +35,8 @@ d_path = pre_path+'/'+'seed'+str(args.seed)+'/params.pkl'
 data = torch.load(d_path,map_location='cpu')
 
 q11net = data['trainer/qf1_n'][0]
-q12net = data['trainer/qf1_n'][1]
-q21net = data['trainer/qf2_n'][0]
+q12net = data['trainer/qf2_n'][0]
+q21net = data['trainer/qf1_n'][1]
 q22net = data['trainer/qf2_n'][1]
 with torch.no_grad():
     for i,x in enumerate(xs):

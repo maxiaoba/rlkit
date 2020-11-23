@@ -1,18 +1,7 @@
 import copy
-
-from rlkit.data_management.ma_env_replay_buffer import MAEnvReplayBuffer
-# from rlkit.envs.wrappers import NormalizedBoxEnv
-from rlkit.exploration_strategies.base import (
-    PolicyWrappedWithExplorationStrategy
-)
-from rlkit.exploration_strategies.ou_strategy import OUStrategy
+import torch.nn as nn
 from rlkit.launchers.launcher_util import setup_logger
-from rlkit.samplers.data_collector.ma_path_collector import MAMdpPathCollector
-from rlkit.torch.networks import FlattenMlp
-from rlkit.torch.policies.deterministic_policies import TanhMlpPolicy
-from rlkit.torch.maddpg.maddpg import MADDPGTrainer
 import rlkit.torch.pytorch_util as ptu
-from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 from rlkit.core.ma_eval_util import get_generic_ma_path_information
 
 def experiment(variant):
@@ -30,42 +19,43 @@ def experiment(variant):
         [], [], [], [], [], []
     qf2_n, target_qf2_n = [], []
     for i in range(num_agent):
+        from rlkit.torch.networks import FlattenMlp
         qf = FlattenMlp(
             input_size=(obs_dim*num_agent+action_dim*num_agent),
             output_size=1,
-            **variant['qf_kwargs']
+            hidden_sizes=[variant['qf_kwargs']['hidden_dim']]*variant['qf_kwargs']['num_layer'],
         )
+        target_qf = copy.deepcopy(qf)
+        from rlkit.torch.policies.deterministic_policies import TanhMlpPolicy
         policy = TanhMlpPolicy(
             input_size=obs_dim,
             output_size=action_dim,
-            **variant['policy_kwargs']
+            hidden_sizes=[variant['policy_kwargs']['hidden_dim']]*variant['policy_kwargs']['num_layer'],
         )
-        target_qf = copy.deepcopy(qf)
         target_policy = copy.deepcopy(policy)
         eval_policy = policy
+        from rlkit.exploration_strategies.base import PolicyWrappedWithExplorationStrategy
+        from rlkit.exploration_strategies.ou_strategy import OUStrategy
         expl_policy = PolicyWrappedWithExplorationStrategy(
             exploration_strategy=OUStrategy(action_space=expl_env.action_space),
             policy=policy,
         )
+        
         qf_n.append(qf)
         policy_n.append(policy)
         target_qf_n.append(target_qf)
         target_policy_n.append(target_policy)
         eval_policy_n.append(eval_policy)
         expl_policy_n.append(expl_policy)
-        if variant['trainer_kwargs']['double_q']:
-            qf2 = FlattenMlp(
-                input_size=(obs_dim*num_agent+action_dim*num_agent),
-                output_size=1,
-                **variant['qf_kwargs']
-            )
-            target_qf2 = copy.deepcopy(qf2)
-            qf2_n.append(qf2)
-            target_qf2_n.append(target_qf2)
 
+    from rlkit.samplers.data_collector.ma_path_collector import MAMdpPathCollector
     eval_path_collector = MAMdpPathCollector(eval_env, eval_policy_n)
     expl_path_collector = MAMdpPathCollector(expl_env, expl_policy_n)
+
+    from rlkit.data_management.ma_env_replay_buffer import MAEnvReplayBuffer
     replay_buffer = MAEnvReplayBuffer(variant['replay_buffer_size'], expl_env, num_agent=num_agent)
+
+    from rlkit.torch.maddpg.maddpg import MADDPGTrainer
     trainer = MADDPGTrainer(
         qf_n=qf_n,
         target_qf_n=target_qf_n,
@@ -75,6 +65,8 @@ def experiment(variant):
         target_qf2_n = target_qf2_n,
         **variant['trainer_kwargs']
     )
+
+    from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
     algorithm = TorchBatchRLAlgorithm(
         trainer=trainer,
         exploration_env=expl_env,
@@ -93,10 +85,10 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='simple')
-    parser.add_argument('--gpu', action='store_true', default=False)
     parser.add_argument('--log_dir', type=str, default='MADDPG')
-    parser.add_argument('--online_action', action='store_true', default=False)
-    parser.add_argument('--double_q', action='store_true', default=False)
+    parser.add_argument('--layer', type=int, default=2)
+    parser.add_argument('--hidden', type=int, default=64)
+    parser.add_argument('--oa', action='store_true', default=False) # online action
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -107,19 +99,20 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
-                +('online_action' if args.online_action else '')\
-                +('double_q' if args.double_q else '')\
+                +('layer'+str(args.layer))\
+                +('hidden'+str(args.hidden))\
+                +('oa' if args.oa else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
         algorithm_kwargs=dict(
-            num_epochs=(args.epoch if args.epoch else 500),
-            num_eval_steps_per_epoch=500,
-            num_trains_per_train_loop=200,
-            num_expl_steps_per_train_loop=200,
-            min_num_steps_before_training=200,
+            num_epochs=(args.epoch if args.epoch else 1000),
+            num_eval_steps_per_epoch=1000,
+            num_trains_per_train_loop=1000,
+            num_expl_steps_per_train_loop=1000,
+            min_num_steps_before_training=1000,
             max_path_length=100,
             batch_size=(args.bs if args.bs else 256),
         ),
@@ -129,14 +122,16 @@ if __name__ == "__main__":
             discount=0.99,
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
-            online_action=args.online_action,
-            double_q=args.double_q,
+            online_action=args.oa,
+            double_q=False,
         ),
         qf_kwargs=dict(
-            hidden_sizes=[400, 300],
+            num_layer=args.layer,
+            hidden_dim=args.hidden,
         ),
         policy_kwargs=dict(
-            hidden_sizes=[400, 300],
+            num_layer=args.layer,
+            hidden_dim=args.hidden,
         ),
         replay_buffer_size=int(1E6),
     )
@@ -157,6 +152,5 @@ if __name__ == "__main__":
     import torch
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    if args.gpu:
-        ptu.set_gpu_mode(True)
+    # ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
     experiment(variant)

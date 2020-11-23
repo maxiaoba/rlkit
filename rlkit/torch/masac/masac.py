@@ -35,6 +35,7 @@ class MASACTrainer(TorchTrainer):
             tau=1e-2,
             use_soft_update=False,
             qf_criterion=None,
+            deterministic_next_action=False,
             use_automatic_entropy_tuning=True,
             target_entropy=None,
             optimizer_class=optim.Adam,
@@ -52,6 +53,7 @@ class MASACTrainer(TorchTrainer):
         self.target_qf2_n = target_qf2_n
         self.policy_n = policy_n
         self.online_action = online_action
+        self.deterministic_next_action = deterministic_next_action
 
         self.discount = discount
         self.reward_scale = reward_scale
@@ -121,7 +123,10 @@ class MASACTrainer(TorchTrainer):
                 online_actions_n = torch.stack(online_actions_n) # num_agent x batch x a_dim
                 online_actions_n = online_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim     
 
-            next_actions_n = [self.policy_n[agent](next_obs_n[:,agent,:]) for agent in range(num_agent)]
+            if self.deterministic_next_action:
+                next_actions_n = [self.policy_n[agent](next_obs_n[:,agent,:], deterministic=True) for agent in range(num_agent)]
+            else:
+                next_actions_n = [self.policy_n[agent](next_obs_n[:,agent,:]) for agent in range(num_agent)]
             next_actions_n = torch.stack(next_actions_n) # num_agent x batch x a_dim
             next_actions_n = next_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
 
@@ -161,12 +166,19 @@ class MASACTrainer(TorchTrainer):
             Critic operations.
             """
             with torch.no_grad():
-                new_actions, new_info = self.policy_n[agent](
-                    next_obs_n[:,agent,:], return_info=True,
-                )
-                new_log_pi = new_info['log_prob']
-                new_actions = new_actions
-                new_log_pi = new_log_pi
+                if self.deterministic_next_action:
+                    # new_actions = next_actions_n[:,agent,:].clone()
+                    # new_log_pi = 0.
+                    new_actions, new_info = self.policy_n[agent](
+                        next_obs_n[:,agent,:], return_info=True,
+                        deterministic=True,
+                    )
+                    new_log_pi = new_info['log_prob']
+                else:
+                    new_actions, new_info = self.policy_n[agent](
+                        next_obs_n[:,agent,:], return_info=True,
+                    )
+                    new_log_pi = new_info['log_prob']
                 next_current_actions = next_actions_n.clone()
                 next_current_actions[:,agent,:] = new_actions
                 next_target_q1_values = self.target_qf1_n[agent](

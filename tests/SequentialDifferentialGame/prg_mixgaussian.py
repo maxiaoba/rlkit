@@ -133,6 +133,8 @@ if __name__ == "__main__":
     parser.add_argument('--re', action='store_true', default=False) # random exploration
     parser.add_argument('--alpha', type=float, default=None) # init alpha
     parser.add_argument('--fa', action='store_true', default=False) # fix alpha
+    parser.add_argument('--dcig', action='store_true', default=False) # deterministic cactor in graph
+    parser.add_argument('--dc', type=float, default=None) # discount
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -153,6 +155,8 @@ if __name__ == "__main__":
                 +('re' if args.re else '')\
                 +(('alpha'+str(args.alpha)) if args.alpha else '')\
                 +('fa' if args.fa else '')\
+                +('dcig' if args.dcig else '')\
+                +(('dc'+str(args.dc)) if (args.dc is not None) else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
@@ -176,7 +180,7 @@ if __name__ == "__main__":
         trainer_kwargs=dict(
             use_soft_update=True,
             tau=1e-2,
-            discount=0.99,
+            discount=(args.dc if (args.dc is not None) else 0.99),
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             cactor_learning_rate=(args.lr if args.lr else 1e-4),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
@@ -188,6 +192,7 @@ if __name__ == "__main__":
             online_next_action=args.ona,
             init_alpha=(args.alpha if args.alpha else 1.),
             use_automatic_entropy_tuning=(not args.fa),
+            deterministic_cactor_in_graph=args.dcig,
         ),
         qf_kwargs=dict(
             hidden_dim=args.hidden,

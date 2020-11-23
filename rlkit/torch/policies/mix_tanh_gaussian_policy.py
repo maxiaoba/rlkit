@@ -57,12 +57,13 @@ class MixTanhGaussianPolicy(Policy, nn.Module):
         log_prob = None
         entropy = None
         pre_tanh_value = None
+
+        mix_tanh_normal = MixTanhNormal(weight, mean, std)
         if deterministic:
             indx = torch.argmax(weight,dim=1,keepdim=True).unsqueeze(-1)
             pre_tanh_value = mean.gather(1,indx)
             action = torch.tanh(pre_tanh_value)
         else:
-            mix_tanh_normal = MixTanhNormal(weight, mean, std)
             # if return_log_prob:
             if reparameterize is True:
                 action, pre_tanh_value = mix_tanh_normal.rsample(
@@ -72,12 +73,12 @@ class MixTanhGaussianPolicy(Policy, nn.Module):
                 action, pre_tanh_value = mix_tanh_normal.sample(
                     return_pretanh_value=True
                 )
-            if return_info:
-                log_prob = mix_tanh_normal.log_prob(
-                    action,
-                    pre_tanh_value=pre_tanh_value
-                )
-                log_prob = log_prob.sum(dim=1, keepdim=True)
+        if return_info:
+            log_prob = mix_tanh_normal.log_prob(
+                action,
+                pre_tanh_value=pre_tanh_value
+            )
+            log_prob = log_prob.sum(dim=1, keepdim=True)
 
         info = dict(
             weight=weight,mean=mean,log_std=log_std,log_prob=log_prob,entropy=entropy,

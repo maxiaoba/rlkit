@@ -5,30 +5,32 @@ matplotlib.rcParams.update({'font.size': 10})
 from matplotlib import pyplot as plt
 import numpy as np
 
-itr_interval = 1
+itr_interval = 10
 max_itr = 1000
 
 fields = [
-            'exploration/Actions 0 Max',
-            'exploration/Actions 1 Min',
+            # 'exploration/Actions 0 Max',
+            # 'exploration/Actions 1 Min',
             # 'evaluation/Actions 0 Mean',
             # 'evaluation/Actions 1 Mean',
-            # 'exploration/Returns 0 Max',
+            'exploration/Returns 0 Max',
+            'exploration/Rewards 0 Max',
             # 'exploration/Returns 0 Min',
-            # 'evaluation/Average Returns 0',
+            'evaluation/Average Returns 0',
             # 'trainer/Q1 Predictions 0 Max',
             # 'trainer/Q1 Predictions 0 Min',
             # 'trainer/Q2 Predictions 0 Max',
             # 'trainer/Q2 Predictions 0 Min',
             ]
 field_names = [
-            'expl a0 max',
-            'expl a0 min',
+            # 'expl a0 max',
+            # 'expl a0 min',
             # 'a0',
             # 'a1',
-            # 'Expl Return Max',
+            'Expl Return Max',
+            'Expl Reward Max',
             # 'Expl Return Min',
-            # 'Eval Average Return 0',
+            'Eval Average Return 0',
             # 'Q1 max',
             # 'Q1 min',
             # 'Q2 max',
@@ -39,7 +41,7 @@ plot_err = True
 itr_name = 'epoch'
 min_loss = [-np.inf]*100
 max_loss = [np.inf]*100
-exp_name = "max2"
+exp_name = "max2ar10.0"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
@@ -77,11 +79,33 @@ policies = [
             # 'PRGMixGaussiank1m2hidden32oacealpha3.0fa',
             # 'PRGMixGaussiank1m2hidden32oacealpha5.0',
             # 'PRGMixGaussiank1m2hidden32oacealpha5.0fa',
-            'PRGMixGaussiank1m2hidden32oaonace',
-            'PRGMixGaussiank1m2hidden32oaonacealpha3.0',
-            'PRGMixGaussiank1m2hidden32oaonacealpha3.0fa',
-            'PRGMixGaussiank1m2hidden32oaonacealpha5.0',
-            'PRGMixGaussiank1m2hidden32oaonacealpha5.0fa',
+            # 'PRGMixGaussiank1m2hidden32oaonace',
+            # 'PRGMixGaussiank1m2hidden32oaonacealpha3.0',
+            # 'PRGMixGaussiank1m2hidden32oaonacealpha3.0fa',
+            # 'PRGMixGaussiank1m2hidden32oaonacealpha5.0',
+            # 'PRGMixGaussiank1m2hidden32oaonacealpha5.0fa',
+            # 'PRGMixGaussiank1m2hidden32oaonacealpha10.0',
+            # 'PRGMixGaussiank1m2hidden32oaonacealpha10.0fa',
+            # 'PRGMixGaussiank1m2hidden32oaonacealpha30.0',
+            # 'PRGMixGaussiank1m2hidden32oaonacealpha30.0fa',
+            # 'PRGMixGaussiank1m2hidden32oaonacealpha50.0',
+            # 'PRGMixGaussiank1m2hidden32oaonacealpha50.0fa',
+            # 'PRGMixGaussiank1m2hidden32oaonacealpha100.0',
+            # 'PRGMixGaussiank1m2hidden32oaonacealpha100.0fa',
+            # 'PRGGaussiank1hidden32oaonacealpha3.0fadc0.0',
+            # 'PRGMixGaussiank1m2hidden32oaonacealpha3.0fadc0.0',
+            # 'MASACGaussianhidden32oaalpha3.0fadna',
+            # 'MASACGaussianhidden32oaalpha3.0fadna0',
+            'PRGGaussiank1hidden32oaonaceeralpha3.0fadcig',
+            'PRGGaussiank1hidden32oaonaceeralpha3.0dcigpna',
+            'PRGGaussiank1hidden32oaonaceeralpha3.0fadcigdna',
+            'PRGGaussiank1hidden32oaonaceeralpha3.0fadcigdna0',
+            'PRGGaussiank1hidden32oaonaceeralpha3.0fadcigpna',
+            'PRGGaussiank1hidden32oaonaceeralpha3.0fadcigdnapna',
+            'PRGGaussiank1hidden32oaonacealpha3.0fadcigdnapna',
+            'PRGGaussiank1hidden32oaonaceeralpha3.0fadcigdna0pna',
+            'PRGGaussiank1hidden32oaonaceersdadcigpna',
+            # 'PRGMixGaussiank1m2hidden32oaonacealpha3.0fadcig',
         ]
 policy_names = policies
 seeds = [0,1,2,3,4]
@@ -90,17 +114,17 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'prgona_mix_expl'
+extra_name = 'prgona_dcig'
 
 pre_name = ''
 post_name = ''
 
 plot_name = extra_name
 
-fig = plt.figure()
+fig = plt.figure(figsize=(6,4*(len(fields)+1)))
 for fid,(field,field_name) in enumerate(zip(fields,field_names)):
     print(field)
-    plt.subplot(len(fields),1,fid+1)
+    plt.subplot(len(fields)+1,1,fid+1)
     legends = []
     plts = []
     for (policy_index,policy) in enumerate(policies):
@@ -164,8 +188,10 @@ for fid,(field,field_name) in enumerate(zip(fields,field_names)):
             #     plot, = plt.plot(itrs,y,colors[policy_index])
     plt.xlabel('Itr')
     plt.ylabel(field_name)
-    if field == fields[-1]:
-        plt.legend(plts,legends,loc='best')
-        # plt.legend() 
+
+
+plt.subplot(len(fields)+1,1,len(fields)+1)
+plt.legend(plts,legends,loc='best')
+
 fig.savefig(plot_path+'/'+plot_name+'.pdf')
 plt.close(fig)

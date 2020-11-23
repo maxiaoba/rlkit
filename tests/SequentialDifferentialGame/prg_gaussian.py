@@ -12,8 +12,10 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
-    qf1_n, qf2_n, cactor_n, policy_n, target_qf1_n, target_qf2_n, target_policy_n, expl_policy_n, eval_policy_n = \
-        [], [], [], [], [], [], [], [], []
+    qf1_n, qf2_n, cactor_n, policy_n = [], [], [], []
+    target_qf1_n, target_qf2_n, target_policy_n = [], [], []
+    expl_policy_n, eval_policy_n = [], []
+    log_alpha_n, log_calpha_n = [], []
     for i in range(num_agent):
         from rlkit.torch.networks import FlattenMlp
         qf1 = FlattenMlp(
@@ -71,6 +73,20 @@ def experiment(variant):
         target_policy_n.append(target_policy)
         expl_policy_n.append(expl_policy)
         eval_policy_n.append(eval_policy)
+
+        if variant['trainer_kwargs']['state_dependent_alpha']:
+            log_alpha = FlattenMlp(
+                            input_size=obs_dim*num_agent,
+                            output_size=1,
+                            hidden_sizes=[variant['qf_kwargs']['hidden_dim']]*2,
+                        )
+            log_calpha = FlattenMlp(
+                            input_size=obs_dim*num_agent,
+                            output_size=1,
+                            hidden_sizes=[variant['qf_kwargs']['hidden_dim']]*2,
+                        )
+            log_alpha_n.append(log_alpha)
+            log_calpha_n.append(log_calpha)
         
     from rlkit.samplers.data_collector.ma_path_collector import MAMdpPathCollector
     eval_path_collector = MAMdpPathCollector(eval_env, eval_policy_n)
@@ -89,6 +105,8 @@ def experiment(variant):
         policy_n=policy_n,
         target_policy_n=target_policy_n,
         cactor_n=cactor_n,
+        log_alpha_n=log_alpha_n,
+        log_calpha_n=log_calpha_n,
         **variant['trainer_kwargs']
     )
 
@@ -120,9 +138,15 @@ if __name__ == "__main__":
     parser.add_argument('--ta', action='store_true', default=False) # target action
     parser.add_argument('--ona', action='store_true', default=False) # online next action
     parser.add_argument('--ce', action='store_true', default=False) # cactor entropy
+    parser.add_argument('--er', action='store_true', default=False) # entropy reward
     parser.add_argument('--re', action='store_true', default=False) # random exploration
     parser.add_argument('--alpha', type=float, default=None) # init alpha
+    parser.add_argument('--sda', action='store_true', default=False) # state dependent alpha
     parser.add_argument('--fa', action='store_true', default=False) # fix alpha
+    parser.add_argument('--dcig', action='store_true', default=False) # deterministic cactor in graph
+    parser.add_argument('--dna', action='store_true', default=False) # deterministic next action
+    parser.add_argument('--pna', action='store_true', default=False) # prg next action
+    parser.add_argument('--dc', type=float, default=None) # discount
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -139,9 +163,15 @@ if __name__ == "__main__":
                 +('ta' if args.ta else '')\
                 +('ona' if args.ona else '')\
                 +('ce' if args.ce else '')\
+                +('er' if args.er else '')\
                 +('re' if args.re else '')\
                 +(('alpha'+str(args.alpha)) if args.alpha else '')\
+                +('sda' if args.sda else '')\
                 +('fa' if args.fa else '')\
+                +('dcig' if args.dcig else '')\
+                +('dna' if args.dna else '')\
+                +('pna' if args.pna else '')\
+                +(('dc'+str(args.dc)) if (args.dc is not None) else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
@@ -165,18 +195,23 @@ if __name__ == "__main__":
         trainer_kwargs=dict(
             use_soft_update=True,
             tau=1e-2,
-            discount=0.99,
+            discount=(args.dc if (args.dc is not None) else 0.99),
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             cactor_learning_rate=(args.lr if args.lr else 1e-4),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
             logit_level=args.k,
             use_entropy_loss=True,
+            use_entropy_reward=args.er,
             use_cactor_entropy_loss=args.ce,
             online_action=args.oa,
             target_action=args.ta,
             online_next_action=args.ona,
             init_alpha=(args.alpha if args.alpha else 1.),
             use_automatic_entropy_tuning=(not args.fa),
+            state_dependent_alpha=args.sda,
+            deterministic_cactor_in_graph=args.dcig,
+            deterministic_next_action=args.dna,
+            prg_next_action=args.pna,
         ),
         qf_kwargs=dict(
             hidden_dim=args.hidden,

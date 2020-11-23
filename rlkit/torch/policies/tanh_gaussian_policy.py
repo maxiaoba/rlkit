@@ -62,11 +62,12 @@ class TanhGaussianPolicy(Policy, nn.Module):
         log_prob = None
         entropy = None
         pre_tanh_value = None
+
+        tanh_normal = TanhNormal(mean, std)
         if deterministic:
             pre_tanh_value = mean
             action = torch.tanh(mean)
         else:
-            tanh_normal = TanhNormal(mean, std)
             # if return_log_prob:
             if reparameterize is True:
                 action, pre_tanh_value = tanh_normal.rsample(
@@ -76,12 +77,12 @@ class TanhGaussianPolicy(Policy, nn.Module):
                 action, pre_tanh_value = tanh_normal.sample(
                     return_pretanh_value=True
                 )
-            if return_info:
-                log_prob = tanh_normal.log_prob(
-                    action,
-                    pre_tanh_value=pre_tanh_value
-                )
-                log_prob = log_prob.sum(dim=1, keepdim=True)
+        if return_info:
+            log_prob = tanh_normal.log_prob(
+                action,
+                pre_tanh_value=pre_tanh_value
+            )
+            log_prob = log_prob.sum(dim=1, keepdim=True)
 
         info = dict(
             mean=mean,log_std=log_std,log_prob=log_prob,entropy=entropy,

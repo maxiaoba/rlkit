@@ -9,11 +9,12 @@ import argparse
 # Logger Params
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='max2')
+parser.add_argument('--ar', type=float, default=10.) # action range
 parser.add_argument('--log_dir', type=str, default='PRGMixGaussiank1m2hidden32oace')
 parser.add_argument('--seed', type=int, default=0)
 args = parser.parse_args()
 
-pre_path = './Data/'+args.exp_name+'/'+args.log_dir
+pre_path = './Data/'+args.exp_name+'ar'+str(args.ar)+'/'+args.log_dir
 plot_file = pre_path+'/'+'seed'+str(args.seed)+'/actor.png'
 
 from sequential_differential_game import SequentialDifferentialGame
