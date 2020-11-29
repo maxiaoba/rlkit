@@ -13,14 +13,20 @@ args = parser.parse_args()
 P_paths = [
             'MADDPGlayer2hidden64oa',
             'MASACGaussianlayer2hidden64oa',
+            'MASACGaussianlayer2hidden64oaalpha3.0fa',
             'PRGGaussiank1hidden64oaonacedcigdnapna',
             'PRGGaussiank1hidden64oaonacealpha3.0fadcigdnapna',
+            'PRGGaussiank1hidden64oaonaceerdcigdnapna',
+            'PRGGaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
             ]
 policy_names = [
                 'MADDPG',
                 'MASAC',
+                'MASACalpha3.0fa',
                 'PRG',
                 'PRGalpha3.0fa',
+                'PRGer',
+                'PRGalpha3.0faer',
             ]
 
 extra_name = args.extra_name
@@ -35,7 +41,7 @@ def plot_matrix(mat,policy_names):
     # fig, ax = plt.subplots(figsize=(5, 5))
     fig, ax = plt.subplots()
     # mat = np.array([[0,1,2],[3,4,5],[6,7,8]])
-    im = ax.imshow(mat, interpolation="None", cmap="viridis", alpha=0.7)
+    im = ax.imshow(mat, interpolation="nearest", cmap="viridis", alpha=0.7)
     for (j, i), label in np.ndenumerate(mat):
         ax.text(i, j, round(label, 3), ha="center", va="center", fontsize=10)
 

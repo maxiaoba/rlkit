@@ -23,7 +23,7 @@ field_names = [
 itr_name = 'epoch'
 min_loss = [-1000,-1000,-1000,-1000]
 max_loss = [1000,1000,1000,1000]
-exp_name = "simple_push"
+exp_name = "simple_adversary"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
@@ -31,15 +31,21 @@ plot_path = "./Data/"+exp_name
 policies = [
             'MADDPGlayer2hidden64oa',
             'MASACGaussianlayer2hidden64oa',
+            'MASACGaussianlayer2hidden64oaalpha3.0fa',
             'PRGGaussiank1hidden64oaonacedcigdnapna',
             'PRGGaussiank1hidden64oaonacealpha3.0fadcigdnapna',
+            'PRGGaussiank1hidden64oaonaceerdcigdnapna',
+            'PRGGaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
         ]
 # policy_names = policies
 policy_names = [
                 'MADDPG',
                 'MASAC',
+                'MASACalpha3.0fa',
                 'PRG',
                 'PRGalpha3.0fa',
+                'PRGer',
+                'PRGalpha3.0faer',
             ]
 seeds = [0,1,2,3,4]
 colors = []

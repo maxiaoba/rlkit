@@ -30,14 +30,20 @@ seeds = [0,1,2]
 P_paths = [
             'MADDPGlayer2hidden64oa',
             'MASACGaussianlayer2hidden64oa',
+            'MASACGaussianlayer2hidden64oaalpha3.0fa',
             'PRGGaussiank1hidden64oaonacedcigdnapna',
             'PRGGaussiank1hidden64oaonacealpha3.0fadcigdnapna',
+            'PRGGaussiank1hidden64oaonaceerdcigdnapna',
+            'PRGGaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
             ]
 policy_names = [
                 'MADDPG',
                 'MASAC',
+                'MASACalpha3.0fa',
                 'PRG',
                 'PRGalpha3.0fa',
+                'PRGer',
+                'PRGalpha3.0faer',
             ]
 
 extra_name = args.extra_name
@@ -123,8 +129,12 @@ with open(log_dir+'/'+csv_name, mode='w') as csv_file:
                                 a2,_ = player2[sub_pid].get_action(o_n[sub_pid])
                                 actions.append(a2)
                             o_n, r_n, done, _ = env.step(actions)
+                            # env.render()
+                            # time.sleep(0.1)
                             cr1 += r_n[groups[0][0]]
                             cr2 += r_n[groups[1][0]]
+                            if done.all():
+                                break
                         Cr1.append(cr1)
                         Cr2.append(cr2)
                     p1_avg_reward = np.mean(Cr1)
@@ -135,6 +145,7 @@ with open(log_dir+'/'+csv_name, mode='w') as csv_file:
                     print('p1'+str(p1id)+'p2'+str(p2id)+'_2',': ',p2_avg_reward)
                     row_content['p1'+str(p1id)+'p2'+str(p2id)+'_1'] = p1_avg_reward
                     row_content['p1'+str(p1id)+'p2'+str(p2id)+'_2'] = p2_avg_reward
+                    # pdb.set_trace()
 
         Mat1.append(mat1)
         Mat2.append(mat2)

@@ -25,9 +25,10 @@ class ParticleEnv(ProxyEnv):
 
     def step(self, action_n):
         action_n = copy.deepcopy(action_n)
-        obs_n_list, reward_n, done_n, info_n = self._wrapped_env.step(action_n)
+        obs_n_list, reward_n, done_n_list, info_n = self._wrapped_env.step(action_n)
         obs_n = self.convert_obs(obs_n_list)
-        return obs_n, np.array(reward_n), np.array(done_n), {}
+        done_n = self.convert_done(done_n_list)
+        return obs_n, np.array(reward_n), done_n, {}
 
     def reset(self):
         obs_n_list = self._wrapped_env.reset()
@@ -39,6 +40,11 @@ class ParticleEnv(ProxyEnv):
         for i,j in enumerate(obs_n_list):
             obs_n[i][0:len(j)] = j
         return obs_n
+
+    def convert_done(self, done_n_list):
+        done = (np.array(done_n_list).sum() > 0) # one done all one
+        done_n = np.array([done]*len(done_n_list))
+        return done_n
 
     def __str__(self):
         return "ParticleEnv: %s" % self._wrapped_env
