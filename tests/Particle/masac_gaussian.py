@@ -91,6 +91,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='simple')
+    parser.add_argument('--mpl', type=int, default=25) # max path length
     parser.add_argument('--log_dir', type=str, default='MASACGaussian')
     parser.add_argument('--layer', type=int, default=2)
     parser.add_argument('--hidden', type=int, default=64)
@@ -106,7 +107,7 @@ if __name__ == "__main__":
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
-    pre_dir = './Data/'+args.exp_name
+    pre_dir = './Data/'+args.exp_name+'mlp'+str(args.mpl)
     main_dir = args.log_dir\
                 +('layer'+str(args.layer))\
                 +('hidden'+str(args.hidden))\
@@ -125,7 +126,7 @@ if __name__ == "__main__":
             num_trains_per_train_loop=1000,
             num_expl_steps_per_train_loop=1000,
             min_num_steps_before_training=1000,
-            max_path_length=100,
+            max_path_length=args.mpl,
             batch_size=(args.bs if args.bs else 256),
         ),
         trainer_kwargs=dict(
