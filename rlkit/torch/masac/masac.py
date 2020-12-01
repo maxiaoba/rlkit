@@ -36,6 +36,7 @@ class MASACTrainer(TorchTrainer):
             use_soft_update=False,
             qf_criterion=None,
             deterministic_next_action=False,
+            use_entropy_reward=False,
             use_automatic_entropy_tuning=True,
             target_entropy=None,
             optimizer_class=optim.Adam,
@@ -54,6 +55,7 @@ class MASACTrainer(TorchTrainer):
         self.policy_n = policy_n
         self.online_action = online_action
         self.deterministic_next_action = deterministic_next_action
+        self.use_entropy_reward = use_entropy_reward
 
         self.discount = discount
         self.reward_scale = reward_scale
@@ -189,8 +191,9 @@ class MASACTrainer(TorchTrainer):
                     whole_next_obs,
                     next_current_actions.view(batch_size,-1),
                 )
-                next_target_min_q_values = torch.min(next_target_q1_values,next_target_q2_values)
-                next_target_q_values =  next_target_min_q_values - alpha * new_log_pi
+                next_target_q_values = torch.min(next_target_q1_values,next_target_q2_values)
+                if self.use_entropy_reward:
+                    next_target_q_values =  next_target_q_values - alpha * new_log_pi
                 q_target = self.reward_scale*rewards_n[:,agent,:] + (1. - terminals_n[:,agent,:]) * self.discount * next_target_q_values
                 q_target = torch.clamp(q_target, self.min_q_value, self.max_q_value)
 

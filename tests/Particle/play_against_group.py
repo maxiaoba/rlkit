@@ -29,8 +29,8 @@ print('groups: ',groups)
 seeds = [0,1,2]
 P_paths = [
             'MADDPGlayer2hidden64oa',
-            'MASACGaussianlayer2hidden64oa',
-            'MASACGaussianlayer2hidden64oaalpha3.0fa',
+            'MASACGaussianlayer2hidden64oaer',
+            'MASACGaussianlayer2hidden64oaeralpha3.0fa',
             'PRGGaussiank1hidden64oaonacedcigdnapna',
             'PRGGaussiank1hidden64oaonacealpha3.0fadcigdnapna',
             'PRGGaussiank1hidden64oaonaceerdcigdnapna',
@@ -38,8 +38,8 @@ P_paths = [
             ]
 policy_names = [
                 'MADDPG',
-                'MASAC',
-                'MASACalpha3.0fa',
+                'MASACer',
+                'MASACalpha3.0faer',
                 'PRG',
                 'PRGalpha3.0fa',
                 'PRGer',

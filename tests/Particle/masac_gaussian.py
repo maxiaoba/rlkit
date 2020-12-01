@@ -96,6 +96,7 @@ if __name__ == "__main__":
     parser.add_argument('--layer', type=int, default=2)
     parser.add_argument('--hidden', type=int, default=64)
     parser.add_argument('--oa', action='store_true', default=False) # online action
+    parser.add_argument('--er', action='store_true', default=False) # entropy reward
     parser.add_argument('--alpha', type=float, default=None) # init alpha
     parser.add_argument('--fa', action='store_true', default=False) # fix alpha
     parser.add_argument('--dna', action='store_true', default=False) # deterministic next action
@@ -112,6 +113,7 @@ if __name__ == "__main__":
                 +('layer'+str(args.layer))\
                 +('hidden'+str(args.hidden))\
                 +('oa' if args.oa else '')\
+                +('er' if args.er else '')\
                 +(('alpha'+str(args.alpha)) if args.alpha else '')\
                 +('fa' if args.fa else '')\
                 +('dna' if args.dna else '')\
@@ -136,6 +138,7 @@ if __name__ == "__main__":
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
             online_action=args.oa,
+            use_entropy_reward=args.er,
             init_alpha=(args.alpha if args.alpha else 1.),
             use_automatic_entropy_tuning=(not args.fa),
             deterministic_next_action=args.dna,

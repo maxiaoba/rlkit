@@ -9,21 +9,27 @@ itr_interval = 10
 max_itr = 2e4
 
 fields = [
+            'exploration/Returns 0 Max',
+            'exploration/Rewards 0 Max',
             'evaluation/Average Returns 0',
-            'evaluation/Average Returns 1',
-            'evaluation/Average Returns 2',
-            'evaluation/Average Returns 3'
+            # 'evaluation/Average Returns 1',
+            # 'evaluation/Average Returns 2',
+            # 'evaluation/Average Returns 3',
             ]
 field_names = [
+            'Expl Max Return 0',
+            'Expl Max Reward 0',
             'Average Return 0',
-            'Average Return 1',
-            'Average Return 2',
-            'Average Return 3',
+            # 'Average Return 1',
+            # 'Average Return 2',
+            # 'Average Return 3',
             ]
+extra_names = field_names
+# extra_names = ['r0','r1','r2','r3']
 itr_name = 'epoch'
 min_loss = [-1000,-1000,-1000,-1000]
 max_loss = [1000,1000,1000,1000]
-exp_name = "simple_adversary"
+exp_name = "simple_spread2mlp25"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
@@ -34,8 +40,8 @@ policies = [
             'MASACGaussianlayer2hidden64oaalpha3.0fa',
             'PRGGaussiank1hidden64oaonacedcigdnapna',
             'PRGGaussiank1hidden64oaonacealpha3.0fadcigdnapna',
-            'PRGGaussiank1hidden64oaonaceerdcigdnapna',
-            'PRGGaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
+            # 'PRGGaussiank1hidden64oaonaceerdcigdnapna',
+            # 'PRGGaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
         ]
 # policy_names = policies
 policy_names = [
@@ -44,15 +50,13 @@ policy_names = [
                 'MASACalpha3.0fa',
                 'PRG',
                 'PRGalpha3.0fa',
-                'PRGer',
-                'PRGalpha3.0faer',
+                # 'PRGer',
+                # 'PRGalpha3.0faer',
             ]
 seeds = [0,1,2,3,4]
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
-
-extra_names = ['r0','r1','r2','r3']
 
 pre_name = ''
 post_name = ''

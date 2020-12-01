@@ -18,8 +18,8 @@ P_paths = [
             'MASACGaussianlayer2hidden64oaalpha3.0fa',
             'PRGGaussiank1hidden64oaonacedcigdnapna',
             'PRGGaussiank1hidden64oaonacealpha3.0fadcigdnapna',
-            'PRGGaussiank1hidden64oaonaceerdcigdnapna',
-            'PRGGaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
+            # 'PRGGaussiank1hidden64oaonaceerdcigdnapna',
+            # 'PRGGaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
             ]
 policy_names = [
                 'MADDPG',
@@ -27,8 +27,8 @@ policy_names = [
                 'MASACalpha3.0fa',
                 'PRG',
                 'PRGalpha3.0fa',
-                'PRGer',
-                'PRGalpha3.0faer',
+                # 'PRGer',
+                # 'PRGalpha3.0faer',
             ]
 
 extra_name = args.extra_name
