@@ -29,31 +29,43 @@ extra_names = field_names
 itr_name = 'epoch'
 min_loss = [-1000,-1000,-1000,-1000]
 max_loss = [1000,1000,1000,1000]
-exp_name = "simple_spread2mlp25"
+exp_name = "simple_spread2_mpl25"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
             'MADDPGlayer2hidden64oa',
-            'MASACGaussianlayer2hidden64oa',
-            'MASACGaussianlayer2hidden64oaalpha3.0fa',
+            # 'MASACGaussianlayer2hidden64oaer',
+            # 'MASACGaussianlayer2hidden64oaeralpha3.0fa',
             'PRGGaussiank1hidden64oaonacedcigdnapna',
             'PRGGaussiank1hidden64oaonacealpha3.0fadcigdnapna',
-            # 'PRGGaussiank1hidden64oaonaceerdcigdnapna',
-            # 'PRGGaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
+            'PRGGaussiank1hidden64oaonaceerdcigdnapna',
+            'PRGGaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
+            'MASACGaussianlayer2hidden64oa',
+            'MASACGaussianlayer2hidden64oadna',
+            # 'MASACGaussianlayer2hidden64oaerdna',
+            # 'MASACGaussianlayer2hidden64oaalpha3.0fa',
+            # 'MASACGaussianlayer2hidden64oaalpha3.0fadna',
+            # 'MASACGaussianlayer2hidden64oaeralpha3.0fadna',
         ]
 # policy_names = policies
 policy_names = [
                 'MADDPG',
-                'MASAC',
-                'MASACalpha3.0fa',
+                # 'MASACer',
+                # 'MASACalpha3.0faer',
                 'PRG',
                 'PRGalpha3.0fa',
-                # 'PRGer',
-                # 'PRGalpha3.0faer',
+                'PRGer',
+                'PRGalpha3.0faer',
+                'MASAC',
+                'MASACdna',
+                # 'MASACerdna',
+                # 'MASACalpha3.0fa',
+                # 'MASACalpha3.0fadna',
+                # 'MASACalpha3.0faerdna',
             ]
-seeds = [0,1,2,3,4]
+seeds = [0,1,2]
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))

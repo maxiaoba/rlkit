@@ -54,9 +54,14 @@ policies = [
             # 'PRGGaussiank1hidden32oaonace',
             # 'PRGMixGaussiank1m2hidden32oace',
             # 'PRGMixGaussiank1m2hidden32oaonace',
-            # 'MASACGaussianhidden32oa',
-            # 'MASACGaussianhidden32oaalpha3.0',
-            # 'MASACGaussianhidden32oaalpha3.0fa',
+            'MASACGaussianhidden32oa',
+            'MASACGaussianhidden32oadna',
+            'MASACGaussianhidden32oaalpha3.0fa',
+            'MASACGaussianhidden32oaalpha3.0fadna',
+            'MASACGaussianhidden32oaer',
+            'MASACGaussianhidden32oaeralpha3.0',
+            'MASACGaussianhidden32oaeralpha3.0fa',
+            'MASACGaussianhidden32oaeralpha3.0fadna',
             # 'MASACGaussianhidden32oaalpha5.0',
             # 'MASACGaussianhidden32oaalpha5.0fa',
             # 'MASACMixGaussianm2hidden32oa',
@@ -96,15 +101,15 @@ policies = [
             # 'PRGMixGaussiank1m2hidden32oaonacealpha3.0fadc0.0',
             # 'MASACGaussianhidden32oaalpha3.0fadna',
             # 'MASACGaussianhidden32oaalpha3.0fadna0',
-            'PRGGaussiank1hidden32oaonaceeralpha3.0fadcig',
-            'PRGGaussiank1hidden32oaonaceeralpha3.0dcigpna',
-            'PRGGaussiank1hidden32oaonaceeralpha3.0fadcigdna',
-            'PRGGaussiank1hidden32oaonaceeralpha3.0fadcigdna0',
-            'PRGGaussiank1hidden32oaonaceeralpha3.0fadcigpna',
-            'PRGGaussiank1hidden32oaonaceeralpha3.0fadcigdnapna',
-            'PRGGaussiank1hidden32oaonacealpha3.0fadcigdnapna',
-            'PRGGaussiank1hidden32oaonaceeralpha3.0fadcigdna0pna',
-            'PRGGaussiank1hidden32oaonaceersdadcigpna',
+            # 'PRGGaussiank1hidden32oaonaceeralpha3.0fadcig',
+            # 'PRGGaussiank1hidden32oaonaceeralpha3.0dcigpna',
+            # 'PRGGaussiank1hidden32oaonaceeralpha3.0fadcigdna',
+            # 'PRGGaussiank1hidden32oaonaceeralpha3.0fadcigdna0',
+            # 'PRGGaussiank1hidden32oaonaceeralpha3.0fadcigpna',
+            # 'PRGGaussiank1hidden32oaonaceeralpha3.0fadcigdnapna',
+            # 'PRGGaussiank1hidden32oaonacealpha3.0fadcigdnapna',
+            # 'PRGGaussiank1hidden32oaonaceeralpha3.0fadcigdna0pna',
+            # 'PRGGaussiank1hidden32oaonaceersdadcigpna',
             # 'PRGMixGaussiank1m2hidden32oaonacealpha3.0fadcig',
         ]
 policy_names = policies
@@ -114,7 +119,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'prgona_dcig'
+extra_name = 'masac_dna'
 
 pre_name = ''
 post_name = ''

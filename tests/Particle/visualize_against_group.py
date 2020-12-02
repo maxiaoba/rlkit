@@ -30,7 +30,7 @@ print('groups: ',groups)
 
 policy_n = []
 
-data_path1 = './Data/{}/{}/seed{}/params.pkl'.format(args.exp_name,args.p1,args.seed)
+data_path1 = './Data/{}_mpl{}/{}/seed{}/params.pkl'.format(args.exp_name,args.mpl,args.p1,args.seed)
 data1 = torch.load(data_path1,map_location='cpu')
 policy_n1 = data1['trainer/trained_policy_n']
 if isinstance(policy_n1[0],TanhGaussianPolicy):

@@ -16,7 +16,7 @@ parser.add_argument('--epoch', type=int, default=None)
 parser.add_argument('--seed', type=int, default=0)
 args = parser.parse_args()
 
-data_path = './Data/{}mlp{}/{}/seed{}/params.pkl'.format(args.exp_name,args.mpl,args.log_dir,args.seed)
+data_path = './Data/{}_mpl{}/{}/seed{}/params.pkl'.format(args.exp_name,args.mpl,args.log_dir,args.seed)
 data = torch.load(data_path,map_location='cpu')
 policy_n = data['trainer/trained_policy_n']
 if isinstance(policy_n[0],TanhGaussianPolicy):

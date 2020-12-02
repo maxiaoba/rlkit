@@ -134,7 +134,7 @@ if __name__ == "__main__":
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
-    pre_dir = './Data/'+args.exp_name+'mlp'+str(args.mpl)
+    pre_dir = './Data/'+args.exp_name+'_mpl'+str(args.mpl)
     main_dir = args.log_dir\
                 +'k'+str(args.k)\
                 +('hidden'+str(args.hidden))\

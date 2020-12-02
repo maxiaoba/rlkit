@@ -14,6 +14,7 @@ from rlkit.policies.argmax import ArgmaxDiscretePolicy
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='simple_push')
+parser.add_argument('--mpl', type=int, default=25) # max path length
 parser.add_argument('--sample_num', type=int, default=1000)
 parser.add_argument('--extra_name', type=str, default='')
 args = parser.parse_args()
@@ -48,11 +49,11 @@ policy_names = [
 
 extra_name = args.extra_name
 
-pre_path = './Data/'+args.exp_name
+pre_path = './Data/'+args.exp_name+'_mpl'+str(args.mpl)
 log_dir = pre_path+'/tests/'+extra_name+'_ss'+str(args.sample_num)
 
 sample_num = args.sample_num
-max_path_length = 100
+max_path_length = args.mpl
 
 import os
 if not os.path.isdir(log_dir):

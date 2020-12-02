@@ -31,7 +31,7 @@ policy_names = [
 
 extra_name = args.extra_name
 
-pre_path = './Data/'+args.exp_name
+pre_path = './Data/'+args.exp_name+'_mpl'+str(args.mpl)
 log_dir = pre_path+'/tests/'+extra_name+'_ss'+str(args.sample_num)
 
 import csv
