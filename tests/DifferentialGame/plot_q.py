@@ -32,8 +32,8 @@ d_path = pre_path+'/'+'seed'+str(args.seed)+'/params.pkl'
 data = torch.load(d_path,map_location='cpu')
 
 q11net = data['trainer/qf1_n'][0]
-q12net = data['trainer/qf1_n'][1]
-q21net = data['trainer/qf2_n'][0]
+q12net = data['trainer/qf2_n'][0]
+q21net = data['trainer/qf1_n'][1]
 q22net = data['trainer/qf2_n'][1]
 
 for i,x in enumerate(xs):

@@ -11,7 +11,7 @@ max_itr = 1000
 fields = [
             # 'evaluation/Actions 0 Mean',
             # 'evaluation/Actions 1 Mean',
-            # 'exploration/Returns 0 Max',
+            'exploration/Returns 0 Max',
             'evaluation/Average Returns 0',
             # 'trainer/Q1 Predictions 0 Max',
             # 'trainer/Q1 Predictions 0 Min',
@@ -23,7 +23,7 @@ fields = [
 field_names = [
             # 'a0',
             # 'a1',
-            # 'Expl Return Max',
+            'Expl Return Max',
             'Eval Average Return',
             # 'Q1 max',
             # 'Q1 min',
@@ -56,16 +56,19 @@ policies = [
             # 'MASACMixGaussianm2hidden32oaalpha3.0fa',
             # 'MASACMixGaussianm2hidden32oaalpha5.0',
             # 'MASACMixGaussianm2hidden32oaalpha5.0fa',
-            'PRGGaussiank1hidden32oacealpha3.0',
-            'PRGGaussiank1hidden32oacealpha3.0dcig',
+            # 'PRGGaussiank1hidden32oacealpha3.0',
+            # 'PRGGaussiank1hidden32oacealpha3.0dcig',
             'PRGGaussiank1hidden32oacealpha3.0fa',
-            'PRGGaussiank1hidden32oacealpha5.0',
-            'PRGGaussiank1hidden32oacealpha5.0dcig',
+            # 'PRGGaussiank1hidden32oacealpha5.0',
+            # 'PRGGaussiank1hidden32oacealpha5.0dcig',
             'PRGGaussiank1hidden32oacealpha5.0fa',
             # 'PRGMixGaussiank1m2hidden32oacealpha3.0',
             # 'PRGMixGaussiank1m2hidden32oacealpha3.0fa',
             # 'PRGMixGaussiank1m2hidden32oacealpha5.0',
             # 'PRGMixGaussiank1m2hidden32oacealpha5.0fa'
+            # 'PRG2Gaussiank1hidden32ce',
+            # 'PRG3Gaussiank1hidden32ce',
+            'PRG3Gaussiank1hidden32oacealpha3.0fa',
         ]
 policy_names = policies
 seeds = [0,1,2,3,4]
@@ -74,7 +77,7 @@ colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
-extra_name = 'prggaussian_alpha_reward'
+extra_name = 'prg3'
 
 pre_name = ''
 post_name = ''
