@@ -29,43 +29,49 @@ extra_names = field_names
 itr_name = 'epoch'
 min_loss = [-1000,-1000,-1000,-1000]
 max_loss = [1000,1000,1000,1000]
-exp_name = "simple_spread_mpl100"
+exp_name = "simple_spread2_mpl25"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'MADDPGlayer2hidden64oa',
-            'MASACGaussianlayer2hidden64oaer',
-            'MASACGaussianlayer2hidden64oaeralpha3.0fa',
-            'PRGGaussiank1hidden64oaonacedcigdnapna',
-            'PRGGaussiank1hidden64oaonacealpha3.0fadcigdnapna',
-            'PRGGaussiank1hidden64oaonaceerdcigdnapna',
-            'PRGGaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
-            'PRG3Gaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
+            # 'MADDPGlayer2hidden64oa',
+            # 'MASACGaussianlayer2hidden64oaer',
+            # 'MASACGaussianlayer2hidden64oaeralpha3.0fa',
+            # 'PRGGaussiank1hidden64oaonacedcigdnapna',
+            # 'PRGGaussiank1hidden64oaonacealpha3.0fadcigdnapna',
+            # 'PRGGaussiank1hidden64oaonaceerdcigdnapna',
+            # 'PRGGaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
+            # 'PRG3Gaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
             # 'MASACGaussianlayer2hidden64oa',
             # 'MASACGaussianlayer2hidden64oadna',
             # 'MASACGaussianlayer2hidden64oaerdna',
             # 'MASACGaussianlayer2hidden64oaalpha3.0fa',
             # 'MASACGaussianlayer2hidden64oaalpha3.0fadna',
             # 'MASACGaussianlayer2hidden64oaeralpha3.0fadna',
+            'MASACGaussianlayer2hidden64oadna',
+            'PRGGaussiank1hidden64oaonacedcigdnapna',
+            'PRG3Gaussiank1hidden64oaonacedcigdnapna',
         ]
 # policy_names = policies
 policy_names = [
-                'MADDPG',
-                'MASACer',
-                'MASACalpha3.0faer',
-                'PRG',
-                'PRGalpha3.0fa',
-                'PRGer',
-                'PRGalpha3.0faer',
-                'PRG3alpha3.0faer',
+                # 'MADDPG',
+                # 'MASACer',
+                # 'MASACalpha3.0faer',
+                # 'PRG',
+                # 'PRGalpha3.0fa',
+                # 'PRGer',
+                # 'PRGalpha3.0faer',
+                # 'PRG3alpha3.0faer',
                 # 'MASAC',
                 # 'MASACdna',
                 # 'MASACerdna',
                 # 'MASACalpha3.0fa',
                 # 'MASACalpha3.0fadna',
                 # 'MASACalpha3.0faerdna',
+                'MASAC',
+                'PRG',
+                'PRG3',
             ]
 seeds = [0,1,2]
 colors = []
@@ -88,39 +94,47 @@ for fid,field in enumerate(fields):
         Losses = []
         min_itr = np.inf
         for trial in seeds:
-            file_path = prepath+'/'+policy_path+'/'+'seed'+str(trial)+'/progress.csv'
-            print(file_path)
-            if os.path.exists(file_path):
+            folder_path = prepath+'/'+policy_path+'/'+'seed'+str(trial)
+            print(folder_path)
+            if os.path.exists(folder_path):
                 print(policy+'_'+str(trial))
                 itrs = []
                 losses = []
                 loss = []
-                with open(file_path) as csv_file:
-                    if '\0' in open(file_path).read():
-                        print("you have null bytes in your input file")
-                        csv_reader = csv.reader(x.replace('\0', '') for x in csv_file)
-                    else:
-                        csv_reader = csv.reader(csv_file, delimiter=',')
-
-                    for (i,row) in enumerate(csv_reader):
-                        if i == 0:
-                            entry_dict = {}
-                            for index in range(len(row)):
-                                entry_dict[row[index]] = index
-                            # print(entry_dict)
+                last_itr = 0
+                while folder_path is not None:
+                    print(folder_path)
+                    file_path = folder_path+'/progress.csv'
+                    with open(file_path) as csv_file:
+                        if '\0' in open(file_path).read():
+                            print("you have null bytes in your input file")
+                            csv_reader = csv.reader(x.replace('\0', '') for x in csv_file)
                         else:
-                            itr = i-1#int(float(row[entry_dict[itr_name]]))
-                            if itr > max_itr:
-                                break
-                            loss.append(np.clip(float(row[entry_dict[field]]),
-                                                min_loss[fid],max_loss[fid]))
-                            if itr % itr_interval == 0:
-                                itrs.append(itr)
-                                loss = np.mean(loss)
-                                losses.append(loss)
-                                loss = []
-                    if len(losses) < min_itr:
-                        min_itr = len(losses)
+                            csv_reader = csv.reader(csv_file, delimiter=',')
+
+                        for (i,row) in enumerate(csv_reader):
+                            if i == 0:
+                                entry_dict = {}
+                                for index in range(len(row)):
+                                    entry_dict[row[index]] = index
+                                # print(entry_dict)
+                            else:
+                                itr = last_itr+i-1#int(float(row[entry_dict[itr_name]]))
+                                if itr > max_itr:
+                                    break
+                                loss.append(np.clip(float(row[entry_dict[field]]),
+                                                    min_loss[fid],max_loss[fid]))
+                                if itr % itr_interval == 0:
+                                    itrs.append(itr)
+                                    loss = np.mean(loss)
+                                    losses.append(loss)
+                                    loss = []
+                        last_itr = itr
+                    folder_path = folder_path+'_load'
+                    if not os.path.exists(folder_path):
+                        folder_path = None
+                if len(losses) < min_itr:
+                    min_itr = len(losses)
                 Losses.append(losses)
         Losses = [losses[:min_itr] for losses in Losses]
         itrs = itrs[:min_itr]

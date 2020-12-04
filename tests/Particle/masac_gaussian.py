@@ -15,44 +15,58 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
-    policy_n, eval_policy_n, expl_policy_n, qf1_n, target_qf1_n, qf2_n, target_qf2_n = \
-        [], [], [], [], [], [], []
-    for i in range(num_agent):
-        from rlkit.torch.networks import FlattenMlp
-        from rlkit.torch.layers import SplitLayer
-        policy = nn.Sequential(
-            FlattenMlp(input_size=obs_dim,
-                        output_size=variant['policy_kwargs']['hidden_dim'],
-                        hidden_sizes=[variant['policy_kwargs']['hidden_dim']]*(variant['policy_kwargs']['num_layer']-1),
-                        ),
-            SplitLayer(layers=[nn.Linear(variant['policy_kwargs']['hidden_dim'],action_dim),
-                                nn.Linear(variant['policy_kwargs']['hidden_dim'],action_dim)])
-            )
-        from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy
-        policy = TanhGaussianPolicy(module=policy)
+    if variant['load_kwargs']['load']:
+        load_dir = variant['load_kwargs']['load_dir']
+        load_data = torch.load(load_dir+'/params.pkl',map_location='cpu')
+        qf1_n = load_data['trainer/qf1_n']
+        target_qf1_n = load_data['trainer/target_qf1_n']
+        qf2_n = load_data['trainer/qf2_n']
+        target_qf2_n = load_data['trainer/target_qf2_n']
+        policy_n = load_data['trainer/trained_policy_n']
         from rlkit.torch.policies.make_deterministic import MakeDeterministic
-        eval_policy = MakeDeterministic(policy)
-        expl_policy = policy
-        
-        qf1 = FlattenMlp(
-            input_size=(obs_dim*num_agent+action_dim*num_agent),
-            output_size=1,
-            hidden_sizes=[variant['qf_kwargs']['hidden_dim']]*variant['qf_kwargs']['num_layer'],
-        )
-        target_qf1 = copy.deepcopy(qf1)
-        qf2 = FlattenMlp(
-            input_size=(obs_dim*num_agent+action_dim*num_agent),
-            output_size=1,
-            hidden_sizes=[variant['qf_kwargs']['hidden_dim']]*variant['qf_kwargs']['num_layer'],
-        )
-        target_qf2 = copy.deepcopy(qf2)
-        policy_n.append(policy)
-        eval_policy_n.append(eval_policy)
-        expl_policy_n.append(expl_policy)
-        qf1_n.append(qf1)
-        target_qf1_n.append(target_qf1)
-        qf2_n.append(qf2)
-        target_qf2_n.append(target_qf2)
+        eval_policy_n = [MakeDeterministic(policy) for policy in policy_n]
+        expl_policy_n = policy_n
+        log_alpha_n, log_calpha_n = [], []
+    else:
+        policy_n, eval_policy_n, expl_policy_n, qf1_n, target_qf1_n, qf2_n, target_qf2_n = \
+            [], [], [], [], [], [], []
+        for i in range(num_agent):
+            from rlkit.torch.networks import FlattenMlp
+            from rlkit.torch.layers import SplitLayer
+            policy = nn.Sequential(
+                FlattenMlp(input_size=obs_dim,
+                            output_size=variant['policy_kwargs']['hidden_dim'],
+                            hidden_sizes=[variant['policy_kwargs']['hidden_dim']]*(variant['policy_kwargs']['num_layer']-1),
+                            ),
+                SplitLayer(layers=[nn.Linear(variant['policy_kwargs']['hidden_dim'],action_dim),
+                                    nn.Linear(variant['policy_kwargs']['hidden_dim'],action_dim)])
+                )
+            from rlkit.torch.policies.tanh_gaussian_policy import TanhGaussianPolicy
+            policy = TanhGaussianPolicy(module=policy)
+            from rlkit.torch.policies.make_deterministic import MakeDeterministic
+            eval_policy = MakeDeterministic(policy)
+            expl_policy = policy
+            
+            qf1 = FlattenMlp(
+                input_size=(obs_dim*num_agent+action_dim*num_agent),
+                output_size=1,
+                hidden_sizes=[variant['qf_kwargs']['hidden_dim']]*variant['qf_kwargs']['num_layer'],
+            )
+            target_qf1 = copy.deepcopy(qf1)
+            qf2 = FlattenMlp(
+                input_size=(obs_dim*num_agent+action_dim*num_agent),
+                output_size=1,
+                hidden_sizes=[variant['qf_kwargs']['hidden_dim']]*variant['qf_kwargs']['num_layer'],
+            )
+            target_qf2 = copy.deepcopy(qf2)
+            
+            policy_n.append(policy)
+            eval_policy_n.append(eval_policy)
+            expl_policy_n.append(expl_policy)
+            qf1_n.append(qf1)
+            target_qf1_n.append(target_qf1)
+            qf2_n.append(qf2)
+            target_qf2_n.append(target_qf2)
 
     from rlkit.samplers.data_collector.ma_path_collector import MAMdpPathCollector
     eval_path_collector = MAMdpPathCollector(eval_env, eval_policy_n)
@@ -104,6 +118,7 @@ if __name__ == "__main__":
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--load', action='store_true', default=False)
     parser.add_argument('--snapshot_mode', type=str, default="gap_and_last")
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
@@ -152,8 +167,22 @@ if __name__ == "__main__":
             hidden_dim=args.hidden,
         ),
         replay_buffer_size=int(1E6),
+        load_kwargs=dict(
+            load=args.load,
+            load_dir=log_dir,
+        ),
     )
     import os
+    if args.load:
+        while os.path.isdir(log_dir):
+            load_dir = log_dir
+            log_dir = log_dir + '_load'
+        print('log: ',log_dir)
+        print('load: ',load_dir)
+        variant['load_kwargs']=dict(
+                                    load=args.load,
+                                    load_dir=load_dir,
+                                    )
     if not os.path.isdir(log_dir):
         os.makedirs(log_dir)
     with open(osp.join(log_dir,'variant.json'),'w') as out_json:

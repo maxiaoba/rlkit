@@ -19,6 +19,7 @@ from make_env import make_env
 from particle_env_wrapper import ParticleEnv
 env = ParticleEnv(make_env(args.exp_name,discrete_action_space=False))
 o_n = env.reset()
+env.render()
 num_agent = env.num_agent
 
 max_path_length = args.mpl

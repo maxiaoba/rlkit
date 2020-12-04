@@ -31,20 +31,20 @@ seeds = [0,1,2]
 P_paths = [
             'MADDPGlayer2hidden64oa',
             'MASACGaussianlayer2hidden64oaer',
-            'MASACGaussianlayer2hidden64oaeralpha3.0fa',
-            'PRGGaussiank1hidden64oaonacedcigdnapna',
-            'PRGGaussiank1hidden64oaonacealpha3.0fadcigdnapna',
+            # 'MASACGaussianlayer2hidden64oaeralpha3.0fa',
+            # 'PRGGaussiank1hidden64oaonacedcigdnapna',
+            # 'PRGGaussiank1hidden64oaonacealpha3.0fadcigdnapna',
             'PRGGaussiank1hidden64oaonaceerdcigdnapna',
-            'PRGGaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
+            # 'PRGGaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
             ]
 policy_names = [
                 'MADDPG',
                 'MASACer',
-                'MASACalpha3.0faer',
-                'PRG',
-                'PRGalpha3.0fa',
+                # 'MASACalpha3.0faer',
+                # 'PRG',
+                # 'PRGalpha3.0fa',
                 'PRGer',
-                'PRGalpha3.0faer',
+                # 'PRGalpha3.0faer',
             ]
 
 extra_name = args.extra_name
