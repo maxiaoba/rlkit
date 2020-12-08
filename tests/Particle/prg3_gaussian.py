@@ -187,6 +187,7 @@ if __name__ == "__main__":
             use_cactor_entropy_loss=args.ce,
             use_k0_loss=args.k0,
             k0_loss_weight=args.k0w,
+            k0_weight_mode=args.k0m,
             init_alpha=(args.alpha if args.alpha else 1.),
             use_automatic_entropy_tuning=(not args.fa),
             state_dependent_alpha=False,
