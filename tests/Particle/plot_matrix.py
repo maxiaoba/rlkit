@@ -6,27 +6,24 @@ import matplotlib.pyplot as plt
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='simple_push')
+parser.add_argument('--mpl', type=int, default=25) # max path length
 parser.add_argument('--sample_num', type=int, default=1000)
 parser.add_argument('--extra_name', type=str, default='')
 args = parser.parse_args()
 
 P_paths = [
             'MADDPGlayer2hidden64oa',
-            'MASACGaussianlayer2hidden64oa',
-            'MASACGaussianlayer2hidden64oaalpha3.0fa',
+            'MASACGaussianlayer2hidden64oadna',
+            'MASACGaussianlayer2hidden64oaerdna',
             'PRGGaussiank1hidden64oaonacedcigdnapna',
-            'PRGGaussiank1hidden64oaonacealpha3.0fadcigdnapna',
             'PRGGaussiank1hidden64oaonaceerdcigdnapna',
-            'PRGGaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
             ]
 policy_names = [
                 'MADDPG',
-                'MASAC',
-                'MASACalpha3.0fa',
-                'PRG',
-                'PRGalpha3.0fa',
-                'PRGer',
-                'PRGalpha3.0faer',
+                'MASACdna',
+                'MASACerdna'
+                'PRGdna',
+                'PRGerdna',
             ]
 
 extra_name = args.extra_name

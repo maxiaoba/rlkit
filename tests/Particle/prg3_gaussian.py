@@ -128,12 +128,10 @@ if __name__ == "__main__":
     parser.add_argument('--mpl', type=int, default=25) # max path length
     parser.add_argument('--gpu', action='store_true', default=False)
     parser.add_argument('--log_dir', type=str, default='PRG3Gaussian')
-    parser.add_argument('--k', type=int, default=1)
     parser.add_argument('--layer', type=int, default=2)
     parser.add_argument('--hidden', type=int, default=64)
-    parser.add_argument('--oa', action='store_true', default=False) # online action
-    parser.add_argument('--ta', action='store_true', default=False) # target action
-    parser.add_argument('--ona', action='store_true', default=False) # online next action
+    parser.add_argument('--k0', action='store_true', default=False) # use k0 loss
+    parser.add_argument('--k0w', type=float, default=None) # k0 loss weight
     parser.add_argument('--ce', action='store_true', default=False) # cactor entropy
     parser.add_argument('--er', action='store_true', default=False) # entropy reward
     parser.add_argument('--alpha', type=float, default=None) # init alpha
@@ -152,11 +150,9 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name+'_mpl'+str(args.mpl)
     main_dir = args.log_dir\
-                +'k'+str(args.k)\
                 +('hidden'+str(args.hidden))\
-                +('oa' if args.oa else '')\
-                +('ta' if args.ta else '')\
-                +('ona' if args.ona else '')\
+                +(('k0' + (str(args.k0w) if args.k0w else ''))\
+                     if args.k0 else '')\
                 +('ce' if args.ce else '')\
                 +('er' if args.er else '')\
                 +(('alpha'+str(args.alpha)) if args.alpha else '')\
@@ -185,13 +181,11 @@ if __name__ == "__main__":
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             cactor_learning_rate=(args.lr if args.lr else 1e-4),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
-            logit_level=args.k,
             use_entropy_loss=True,
             use_entropy_reward=args.er,
             use_cactor_entropy_loss=args.ce,
-            online_action=args.oa,
-            target_action=args.ta,
-            online_next_action=args.ona,
+            use_k0_loss=args.k0,
+            k0_loss_weight=args.k0w,
             init_alpha=(args.alpha if args.alpha else 1.),
             use_automatic_entropy_tuning=(not args.fa),
             state_dependent_alpha=False,

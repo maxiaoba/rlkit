@@ -22,11 +22,10 @@ class PRGTrainer(TorchTrainer):
             policy_n,
             target_policy_n,
             cactor_n,
-            online_action,
-            target_action,
-            online_next_action,
             qf2_n,
             target_qf2_n,
+            use_k0_loss=False,
+            k0_loss_weight=None,
             deterministic_cactor_in_graph=False,
             deterministic_next_action=False,
             prg_next_action=False,
@@ -38,8 +37,6 @@ class PRGTrainer(TorchTrainer):
             log_alpha_n = None,
             log_calpha_n = None,
             target_entropy=None,
-
-            logit_level=1,
 
             discount=0.99,
             reward_scale=1.0,
@@ -71,10 +68,9 @@ class PRGTrainer(TorchTrainer):
         self.target_policy_n = target_policy_n
         self.cactor_n = cactor_n
 
-        self.online_action = online_action
-        self.target_action = target_action
-        self.online_next_action = online_next_action
-        self.logit_level = logit_level
+        self.use_k0_loss = use_k0_loss
+        self.k0_loss_weight = k0_loss_weight
+
         self.deterministic_cactor_in_graph = deterministic_cactor_in_graph
         self.deterministic_next_action = deterministic_next_action
         self.prg_next_action = prg_next_action
@@ -196,10 +192,8 @@ class PRGTrainer(TorchTrainer):
         for agent_j in range(num_agent):
             other_action_index = np.array([i for i in range(num_agent) if i!=agent_j])
             other_actions = k0_actions[:,other_action_index,:].view(batch_size,-1)
-            if self.deterministic_cactor_in_graph:
-                cactor_actions = self.cactor_n[agent_j](torch.cat((whole_obs,other_actions),dim=-1),deterministic=True)
-            else:
-                cactor_actions = self.cactor_n[agent_j](torch.cat((whole_obs,other_actions),dim=-1))
+            cactor_actions = self.cactor_n[agent_j](torch.cat((whole_obs,other_actions),dim=-1),
+                                                    deterministic=self.deterministic_cactor_in_graph)
             k1_actions[:,agent_j,:] = cactor_actions
 
         policy_gradients_n = []
@@ -240,8 +234,26 @@ class PRGTrainer(TorchTrainer):
             q2_output = self.qf2_n[agent](whole_obs, input_actions.view(batch_size, -1))
             q_output = torch.min(q1_output,q2_output)
             raw_policy_loss = -q_output.mean()
+            if self.use_k0_loss:
+                if self.k0_loss_weight is None:
+                    with torch.no_grad():
+                        other_action_index = np.array([i for i in range(num_agent) if i!=agent])
+                        d_k0k1 = torch.abs(k0_actions[:,other_action_index,:]-k1_actions[:,other_action_index,:])
+                        k0_loss_weight = torch.mean(torch.mean(d_k0k1,-1),-1,keepdim=True) # batch x 1
+                else:
+                    k0_loss_weight = torch.tensor(self.k0_loss_weight).to(ptu.device)
+                input_actions = k0_actions.clone()
+                input_actions[:,agent,:] = policy_actions
+                q1_output = self.qf1_n[agent](whole_obs, input_actions.view(batch_size, -1))
+                q2_output = self.qf2_n[agent](whole_obs, input_actions.view(batch_size, -1))
+                q_output = torch.min(q1_output,q2_output)
+                k0_loss = -(k0_loss_weight*q_output).mean()
+            else:
+                k0_loss_weight = torch.tensor(0.).to(ptu.device)
+                k0_loss = torch.tensor(0.).to(ptu.device)
             policy_loss = (
                     raw_policy_loss +
+                    k0_loss + 
                     pre_activation_policy_loss * self.pre_activation_weight +
                     entropy_loss
             )
@@ -257,6 +269,12 @@ class PRGTrainer(TorchTrainer):
                 ))
                 self.eval_statistics['Raw Policy Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
                     raw_policy_loss
+                ))
+                self.eval_statistics['K0 Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
+                    k0_loss
+                ))
+                self.eval_statistics['K0 Loss Weight {}'.format(agent)] = np.mean(ptu.get_numpy(
+                    k0_loss_weight
                 ))
                 self.eval_statistics['Preactivation Policy Loss {}'.format(agent)] = np.mean(ptu.get_numpy(
                     pre_activation_policy_loss
@@ -306,10 +324,8 @@ class PRGTrainer(TorchTrainer):
                 for agent_j in range(num_agent):
                     other_action_index = np.array([i for i in range(num_agent) if i!=agent_j])
                     other_actions = k0_actions[:,other_action_index,:].view(batch_size,-1)
-                    if self.deterministic_cactor_in_graph:
-                        cactor_actions = self.cactor_n[agent_j](torch.cat((whole_next_obs,other_actions),dim=-1),deterministic=True)
-                    else:
-                        cactor_actions = self.cactor_n[agent_j](torch.cat((whole_next_obs,other_actions),dim=-1))
+                    cactor_actions = self.cactor_n[agent_j](torch.cat((whole_next_obs,other_actions),dim=-1),
+                                                            deterministic=self.deterministic_cactor_in_graph)
                     k1_actions[:,agent_j,:] = cactor_actions
 
         for agent in range(num_agent):

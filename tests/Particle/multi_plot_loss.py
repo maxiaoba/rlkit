@@ -9,23 +9,29 @@ itr_interval = 10
 max_itr = 2e4
 
 fields = [
-            'exploration/Returns 0 Max',
-            'exploration/Rewards 0 Max',
+            # 'trainer/Alpha 0',
+            # 'trainer/Alpha 0 Mean',
+            # 'trainer/CAlpha 0 Mean',
+            # 'exploration/Returns 0 Max',
+            # 'exploration/Rewards 0 Max',
+            # 'evaluation/Returns 0 Max',
             'evaluation/Average Returns 0',
             # 'evaluation/Average Returns 1',
             # 'evaluation/Average Returns 2',
             # 'evaluation/Average Returns 3',
             ]
 field_names = [
-            'Expl Max Return 0',
-            'Expl Max Reward 0',
+            # 'Alpha 0',
+            # 'CAlpha 0',
+            # 'Expl Max Return 0',
+            # 'Expl Max Reward 0',
+            # 'Eval Max Reward 0',
             'Average Return 0',
             # 'Average Return 1',
             # 'Average Return 2',
             # 'Average Return 3',
             ]
-extra_names = field_names
-# extra_names = ['r0','r1','r2','r3']
+
 itr_name = 'epoch'
 min_loss = [-1000,-1000,-1000,-1000]
 max_loss = [1000,1000,1000,1000]
@@ -35,53 +41,35 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            # 'MADDPGlayer2hidden64oa',
-            # 'MASACGaussianlayer2hidden64oaer',
-            # 'MASACGaussianlayer2hidden64oaeralpha3.0fa',
-            # 'PRGGaussiank1hidden64oaonacedcigdnapna',
-            # 'PRGGaussiank1hidden64oaonacealpha3.0fadcigdnapna',
-            # 'PRGGaussiank1hidden64oaonaceerdcigdnapna',
-            # 'PRGGaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
-            # 'PRG3Gaussiank1hidden64oaonaceeralpha3.0fadcigdnapna',
-            # 'MASACGaussianlayer2hidden64oa',
-            # 'MASACGaussianlayer2hidden64oadna',
-            # 'MASACGaussianlayer2hidden64oaerdna',
-            # 'MASACGaussianlayer2hidden64oaalpha3.0fa',
-            # 'MASACGaussianlayer2hidden64oaalpha3.0fadna',
-            # 'MASACGaussianlayer2hidden64oaeralpha3.0fadna',
+            'MASACGaussianlayer2hidden64oa',
             'MASACGaussianlayer2hidden64oadna',
-            'PRGGaussiank1hidden64oaonacedcigdnapna',
-            'PRG3Gaussiank1hidden64oaonacedcigdnapna',
+            'MASACGaussianlayer2hidden64oaer',
+            'MASACGaussianlayer2hidden64oaerdna',
+            # 'PRGGaussiank1hidden64oaonacedcigpna',
+            # 'PRGGaussiank1hidden64oaonacedcigdnapna',
+            # 'PRGGaussiank1hidden64oaonaceerdcigpna',
+            # 'PRGGaussiank1hidden64oaonaceerdcigdnapna',
         ]
 # policy_names = policies
 policy_names = [
-                # 'MADDPG',
-                # 'MASACer',
-                # 'MASACalpha3.0faer',
-                # 'PRG',
-                # 'PRGalpha3.0fa',
-                # 'PRGer',
-                # 'PRGalpha3.0faer',
-                # 'PRG3alpha3.0faer',
-                # 'MASAC',
-                # 'MASACdna',
-                # 'MASACerdna',
-                # 'MASACalpha3.0fa',
-                # 'MASACalpha3.0fadna',
-                # 'MASACalpha3.0faerdna',
                 'MASAC',
-                'PRG',
-                'PRG3',
+                'MASACdna',
+                'MASACer',
+                'MASACerdna',
+                # 'PRG',
+                # 'PRGdna',
+                # 'PRGer',
+                # 'PRGerdna',
             ]
-seeds = [0,1,2]
+extra_name = 'MASACseed0'
+seeds = [0]
+
 colors = []
 for pid in range(len(policies)):
     colors.append('C'+str(pid))
 
 pre_name = ''
 post_name = ''
-
-plot_names = extra_names
 
 for fid,field in enumerate(fields):
     print(field)
@@ -151,5 +139,5 @@ for fid,field in enumerate(fields):
     plt.legend(plts,legends,loc='best')
     plt.xlabel('Itr')
     plt.ylabel(field_names[fid]) 
-    fig.savefig(plot_path+'/'+plot_names[fid]+'.pdf')
+    fig.savefig(plot_path+'/'+extra_name+field_names[fid]+'.pdf')
     plt.close(fig)

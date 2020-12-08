@@ -14,6 +14,7 @@ from rlkit.policies.argmax import ArgmaxDiscretePolicy
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='simple_spread')
+parser.add_argument('--mpl', type=int, default=25) # max path length
 parser.add_argument('--p1', type=str, default='MASAC')
 parser.add_argument('--p2', type=str, default='PRG')
 parser.add_argument('--epoch', type=int, default=None)
@@ -38,7 +39,7 @@ if isinstance(policy_n1[0],TanhGaussianPolicy):
 elif  isinstance(policy_n1[0],GumbelSoftmaxMlpPolicy):
     policy_n1 = [ArgmaxDiscretePolicy(policy,use_preactivation=True) for policy in policy_n1]
 
-data_path2 = './Data/{}/{}/seed{}/params.pkl'.format(args.exp_name,args.p2,args.seed)
+data_path2 = './Data/{}_mpl{}/{}/seed{}/params.pkl'.format(args.exp_name,args.mpl,args.p2,args.seed)
 data2 = torch.load(data_path2,map_location='cpu')
 policy_n2 = data2['trainer/trained_policy_n']
 if isinstance(policy_n2[0],TanhGaussianPolicy):

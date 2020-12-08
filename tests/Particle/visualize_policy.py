@@ -33,7 +33,7 @@ env = ParticleEnv(make_env(args.exp_name,discrete_action_space=False))
 o_n = env.reset()
 num_agent = env.num_agent
 
-max_path_length = array.mpl
+max_path_length = args.mpl
 path_length = 0
 done = np.array([False]*num_agent)
 c_r = np.zeros(num_agent)

@@ -251,10 +251,8 @@ class PRGTrainer(TorchTrainer):
                     if agent_j != agent:
                         other_action_index = np.array([i for i in range(num_agent) if i!=agent_j])
                         other_actions = current_actions[:,other_action_index,:].view(batch_size,-1)
-                        if self.deterministic_cactor_in_graph:
-                            cactor_actions = self.cactor_n[agent_j](torch.cat((whole_obs,other_actions),dim=-1),deterministic=True)
-                        else:
-                            cactor_actions = self.cactor_n[agent_j](torch.cat((whole_obs,other_actions),dim=-1))
+                        cactor_actions = self.cactor_n[agent_j](torch.cat((whole_obs,other_actions),dim=-1),
+                                                                deterministic=self.deterministic_cactor_in_graph)
                         next_actions[:,agent_j,:] = cactor_actions
                     else:
                         next_actions[:,agent_j,:] = policy_actions
@@ -277,19 +275,11 @@ class PRGTrainer(TorchTrainer):
             Critic operations.
             """
             with torch.no_grad():
-                if self.deterministic_next_action:
-                    # new_actions = next_target_actions_n[:,agent,:].clone()
-                    # new_log_pi = 0.
-                    new_actions, new_info = self.policy_n[agent](
-                        next_obs_n[:,agent,:], return_info=True,
-                        deterministic=True,
-                    )
-                    new_log_pi = new_info['log_prob']
-                else:
-                    new_actions, new_info = self.policy_n[agent](
-                        next_obs_n[:,agent,:], return_info=True,
-                    )
-                    new_log_pi = new_info['log_prob']
+                new_actions, new_info = self.policy_n[agent](
+                    next_obs_n[:,agent,:], return_info=True,
+                    deterministic=self.deterministic_next_action,
+                )
+                new_log_pi = new_info['log_prob']
                 if self.prg_next_action:
                     current_actions = next_target_actions_n.clone()
                     current_actions[:,agent,:] = new_actions
@@ -299,10 +289,8 @@ class PRGTrainer(TorchTrainer):
                             if agent_j != agent:
                                 other_action_index = np.array([i for i in range(num_agent) if i!=agent_j])
                                 other_actions = current_actions[:,other_action_index,:].view(batch_size,-1)
-                                if self.deterministic_cactor_in_graph:
-                                    cactor_actions = self.cactor_n[agent_j](torch.cat((whole_next_obs,other_actions),dim=-1),deterministic=True)
-                                else:
-                                    cactor_actions = self.cactor_n[agent_j](torch.cat((whole_next_obs,other_actions),dim=-1))
+                                cactor_actions = self.cactor_n[agent_j](torch.cat((whole_next_obs,other_actions),dim=-1),
+                                                                        deterministic=self.deterministic_cactor_in_graph)
                                 next_actions[:,agent_j,:] = cactor_actions
                             else:
                                 next_actions[:,agent_j,:] = new_actions
