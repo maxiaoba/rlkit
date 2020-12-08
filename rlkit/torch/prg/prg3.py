@@ -26,6 +26,7 @@ class PRGTrainer(TorchTrainer):
             target_qf2_n,
             use_k0_loss=False,
             k0_loss_weight=None,
+            k0_weight_mode=0,
             deterministic_cactor_in_graph=False,
             deterministic_next_action=False,
             prg_next_action=False,
@@ -70,6 +71,7 @@ class PRGTrainer(TorchTrainer):
 
         self.use_k0_loss = use_k0_loss
         self.k0_loss_weight = k0_loss_weight
+        self.k0_weight_mode = k0_weight_mode
 
         self.deterministic_cactor_in_graph = deterministic_cactor_in_graph
         self.deterministic_next_action = deterministic_next_action
@@ -239,7 +241,11 @@ class PRGTrainer(TorchTrainer):
                     with torch.no_grad():
                         other_action_index = np.array([i for i in range(num_agent) if i!=agent])
                         d_k0k1 = torch.abs(k0_actions[:,other_action_index,:]-k1_actions[:,other_action_index,:])
-                        k0_loss_weight = torch.mean(torch.mean(d_k0k1,-1),-1,keepdim=True) # batch x 1
+                        if self.k0_weight_mode == 0:
+                            k0_loss_weight = torch.mean(torch.mean(d_k0k1,-1),-1,keepdim=True)/2. # batch x 1
+                        elif self.k0_weight_mode == 1:
+                            k0_loss_weight = torch.mean(torch.mean(d_k0k1,-1),-1,keepdim=True)/2. # batch x 1
+                            k0_loss_weight = 1. - k0_loss_weight
                 else:
                     k0_loss_weight = torch.tensor(self.k0_loss_weight).to(ptu.device)
                 input_actions = k0_actions.clone()

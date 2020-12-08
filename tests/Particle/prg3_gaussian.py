@@ -132,6 +132,7 @@ if __name__ == "__main__":
     parser.add_argument('--hidden', type=int, default=64)
     parser.add_argument('--k0', action='store_true', default=False) # use k0 loss
     parser.add_argument('--k0w', type=float, default=None) # k0 loss weight
+    parser.add_argument('--k0m', type=int, default=0) # k0 loss weight mode
     parser.add_argument('--ce', action='store_true', default=False) # cactor entropy
     parser.add_argument('--er', action='store_true', default=False) # entropy reward
     parser.add_argument('--alpha', type=float, default=None) # init alpha
@@ -151,7 +152,7 @@ if __name__ == "__main__":
     pre_dir = './Data/'+args.exp_name+'_mpl'+str(args.mpl)
     main_dir = args.log_dir\
                 +('hidden'+str(args.hidden))\
-                +(('k0' + (str(args.k0w) if args.k0w else ''))\
+                +(('k0' + (str(args.k0w) if args.k0w else ('m'+str(args.k0m))))\
                      if args.k0 else '')\
                 +('ce' if args.ce else '')\
                 +('er' if args.er else '')\

@@ -9,6 +9,7 @@ itr_interval = 10
 max_itr = 2e4
 
 fields = [
+            'trainer/K0 Loss Weight 0',
             # 'trainer/Alpha 0',
             # 'trainer/Alpha 0 Mean',
             # 'trainer/CAlpha 0 Mean',
@@ -21,6 +22,7 @@ fields = [
             # 'evaluation/Average Returns 3',
             ]
 field_names = [
+            'K0 0',
             # 'Alpha 0',
             # 'CAlpha 0',
             # 'Expl Max Return 0',
@@ -41,28 +43,36 @@ prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'MASACGaussianlayer2hidden64oa',
-            'MASACGaussianlayer2hidden64oadna',
-            'MASACGaussianlayer2hidden64oaer',
-            'MASACGaussianlayer2hidden64oaerdna',
+            # 'MASACGaussianlayer2hidden64oa',
+            # 'MASACGaussianlayer2hidden64oadna',
+            # 'MASACGaussianlayer2hidden64oaer',
+            # 'MASACGaussianlayer2hidden64oaerdna',
             # 'PRGGaussiank1hidden64oaonacedcigpna',
             # 'PRGGaussiank1hidden64oaonacedcigdnapna',
             # 'PRGGaussiank1hidden64oaonaceerdcigpna',
             # 'PRGGaussiank1hidden64oaonaceerdcigdnapna',
+            # 'PRG3Gaussianhidden64k0ceerdcigpna',
+            # 'PRG3Gaussianhidden64k01.0ceerdcigpna',
+            'PRG3Gaussianhidden64k0cedcigdnapna',
+            'PRG3Gaussianhidden64k01.0cedcigdnapna',
         ]
 # policy_names = policies
 policy_names = [
-                'MASAC',
-                'MASACdna',
-                'MASACer',
-                'MASACerdna',
+                # 'MASAC',
+                # 'MASACdna',
+                # 'MASACer',
+                # 'MASACerdna',
                 # 'PRG',
                 # 'PRGdna',
                 # 'PRGer',
                 # 'PRGerdna',
+                # 'PRG3er',
+                # 'PRG3k01.0er',
+                'PRG3dna',
+                'PRG3k01.0dna',
             ]
-extra_name = 'MASACseed0'
-seeds = [0]
+extra_name = 'PRG3k0seed4'
+seeds = [4]
 
 colors = []
 for pid in range(len(policies)):
