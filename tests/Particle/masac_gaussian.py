@@ -9,8 +9,8 @@ def experiment(variant):
     sys.path.append("./multiagent-particle-envs")
     from make_env import make_env
     from particle_env_wrapper import ParticleEnv
-    expl_env = ParticleEnv(make_env(args.exp_name,discrete_action_space=False))
-    eval_env = ParticleEnv(make_env(args.exp_name,discrete_action_space=False))
+    expl_env = ParticleEnv(make_env(args.exp_name,discrete_action_space=False,world_args=variant['world_args']))
+    eval_env = ParticleEnv(make_env(args.exp_name,discrete_action_space=False,world_args=variant['world_args']))
     num_agent = expl_env.num_agent
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
@@ -59,7 +59,7 @@ def experiment(variant):
                 hidden_sizes=[variant['qf_kwargs']['hidden_dim']]*variant['qf_kwargs']['num_layer'],
             )
             target_qf2 = copy.deepcopy(qf2)
-            
+
             policy_n.append(policy)
             eval_policy_n.append(eval_policy)
             expl_policy_n.append(expl_policy)
@@ -105,6 +105,9 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='simple')
+    parser.add_argument('--num_ag', type=int, default=None)
+    parser.add_argument('--num_adv', type=int, default=None)
+    parser.add_argument('--num_l', type=int, default=None)
     parser.add_argument('--mpl', type=int, default=25) # max path length
     parser.add_argument('--log_dir', type=str, default='MASACGaussian')
     parser.add_argument('--layer', type=int, default=2)
@@ -123,7 +126,11 @@ if __name__ == "__main__":
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
-    pre_dir = './Data/'+args.exp_name+'_mpl'+str(args.mpl)
+    pre_dir = './Data/'+args.exp_name\
+                +(('ag'+str(args.num_ag)) if args.num_ag else '')\
+                +(('adv'+str(args.num_adv)) if args.num_adv else '')\
+                +(('l'+str(args.num_l)) if args.num_l else '')\
+                +'_mpl'+str(args.mpl)
     main_dir = args.log_dir\
                 +('layer'+str(args.layer))\
                 +('hidden'+str(args.hidden))\
@@ -137,6 +144,11 @@ if __name__ == "__main__":
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
     # noinspection PyTypeChecker
     variant = dict(
+        world_args=dict(
+            num_agents=args.num_ag,
+            num_adversaries=args.num_adv,
+            num_landmarks=args.num_l,
+        ),
         algorithm_kwargs=dict(
             num_epochs=(args.epoch if args.epoch else 1000),
             num_eval_steps_per_epoch=1000,

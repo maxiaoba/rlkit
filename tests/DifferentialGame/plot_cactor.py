@@ -1,7 +1,7 @@
 import csv
 import os.path
 import matplotlib 
-matplotlib.rcParams.update({'font.size': 10})
+matplotlib.rcParams.update({'font.size': 30})
 from matplotlib import pyplot as plt
 import numpy as np
 import torch
@@ -14,7 +14,8 @@ parser.add_argument('--seed', type=int, default=0)
 args = parser.parse_args()
 
 pre_path = './Data/'+args.exp_name+'/'+args.log_dir
-plot_file = pre_path+'/'+'seed'+str(args.seed)+'/cactor.png'
+# plot_file = pre_path+'/'+'seed'+str(args.seed)+'/cactor.pdf'
+plot_file = pre_path+'/'+'seed'+str(args.seed)+'/cactor'
 
 from differential_game import DifferentialGame
 env = DifferentialGame(game_name=args.exp_name)
@@ -45,20 +46,48 @@ for a1 in a1s:
     c2, _ = c2net.get_action(c2_input)
     c2s.append(c2[0])
 
+# plt.figure()
+# plt.subplot(1,2,1)
+# plt.plot(a2s,c1s)
+# plt.gca().set_aspect('equal', 'box')
+# plt.gca().axes.get_xaxis().set_ticks([-1.,0.,1.])
+# plt.gca().axes.get_yaxis().set_ticks([-1.,0.,1.])
+# plt.xlim(-1,1)
+# plt.ylim(-1,1)
+# plt.xlabel('a2')
+# plt.ylabel('c1')
+# plt.subplot(1,2,2)
+# plt.plot(a1s,c2s)
+# plt.gca().set_aspect('equal', 'box')
+# plt.gca().axes.get_xaxis().set_ticks([-1.,0.,1.])
+# plt.gca().axes.get_yaxis().set_ticks([-1.,0.,1.])
+# plt.xlim(-1,1)
+# plt.ylim(-1,1)
+# plt.xlabel('a1')
+# plt.ylabel('c2')
+# plt.savefig(plot_file, bbox_inches='tight')
+# plt.close()
+
 plt.figure()
-plt.subplot(1,2,1)
 plt.plot(a2s,c1s)
 plt.gca().set_aspect('equal', 'box')
+plt.gca().axes.get_xaxis().set_ticks([-1.,0.,1.])
+plt.gca().axes.get_yaxis().set_ticks([-1.,0.,1.])
 plt.xlim(-1,1)
 plt.ylim(-1,1)
 plt.xlabel('a2')
-plt.ylabel('c1')
-plt.subplot(1,2,2)
+plt.ylabel('ca1')
+plt.savefig(plot_file+'1.pdf', bbox_inches='tight')
+plt.close()
+
+plt.figure()
 plt.plot(a1s,c2s)
 plt.gca().set_aspect('equal', 'box')
+plt.gca().axes.get_xaxis().set_ticks([-1.,0.,1.])
+plt.gca().axes.get_yaxis().set_ticks([-1.,0.,1.])
 plt.xlim(-1,1)
 plt.ylim(-1,1)
 plt.xlabel('a1')
-plt.ylabel('c2')
-plt.savefig(plot_file)
+plt.ylabel('ca2')
+plt.savefig(plot_file+'2.pdf', bbox_inches='tight')
 plt.close()

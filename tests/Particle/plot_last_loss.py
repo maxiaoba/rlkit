@@ -1,7 +1,7 @@
 import csv
 import os.path
 import matplotlib 
-matplotlib.rcParams.update({'font.size': 10})
+matplotlib.rcParams.update({'font.family': 'serif','font.size': 18})
 from matplotlib import pyplot as plt
 import numpy as np
 
@@ -9,28 +9,16 @@ itr_interval = 10
 max_itr = 2e4
 
 fields = [
-            # 'trainer/K0 Loss Weight 0',
-            # 'trainer/Alpha 0 Mean',
-            # 'trainer/CAlpha 0 Mean',
-            # 'exploration/Returns 0 Max',
-            # 'exploration/Rewards 0 Max',
-            # 'evaluation/Returns 0 Max',
             'evaluation/Average Returns 0',
-            'evaluation/Average Returns 1',
-            'evaluation/Average Returns 2',
-            'evaluation/Average Returns 3',
+            # 'evaluation/Average Returns 1',
+            # 'evaluation/Average Returns 2',
+            # 'evaluation/Average Returns 3',
             ]
 field_names = [
-            # 'K0 0',
-            # 'Alpha 0',
-            # 'CAlpha 0',
-            # 'Expl Max Return 0',
-            # 'Expl Max Reward 0',
-            # 'Eval Max Reward 0',
             'Average Return 0',
-            'Average Return 1',
-            'Average Return 2',
-            'Average Return 3',
+            # 'Average Return 1',
+            # 'Average Return 2',
+            # 'Average Return 3',
             ]
 
 itr_name = 'epoch'
@@ -68,21 +56,23 @@ policy_names = [
                 # 'PRG3k0m0er',
                 # 'PRG3k0m1er',
             ]
+
 extra_name = ''
 seeds = [0,1,2,3,4]
 
-colors = []
-for pid in range(len(policies)):
-    colors.append('C'+str(pid))
+# colors = []
+# for pid in range(len(policies)):
+#     colors.append('C'+str(pid))
+colors = ['C0', 'C1', 'C2', 'C4', 'C3']
 
 pre_name = ''
 post_name = ''
 
 for fid,field in enumerate(fields):
     print(field)
-    fig = plt.figure(fid)
-    legends = []
-    plts = []
+    # fig = plt.figure(fid)
+    fig = plt.figure(fid,figsize=(2.*len(policy_names),6))
+    Losses_n = []
     for (policy_index,policy) in enumerate(policies):
         policy_path = pre_name+policy+post_name
         Itrs = []
@@ -131,20 +121,17 @@ for fid,field in enumerate(fields):
                 if len(losses) < min_itr:
                     min_itr = len(losses)
                 Losses.append(losses)
-        Losses = [losses[:min_itr] for losses in Losses]
-        itrs = itrs[:min_itr]
-        Losses = np.array(Losses)
-        print(Losses.shape)
-        y = np.mean(Losses,0)
-        yerr = np.std(Losses,0)
-        plot, = plt.plot(itrs,y,colors[policy_index])
-        plt.fill_between(itrs,y+yerr,y-yerr,linewidth=0,
-                            facecolor=colors[policy_index],alpha=0.3)
-        plts.append(plot)
-        legends.append(policy_names[policy_index])
+        Losses = [losses[min_itr-1] for losses in Losses]
+        Losses_n.append(Losses)
 
-    plt.legend(plts,legends,loc='best')
-    plt.xlabel('Itr')
-    plt.ylabel(field_names[fid]) 
-    fig.savefig(plot_path+'/'+extra_name+field_names[fid]+'.pdf')
+    Losses_n = np.array(Losses_n) # num_policy x num_seed
+    Losses_n = (Losses_n-np.min(Losses_n))/(np.max(Losses_n)-np.min(Losses_n))
+    plt.bar(policy_names,np.mean(Losses_n,1),
+            yerr=np.std(Losses_n,1)/np.sqrt(Losses_n.shape[1]),
+            capsize=10.0,
+            color=colors,
+            )
+    plt.ylabel('Normalized Evaluation Return')
+    plt.ylim(0,1) 
+    fig.savefig(plot_path+'/'+extra_name+field_names[fid]+'_last.pdf', bbox_inches='tight')
     plt.close(fig)

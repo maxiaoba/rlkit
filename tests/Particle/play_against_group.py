@@ -15,6 +15,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='simple_push')
 parser.add_argument('--mpl', type=int, default=25) # max path length
+parser.add_argument('--new', action='store_true', default=False)
 parser.add_argument('--sample_num', type=int, default=1000)
 parser.add_argument('--extra_name', type=str, default='')
 args = parser.parse_args()
@@ -27,36 +28,38 @@ elif args.exp_name == 'simple_push':
     groups = [[0],[1]]
 print('groups: ',groups)
 
-seeds = [0,1,2]
+seeds = [0,1,2,3,4]
 P_paths = [
+            'MADDPGlayer2hidden64',
             'MADDPGlayer2hidden64oa',
-            'MASACGaussianlayer2hidden64oadna',
-            'MASACGaussianlayer2hidden64oaerdna',
-            'PRGGaussiank1hidden64oaonacedcigdnapna',
-            'PRGGaussiank1hidden64oaonaceerdcigdnapna',
-            ]
-policy_names = [
-                'MADDPG',
-                'MASACdna',
-                'MASACerdna'
-                'PRGdna',
-                'PRGerdna',
+            'MASACGaussianlayer2hidden64er',
+            'MASACGaussianlayer2hidden64oaer',
+            # 'MASACGaussianlayer2hidden64oadna',
+            'PRGGaussiank1hidden64oaonaceerdcigpna',
+            # 'PRGGaussiank1hidden64oaonacedcigdnapna',
+            # 'PRG3Gaussianhidden64k0m0cedcigdnapna',
+            # 'PRG3Gaussianhidden64k0m1cedcigdnapna',
+            'PRG3Gaussianhidden64k0m0ceerdcigpna',
+            'PRG3Gaussianhidden64k0m1ceerdcigpna',
             ]
 
 extra_name = args.extra_name
 
 pre_path = './Data/'+args.exp_name+'_mpl'+str(args.mpl)
 log_dir = pre_path+'/tests/'+extra_name+'_ss'+str(args.sample_num)
+log_file = log_dir+'/results.pkl'
 
 sample_num = args.sample_num
 max_path_length = args.mpl
 
 import os
-if not os.path.isdir(log_dir):
+if (not os.path.isdir(log_dir)):
     os.makedirs(log_dir)
-
-import csv
-csv_name = 'payoff.csv'
+if (not os.path.isfile(log_file)) or args.new:
+    results = {}
+else:
+    import joblib
+    results = joblib.load(log_file)
 
 import sys
 sys.path.append("./multiagent-particle-envs")
@@ -65,51 +68,42 @@ from particle_env_wrapper import ParticleEnv
 # env = ParticleEnv(make_env(args.exp_name,discrete_action_space=True,discrete_action_input=True))
 env = ParticleEnv(make_env(args.exp_name,discrete_action_space=False))
 
-with open(log_dir+'/'+csv_name, mode='w') as csv_file:
-    fieldnames0 = ['seed'] + ['p'+str(pid) for pid in range(len(P_paths))]
-    fieldnames1 = []
-    fieldnames2 = []
-    for p1id in range(len(P_paths)):
-        for p2id in range(len(P_paths)):
-            fieldnames1.append('p1'+str(p1id)+'p2'+str(p2id)+'_1')
-            fieldnames2.append('p1'+str(p1id)+'p2'+str(p2id)+'_2')
 
-    writer = csv.DictWriter(csv_file, fieldnames=fieldnames0+fieldnames1+fieldnames2)
-    writer.writeheader()
-    Mat1 = []
-    Mat2 = []
-    for seed in seeds:
-        mat1 = np.zeros((len(P_paths),len(P_paths)))
-        mat2 = np.zeros((len(P_paths),len(P_paths)))
-        print('seed: ',seed)
-        row_content = dict()
-        row_content['seed'] = seed
-        p_paths = []
+for seed in seeds:
+    print('seed: ',seed)
+    if seed in results.keys():
+        pass
+    else:
+        results[seed] = dict()
+
+    p_paths = []
+    for pid in range(len(P_paths)):
+        p_paths.append(P_paths[pid]+'/'+'seed'+str(seed))
+
+    with torch.no_grad():
+        players = []
         for pid in range(len(P_paths)):
-            row_content['p'+str(pid)] = P_paths[pid]
-            p_paths.append(P_paths[pid]+'/'+'seed'+str(seed))
+            d_path = pre_path+'/'+P_paths[pid]+'/seed'+str(seed)\
+                    +'/params.pkl'
+            data = torch.load(d_path,map_location='cpu')
+            policy_n = data['trainer/trained_policy_n']
+            if isinstance(policy_n[0],TanhGaussianPolicy):
+                policy_n = [MakeDeterministic(policy) for policy in policy_n]
+            elif  isinstance(policy_n[0],GumbelSoftmaxMlpPolicy):
+                policy_n = [ArgmaxDiscretePolicy(policy,use_preactivation=True) for policy in policy_n]
+            players.append(policy_n)
 
-        with torch.no_grad():
-            # p1s = []
-            # p2s = []
-            players = []
-            for pid in range(len(P_paths)):
-                d_path = pre_path+'/'+P_paths[pid]+'/seed'+str(seed)\
-                        +'/params.pkl'
-                data = torch.load(d_path,map_location='cpu')
-                policy_n = data['trainer/trained_policy_n']
-                if isinstance(policy_n[0],TanhGaussianPolicy):
-                    policy_n = [MakeDeterministic(policy) for policy in policy_n]
-                elif  isinstance(policy_n[0],GumbelSoftmaxMlpPolicy):
-                    policy_n = [ArgmaxDiscretePolicy(policy,use_preactivation=True) for policy in policy_n]
-                # p1 = [policy_n[i] for i in groups[0]]
-                # p2 = [policy_n[i] for i in groups[1]]
-                # p1s.append(p1)
-                # p2s.append(p2)
-                players.append(policy_n)
-
-            for p1id in range(len(P_paths)):
-                for p2id in range(len(P_paths)):
+        for p1id in range(len(P_paths)):
+            for p2id in range(len(P_paths)):
+                pair_name = '{}-{}'.format(P_paths[p1id],P_paths[p2id])
+                # print(pair_name)
+                if pair_name in results[seed].keys():
+                    print('pass')
+                    Cr1 = results[seed][pair_name]['r1']
+                    Cr2 = results[seed][pair_name]['r2']
+                    print('{}: r1: {:.2f}; r2: {:.2f}'.format(pair_name,np.mean(Cr1),np.mean(Cr2)))
+                else:
+                    results[seed][pair_name] = {}
                     player1 = players[p1id]
                     player2 = players[p2id]
 
@@ -134,17 +128,12 @@ with open(log_dir+'/'+csv_name, mode='w') as csv_file:
                                 break
                         Cr1.append(cr1)
                         Cr2.append(cr2)
-                    p1_avg_reward = np.mean(Cr1)
-                    p2_avg_reward = np.mean(Cr2)
-                    mat1[p1id,p2id] = p1_avg_reward
-                    mat2[p1id,p2id] = p2_avg_reward
-                    print('p1'+str(p1id)+'p2'+str(p2id)+'_1',': ',p1_avg_reward)
-                    print('p1'+str(p1id)+'p2'+str(p2id)+'_2',': ',p2_avg_reward)
-                    row_content['p1'+str(p1id)+'p2'+str(p2id)+'_1'] = p1_avg_reward
-                    row_content['p1'+str(p1id)+'p2'+str(p2id)+'_2'] = p2_avg_reward
-                    # pdb.set_trace()
+                    print('{}: r1: {:.2f}; r2: {:.2f}'.format(pair_name,np.mean(Cr1),np.mean(Cr2)))
+                    results[seed][pair_name]['r1'] = Cr1
+                    results[seed][pair_name]['r2'] = Cr2
 
-        Mat1.append(mat1)
-        Mat2.append(mat2)
-        writer.writerow(row_content)
+import pickle
+f = open(log_file,"wb")
+pickle.dump(results,f)
+f.close()
 

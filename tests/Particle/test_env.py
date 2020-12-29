@@ -10,6 +10,9 @@ from rlkit.policies.argmax import ArgmaxDiscretePolicy
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='simple_spread')
+parser.add_argument('--num_agents', type=int, default=None)
+parser.add_argument('--num_adversaries', type=int, default=None)
+parser.add_argument('--num_landmarks', type=int, default=None)
 parser.add_argument('--mpl', type=int, default=25) # max path length
 args = parser.parse_args()
 
@@ -17,7 +20,9 @@ import sys
 sys.path.append("./multiagent-particle-envs")
 from make_env import make_env
 from particle_env_wrapper import ParticleEnv
-env = ParticleEnv(make_env(args.exp_name,discrete_action_space=False))
+world_args={'num_agents':args.num_agents,'num_adversaries':args.num_adversaries,
+			'num_landmarks':args.num_landmarks}
+env = ParticleEnv(make_env(args.exp_name,discrete_action_space=False,world_args=world_args))
 o_n = env.reset()
 env.render()
 num_agent = env.num_agent
@@ -30,10 +35,11 @@ while True:
 	path_length += 1
 	a_n = []
 	for i in range(num_agent):
-		a = input("Action for agent {}:\n".format(i))
-		a = np.array(list(map(float,a.split(' '))))
+		# a = input("Action for agent {}:\n".format(i))
+		# a = np.array(list(map(float,a.split(' '))))
+		# a_n.append(a)
+		a = env.action_space.sample()
 		a_n.append(a)
-	# a_n = [np.array([0.,-1.]),np.array([0.,1.]),np.array([0.,1.])]
 	o_n, r_n, done, _ = env.step(a_n)
 	c_r += r_n
 	env.render()

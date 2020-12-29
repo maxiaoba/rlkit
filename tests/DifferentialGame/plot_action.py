@@ -1,7 +1,7 @@
 import csv
 import os.path
 import matplotlib 
-matplotlib.rcParams.update({'font.size': 10})
+matplotlib.rcParams.update({'font.size': 20})
 from matplotlib import pyplot as plt
 import numpy as np
 import torch
@@ -14,7 +14,7 @@ parser.add_argument('--seed', type=int, default=0)
 args = parser.parse_args()
 
 pre_path = './Data/'+args.exp_name+'/'+args.log_dir
-plot_file = pre_path+'/'+'seed'+str(args.seed)+'/action.png'
+plot_file = pre_path+'/'+'seed'+str(args.seed)+'/action.pdf'
 a1_field = 'evaluation/Actions 0 Mean'
 a2_field = 'evaluation/Actions 1 Mean'
 a1s = []
@@ -50,8 +50,10 @@ plt.plot(a1s[0],a2s[0],'o',color='green')
 plt.plot(a1s[-1],a2s[-1],'o',color='red')
 plt.xlabel('a1')
 plt.ylabel('a2') 
+plt.gca().axes.get_xaxis().set_ticks([-1.,0.,1.])
+plt.gca().axes.get_yaxis().set_ticks([-1.,0.,1.])
 plt.gca().set_aspect('equal', 'box')
 plt.xlim(-1,1)
 plt.ylim(-1,1)
-fig.savefig(plot_file)
+fig.savefig(plot_file, bbox_inches='tight')
 plt.close(fig)

@@ -113,7 +113,6 @@ if __name__ == "__main__":
     parser.add_argument('--exp_name', type=str, default='zero_sum')
     parser.add_argument('--gpu', action='store_true', default=False)
     parser.add_argument('--log_dir', type=str, default='PRG3Gaussian')
-    parser.add_argument('--k', type=int, default=1)
     parser.add_argument('--hidden', type=int, default=16)
     parser.add_argument('--oa', action='store_true', default=False) # online action
     parser.add_argument('--ta', action='store_true', default=False) # target action
@@ -133,7 +132,6 @@ if __name__ == "__main__":
     import os.path as osp
     pre_dir = './Data/'+args.exp_name
     main_dir = args.log_dir\
-                +'k'+str(args.k)\
                 +('hidden'+str(args.hidden))\
                 +('oa' if args.oa else '')\
                 +('ta' if args.ta else '')\
@@ -166,7 +164,6 @@ if __name__ == "__main__":
             qf_learning_rate=(args.lr if args.lr else 1e-3),
             cactor_learning_rate=(args.lr if args.lr else 1e-4),
             policy_learning_rate=(args.lr if args.lr else 1e-4),
-            logit_level=args.k,
             use_entropy_loss=True,
             use_cactor_entropy_loss=args.ce,
             online_action=args.oa,
