@@ -19,6 +19,7 @@ fields = [
             'evaluation/Average Returns 1',
             'evaluation/Average Returns 2',
             'evaluation/Average Returns 3',
+            'evaluation/Average Returns 4',
             ]
 field_names = [
             # 'K0 0',
@@ -31,42 +32,45 @@ field_names = [
             'Average Return 1',
             'Average Return 2',
             'Average Return 3',
+            'Average Return 4',
             ]
 
 itr_name = 'epoch'
-min_loss = [-1000,-1000,-1000,-1000]
-max_loss = [1000,1000,1000,1000]
+min_loss = [-1000,-1000,-1000,-1000,-1000]
+max_loss = [1000,1000,1000,1000,1000]
 exp_name = "simple_spread_mpl25"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
-            'MADDPGlayer2hidden64',
+            # 'MADDPGlayer2hidden64',
             'MADDPGlayer2hidden64oa',
-            'MASACGaussianlayer2hidden64er',
+            # 'MASACGaussianlayer2hidden64er',
             'MASACGaussianlayer2hidden64oaer',
             # 'MASACGaussianlayer2hidden64oadna',
             'PRGGaussiank1hidden64oaonaceerdcigpna',
             # 'PRGGaussiank1hidden64oaonacedcigdnapna',
+            # 'PRG3Gaussianhidden64ceerdcigpna',
             # 'PRG3Gaussianhidden64k0m0cedcigdnapna',
             # 'PRG3Gaussianhidden64k0m1cedcigdnapna',
-            # 'PRG3Gaussianhidden64k0m0ceerdcigpna',
-            # 'PRG3Gaussianhidden64k0m1ceerdcigpna',
+            'PRG3Gaussianhidden64k0m0ceerdcigpna',
+            'PRG3Gaussianhidden64k0m1ceerdcigpna',
         ]
 # policy_names = policies
 policy_names = [
-                'MADDPG',
+                # 'MADDPG',
                 'MADDPG-OA',
-                'MASAC',
+                # 'MASAC',
                 'MASAC-OA',
                 # 'MASACdna',
                 'R2G',
                 # 'PRGdna',
+                # 'R2G3',
                 # 'PRG3k0m0dna',
                 # 'PRG3k0m1dna',
-                # 'PRG3k0m0er',
-                # 'PRG3k0m1er',
+                'PRG3k0m0er',
+                'PRG3k0m1er',
             ]
 extra_name = ''
 seeds = [0,1,2,3,4]
