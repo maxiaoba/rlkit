@@ -24,14 +24,14 @@ fields = [
             # "trainer/Q1 Predictions 2 Mean",
             # "trainer/Q1 Predictions 3 Mean",
             # "trainer/Q1 Predictions 4 Mean",
-            "trainer/Alpha 0 Mean","trainer/Alpha 1 Mean","trainer/Alpha 2 Mean","trainer/Alpha 3 Mean","trainer/Alpha 4 Mean",
+            # "trainer/Alpha 0 Mean","trainer/Alpha 1 Mean","trainer/Alpha 2 Mean","trainer/Alpha 3 Mean","trainer/Alpha 4 Mean",
             # "trainer/Entropy Loss 0","trainer/Entropy Loss 1","trainer/Entropy Loss 2","trainer/Entropy Loss 3","trainer/Entropy Loss 4",
             # 'evaluation/Average Returns 0',
             # 'evaluation/Average Returns 1',
             # 'evaluation/Average Returns 2',
             # 'evaluation/Average Returns 3',
             # 'evaluation/Average Returns 4',
-            # 'time/epoch (s)',
+            'time/epoch (s)',
             ]
 field_names = [
             # 'Policy Loss 0',
@@ -40,33 +40,33 @@ field_names = [
             # 'Policy Loss 3',
             # 'Policy Loss 4',
             # "Q1 0","Q1 1","Q1 2","Q1 3","Q1 4",
-            'Alpha 0','Alpha 1','Alpha 2','Alpha 3','Alpha 5', 
+            # 'Alpha 0','Alpha 1','Alpha 2','Alpha 3','Alpha 5', 
             # 'Entropy Loss 0','Entropy Loss 1','Entropy Loss 2','Entropy Loss 3','Entropy Loss 5', 
             # 'Average Return 0',
             # 'Average Return 1',
             # 'Average Return 2',
             # 'Average Return 3',
             # 'Average Return 4',
-            # 'time epoch (s)',
+            'time epoch (s)',
             ]
 
 itr_name = 'epoch'
 min_loss = [-np.inf]*10
 max_loss = [np.inf]*10
-exp_name = "simple_spread_mpl25"
+exp_name = "simple_spreadag5l5_mpl25"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
 
 policies = [
             # 'MADDPGlayer2hidden64',
-            # 'MADDPGlayer2hidden64oa',
+            'MADDPGlayer2hidden64oa',
             # 'MASACGaussianlayer2hidden64er',
-            # 'MASACGaussianlayer2hidden64oaer',
+            'MASACGaussianlayer2hidden64oaer',
             # 'MASACGaussianlayer2hidden64oadna',
-            'PRGGaussiank1hidden64oaonaceerdcigpna',
+            'PRGGaussiank1hidden64oaceerdcigpna',
             # 'PRGGaussiank1hidden64oaonacedcigdnapna',
-            # 'PRG3Gaussianhidden64ceerdcigpna',
+            'PRG3Gaussianhidden64ceerdcigpna',
             # 'PRG3Gaussianhidden64k0m0cedcigdnapna',
             # 'PRG3Gaussianhidden64k0m1cedcigdnapna',
             # 'PRG3Gaussianhidden64k0m0ceerdcigpna',
@@ -75,20 +75,20 @@ policies = [
 # policy_names = policies
 policy_names = [
                 # 'MADDPG',
-                # 'MADDPG-OA',
+                'MADDPG-OA',
                 # 'MASAC',
-                # 'MASAC-OA',
+                'MASAC-OA',
                 # 'MASACdna',
                 'R2G',
                 # 'PRGdna',
-                # 'R2G3',
+                'R2G3',
                 # 'PRG3k0m0dna',
                 # 'PRG3k0m1dna',
                 # 'PRG3k0m0er',
                 # 'PRG3k0m1er',
             ]
-extra_name = ''
-seeds = [0,1,2,3,4]
+extra_name = 't4'
+seeds = [0]
 
 colors = []
 for pid in range(len(policies)):
