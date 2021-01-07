@@ -135,7 +135,7 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--load', action='store_true', default=False)
     parser.add_argument('--load_epoch', type=int, default=None)
-    parser.add_argument('--snapshot_mode', type=str, default="gap")
+    parser.add_argument('--snapshot_mode', type=str, default="gap_and_last")
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
