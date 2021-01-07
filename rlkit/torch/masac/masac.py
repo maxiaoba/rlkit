@@ -30,6 +30,7 @@ class MASACTrainer(TorchTrainer):
             policy_learning_rate=1e-4,
             qf_learning_rate=1e-3,
             qf_weight_decay=0.,
+            log_alpha_n=None,
             init_alpha=1.,
             target_hard_update_period=1000,
             tau=1e-2,
@@ -43,6 +44,11 @@ class MASACTrainer(TorchTrainer):
 
             min_q_value=-np.inf,
             max_q_value=np.inf,
+
+            qf1_optimizer_n=None,
+            qf2_optimizer_n=None,
+            policy_optimizer_n=None,
+            alpha_optimizer_n=None,
     ):
         super().__init__()
         if qf_criterion is None:
@@ -77,30 +83,43 @@ class MASACTrainer(TorchTrainer):
                 self.target_entropy = target_entropy
             else:
                 self.target_entropy = -np.prod(self.env.action_space.shape).item()  # heuristic value from Tuomas
-            # self.log_alpha_n = [ptu.zeros(1, requires_grad=True) for i in range(len(self.policy_n))]
-            self.log_alpha_n = [ptu.tensor([np.log(self.init_alpha)], requires_grad=True, dtype=torch.float32) for i in range(len(self.policy_n))]
-            self.alpha_optimizer_n = [
+            if log_alpha_n:
+                self.log_alpha_n = log_alpha_n
+            else:
+                self.log_alpha_n = [ptu.tensor([np.log(self.init_alpha)], requires_grad=True, dtype=torch.float32) for i in range(len(self.policy_n))]
+            if alpha_optimizer_n:
+                self.alpha_optimizer_n = alpha_optimizer_n
+            else:
+                self.alpha_optimizer_n = [
+                    optimizer_class(
+                        [self.log_alpha_n[i]],
+                        lr=self.policy_learning_rate,
+                    ) for i in range(len(self.log_alpha_n))]
+
+        if qf1_optimizer_n:
+            self.qf1_optimizer_n = qf1_optimizer_n
+        else:
+            self.qf1_optimizer_n = [ 
                 optimizer_class(
-                    [self.log_alpha_n[i]],
+                    self.qf1_n[i].parameters(),
+                    lr=self.qf_learning_rate,
+                ) for i in range(len(self.qf1_n))]
+        if qf2_optimizer_n:
+            self.qf2_optimizer_n = qf2_optimizer_n
+        else:
+            self.qf2_optimizer_n = [ 
+                optimizer_class(
+                    self.qf2_n[i].parameters(),
+                    lr=self.qf_learning_rate,
+                ) for i in range(len(self.qf2_n))]
+        if policy_optimizer_n:
+            self.policy_optimizer_n = policy_optimizer_n
+        else:
+            self.policy_optimizer_n = [
+                optimizer_class(
+                    self.policy_n[i].parameters(),
                     lr=self.policy_learning_rate,
-                ) for i in range(len(self.log_alpha_n))]
-
-        self.qf1_optimizer_n = [ 
-            optimizer_class(
-                self.qf1_n[i].parameters(),
-                lr=self.qf_learning_rate,
-            ) for i in range(len(self.qf1_n))]
-        self.qf2_optimizer_n = [ 
-            optimizer_class(
-                self.qf2_n[i].parameters(),
-                lr=self.qf_learning_rate,
-            ) for i in range(len(self.qf2_n))]
-
-        self.policy_optimizer_n = [
-            optimizer_class(
-                self.policy_n[i].parameters(),
-                lr=self.policy_learning_rate,
-            ) for i in range(len(self.policy_n))]
+                ) for i in range(len(self.policy_n))]
 
         self.eval_statistics = OrderedDict()
         self._n_train_steps_total = 0
@@ -275,10 +294,18 @@ class MASACTrainer(TorchTrainer):
         ]
 
     def get_snapshot(self):
-        return dict(
+        res = dict(
             qf1_n=self.qf1_n,
             target_qf1_n=self.target_qf1_n,
             qf2_n=self.qf2_n,
             target_qf2_n=self.target_qf2_n,
-            trained_policy_n=self.policy_n,
+            policy_n=self.policy_n,
+            # optimizers
+            qf1_optimizer_n=self.qf1_optimizer_n,
+            qf2_optimizer_n=self.qf2_optimizer_n,
+            policy_optimizer_n=self.policy_optimizer_n,
         )
+        if self.use_automatic_entropy_tuning:
+            res['log_alpha_n'] = self.log_alpha_n
+            res['alpha_optimizer_n'] = self.alpha_optimizer_n
+        return res

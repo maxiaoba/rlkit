@@ -34,6 +34,12 @@ class SACTrainer(TorchTrainer):
 
             use_automatic_entropy_tuning=True,
             target_entropy=None,
+
+            log_alpha=None,
+            qf1_optimizer=None,
+            qf2_optimizer=None,
+            policy_optimizer=None,
+            alpha_optimizer=None,
     ):
         super().__init__()
         self.env = env
@@ -51,11 +57,17 @@ class SACTrainer(TorchTrainer):
                 self.target_entropy = target_entropy
             else:
                 self.target_entropy = -np.prod(self.env.action_space.shape).item()  # heuristic value from Tuomas
-            self.log_alpha = ptu.zeros(1, requires_grad=True)
-            self.alpha_optimizer = optimizer_class(
-                [self.log_alpha],
-                lr=policy_lr,
-            )
+            if log_alpha:
+                self.log_alpha = log_alpha
+            else:
+                self.log_alpha = ptu.zeros(1, requires_grad=True)
+            if alpha_optimizer:
+                alpha_optimizer = alpha_optimizer
+            else:
+                self.alpha_optimizer = optimizer_class(
+                    [self.log_alpha],
+                    lr=policy_lr,
+                )
 
         self.plotter = plotter
         self.render_eval_paths = render_eval_paths
@@ -63,18 +75,27 @@ class SACTrainer(TorchTrainer):
         self.qf_criterion = nn.MSELoss()
         self.vf_criterion = nn.MSELoss()
 
-        self.policy_optimizer = optimizer_class(
-            self.policy.parameters(),
-            lr=policy_lr,
-        )
-        self.qf1_optimizer = optimizer_class(
-            self.qf1.parameters(),
-            lr=qf_lr,
-        )
-        self.qf2_optimizer = optimizer_class(
-            self.qf2.parameters(),
-            lr=qf_lr,
-        )
+        if policy_optimizer:
+            self.policy_optimizer = policy_optimizer
+        else:
+            self.policy_optimizer = optimizer_class(
+                self.policy.parameters(),
+                lr=policy_lr,
+            )
+        if qf1_optimizer:
+            self.qf1_optimizer = qf1_optimizer
+        else:
+            self.qf1_optimizer = optimizer_class(
+                self.qf1.parameters(),
+                lr=qf_lr,
+            )
+        if qf2_optimizer:
+            self.qf2_optimizer = qf2_optimizer
+        else:
+            self.qf2_optimizer = optimizer_class(
+                self.qf2.parameters(),
+                lr=qf_lr,
+            )
 
         self.discount = discount
         self.reward_scale = reward_scale
@@ -221,11 +242,18 @@ class SACTrainer(TorchTrainer):
         ]
 
     def get_snapshot(self):
-        return dict(
+        res = dict(
             policy=self.policy,
             qf1=self.qf1,
             qf2=self.qf2,
             target_qf1=self.qf1,
             target_qf2=self.qf2,
+            policy_optimizer=self.policy_optimizer,
+            qf1_optimizer=self.qf1_optimizer,
+            qf2_optimizer=self.qf2_optimizer,
         )
+        if self.use_automatic_entropy_tuning:
+            res['log_alpha'] = self.log_alpha
+            res['alpha_optimizer'] = self.alpha_optimizer
+        return res
 

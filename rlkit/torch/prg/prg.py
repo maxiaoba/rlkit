@@ -20,11 +20,8 @@ class PRGTrainer(TorchTrainer):
             qf1_n,
             target_qf1_n,
             policy_n,
-            target_policy_n,
             cactor_n,
             online_action,
-            target_action,
-            online_next_action,
             qf2_n,
             target_qf2_n,
             deterministic_cactor_in_graph=False,
@@ -58,6 +55,13 @@ class PRGTrainer(TorchTrainer):
 
             min_q_value=-np.inf,
             max_q_value=np.inf,
+
+            qf1_optimizer_n=None,
+            qf2_optimizer_n=None,
+            policy_optimizer_n=None,
+            cactor_optimizer_n=None,
+            alpha_optimizer_n=None,
+            calpha_optimizer_n=None,
     ):
         super().__init__()
         self.env = env
@@ -68,12 +72,9 @@ class PRGTrainer(TorchTrainer):
         self.qf2_n = qf2_n
         self.target_qf2_n = target_qf2_n
         self.policy_n = policy_n
-        self.target_policy_n = target_policy_n
         self.cactor_n = cactor_n
 
         self.online_action = online_action
-        self.target_action = target_action
-        self.online_next_action = online_next_action
         self.logit_level = logit_level
         self.deterministic_cactor_in_graph = deterministic_cactor_in_graph
         self.deterministic_next_action = deterministic_next_action
@@ -94,28 +95,38 @@ class PRGTrainer(TorchTrainer):
         self.min_q_value = min_q_value
         self.max_q_value = max_q_value
 
-        self.qf1_optimizer_n = [ 
-            optimizer_class(
-                self.qf1_n[i].parameters(),
-                lr=self.qf_learning_rate,
-            ) for i in range(len(self.qf1_n))]
-        self.qf2_optimizer_n = [ 
-            optimizer_class(
-                self.qf2_n[i].parameters(),
-                lr=self.qf_learning_rate,
-            ) for i in range(len(self.qf2_n))]
-
-        self.policy_optimizer_n = [
-            optimizer_class(
-                self.policy_n[i].parameters(),
-                lr=self.policy_learning_rate,
-            ) for i in range(len(self.policy_n))]
-
-        self.cactor_optimizer_n = [
-            optimizer_class(
-                self.cactor_n[i].parameters(),
-                lr=self.cactor_learning_rate,
-            ) for i in range(len(self.cactor_n))]
+        if qf1_optimizer_n:
+            self.qf1_optimizer_n = qf1_optimizer_n
+        else:
+            self.qf1_optimizer_n = [ 
+                optimizer_class(
+                    self.qf1_n[i].parameters(),
+                    lr=self.qf_learning_rate,
+                ) for i in range(len(self.qf1_n))]
+        if qf2_optimizer_n:
+            self.qf2_optimizer_n = qf2_optimizer_n
+        else:
+            self.qf2_optimizer_n = [ 
+                optimizer_class(
+                    self.qf2_n[i].parameters(),
+                    lr=self.qf_learning_rate,
+                ) for i in range(len(self.qf2_n))]
+        if policy_optimizer_n:
+            self.policy_optimizer_n = policy_optimizer_n
+        else:
+            self.policy_optimizer_n = [
+                optimizer_class(
+                    self.policy_n[i].parameters(),
+                    lr=self.policy_learning_rate,
+                ) for i in range(len(self.policy_n))]
+        if cactor_optimizer_n:
+            self.cactor_optimizer_n = cactor_optimizer_n
+        else:
+            self.cactor_optimizer_n = [
+                optimizer_class(
+                    self.cactor_n[i].parameters(),
+                    lr=self.cactor_learning_rate,
+                ) for i in range(len(self.cactor_n))]
 
         self.init_alpha = init_alpha
         self.use_entropy_loss = use_entropy_loss
@@ -129,38 +140,46 @@ class PRGTrainer(TorchTrainer):
             else:
                 self.target_entropy = -np.prod(self.env.action_space.shape).item()  # heuristic value from Tuomas
             if self.use_entropy_loss:
-                # self.log_alpha_n = [ptu.zeros(1, requires_grad=True) for i in range(len(self.policy_n))]
-                if self.state_dependent_alpha:
+                if log_alpha_n:
                     self.log_alpha_n = log_alpha_n
-                    self.alpha_optimizer_n = [
-                            optimizer_class(
-                                self.log_alpha_n[i].parameters(),
-                                lr=self.policy_learning_rate,
-                            ) for i in range(len(self.log_alpha_n))]
                 else:
                     self.log_alpha_n = [ptu.tensor([np.log(self.init_alpha)], requires_grad=True, dtype=torch.float32) for i in range(len(self.policy_n))]
-                    self.alpha_optimizer_n = [
-                        optimizer_class(
-                            [self.log_alpha_n[i]],
-                            lr=self.policy_learning_rate,
-                        ) for i in range(len(self.log_alpha_n))]
+                if alpha_optimizer_n:
+                    self.alpha_optimizer_n = alpha_optimizer_n
+                else:
+                    if self.state_dependent_alpha:
+                        self.alpha_optimizer_n = [
+                                optimizer_class(
+                                    self.log_alpha_n[i].parameters(),
+                                    lr=self.policy_learning_rate,
+                                ) for i in range(len(self.log_alpha_n))]
+                    else:
+                        self.alpha_optimizer_n = [
+                            optimizer_class(
+                                [self.log_alpha_n[i]],
+                                lr=self.policy_learning_rate,
+                            ) for i in range(len(self.log_alpha_n))]
 
             if self.use_cactor_entropy_loss:
-                # self.log_calpha_n = [ptu.zeros(1, requires_grad=True) for i in range(len(self.policy_n))]
-                if self.state_dependent_alpha:
+                if log_calpha_n:
                     self.log_calpha_n = log_calpha_n
-                    self.calpha_optimizer_n = [
-                            optimizer_class(
-                                self.log_calpha_n[i].parameters(),
-                                lr=self.policy_learning_rate,
-                            ) for i in range(len(self.log_calpha_n))]
                 else:
                     self.log_calpha_n = [ptu.tensor([np.log(self.init_alpha)], requires_grad=True, dtype=torch.float32) for i in range(len(self.policy_n))]
-                    self.calpha_optimizer_n = [
-                        optimizer_class(
-                            [self.log_calpha_n[i]],
-                            lr=self.policy_learning_rate,
-                        ) for i in range(len(self.log_calpha_n))]
+                if calpha_optimizer_n:
+                    self.calpha_optimizer_n = calpha_optimizer_n
+                else:
+                    if self.state_dependent_alpha:
+                        self.calpha_optimizer_n = [
+                                optimizer_class(
+                                    self.log_calpha_n[i].parameters(),
+                                    lr=self.policy_learning_rate,
+                                ) for i in range(len(self.log_calpha_n))]
+                    else:
+                        self.calpha_optimizer_n = [
+                            optimizer_class(
+                                [self.log_calpha_n[i]],
+                                lr=self.policy_learning_rate,
+                            ) for i in range(len(self.log_calpha_n))]
 
         self.eval_statistics = OrderedDict()
         self._n_train_steps_total = 0
@@ -184,21 +203,12 @@ class PRGTrainer(TorchTrainer):
                 online_actions_n = [self.policy_n[agent](obs_n[:,agent,:]) for agent in range(num_agent)]
                 online_actions_n = torch.stack(online_actions_n) # num_agent x batch x a_dim
                 online_actions_n = online_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
-            elif self.target_action:
-                target_actions_n = [self.target_policy_n[agent](obs_n[:,agent,:]) for agent in range(num_agent)]
-                target_actions_n = torch.stack(target_actions_n) # num_agent x batch x a_dim
-                target_actions_n = target_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
 
-            if self.online_next_action:
-                if self.deterministic_next_action:
-                    next_target_actions_n = [self.policy_n[agent](next_obs_n[:,agent,:],deterministic=True) for agent in range(num_agent)]
-                else:
-                    next_target_actions_n = [self.policy_n[agent](next_obs_n[:,agent,:]) for agent in range(num_agent)]
+            if self.deterministic_next_action:
+                next_target_actions_n = [self.policy_n[agent](next_obs_n[:,agent,:],deterministic=True) for agent in range(num_agent)]
             else:
-                if self.deterministic_next_action:
-                    next_target_actions_n = [self.target_policy_n[agent](next_obs_n[:,agent,:],deterministic=True) for agent in range(num_agent)]
-                else:
-                    next_target_actions_n = [self.target_policy_n[agent](next_obs_n[:,agent,:]) for agent in range(num_agent)]
+                next_target_actions_n = [self.policy_n[agent](next_obs_n[:,agent,:]) for agent in range(num_agent)]
+
             next_target_actions_n = torch.stack(next_target_actions_n) # num_agent x batch x a_dim
             next_target_actions_n = next_target_actions_n.transpose(0,1).contiguous() # batch x num_agent x a_dim
 
@@ -240,8 +250,6 @@ class PRGTrainer(TorchTrainer):
 
             if self.online_action:
                 current_actions = online_actions_n.clone()
-            elif self.target_action:
-                current_actions = target_actions_n.clone()
             else:
                 current_actions = actions_n.clone()
             current_actions[:,agent,:] = policy_actions
@@ -476,15 +484,13 @@ class PRGTrainer(TorchTrainer):
         self._n_train_steps_total += 1
 
     def _update_target_networks(self):
-        for policy, target_policy, qf1, target_qf1, qf2, target_qf2 in \
-            zip(self.policy_n, self.target_policy_n, self.qf1_n, self.target_qf1_n, self.qf2_n, self.target_qf2_n):
+        for qf1, target_qf1, qf2, target_qf2 in \
+            zip(self.qf1_n, self.target_qf1_n, self.qf2_n, self.target_qf2_n):
             if self.use_soft_update:
-                ptu.soft_update_from_to(policy, target_policy, self.tau)
                 ptu.soft_update_from_to(qf1, target_qf1, self.tau)
                 ptu.soft_update_from_to(qf2, target_qf2, self.tau)
             else:
                 if self._n_train_steps_total % self.target_hard_update_period == 0:
-                    ptu.copy_model_params_from_to(policy, target_policy)
                     ptu.copy_model_params_from_to(qf1, target_qf1)
                     ptu.copy_model_params_from_to(qf2, target_qf2)
 
@@ -498,7 +504,6 @@ class PRGTrainer(TorchTrainer):
     def networks(self):
         res = [
             *self.policy_n,
-            *self.target_policy_n,
             *self.cactor_n,
             *self.qf1_n,
             *self.target_qf1_n,
@@ -518,11 +523,17 @@ class PRGTrainer(TorchTrainer):
             qf2_n=self.qf2_n,
             target_qf2_n=self.target_qf2_n,
             cactor_n=self.cactor_n,
-            trained_policy_n=self.policy_n,
-            target_policy_n=self.target_policy_n,
+            policy_n=self.policy_n,
+            # optimizers
+            qf1_optimizer_n=self.qf1_optimizer_n,
+            qf2_optimizer_n=self.qf2_optimizer_n,
+            cactor_optimizer_n=self.cactor_optimizer_n,
+            policy_optimizer_n=self.policy_optimizer_n,
         )
-        if self.state_dependent_alpha:
-            res['log_alpha_n']=self.log_alpha_n
+        if self.use_automatic_entropy_tuning:
+            res['log_alpha_n'] = self.log_alpha_n
+            res['alpha_optimizer_n'] = self.alpha_optimizer_n
             if self.use_cactor_entropy_loss:
-                res['log_calpha_n']=self.log_calpha_n
+                res['log_calpha_n'] = self.log_calpha_n
+                res['calpha_optimizer_n'] = self.calpha_optimizer_n
         return res

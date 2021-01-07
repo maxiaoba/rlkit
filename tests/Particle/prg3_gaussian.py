@@ -17,23 +17,32 @@ def experiment(variant):
 
     if variant['load_kwargs']['load']:
         load_dir = variant['load_kwargs']['load_dir']
-        load_data = torch.load(load_dir+'/params.pkl',map_location='cpu')
+        load_epoch = variant['load_kwargs']['load_epoch']
+        load_data = torch.load('{}/itr_{}.pkl'.format(load_dir,load_epoch),map_location='cpu')
         qf1_n = load_data['trainer/qf1_n']
         target_qf1_n = load_data['trainer/target_qf1_n']
         qf2_n = load_data['trainer/qf2_n']
         target_qf2_n = load_data['trainer/target_qf2_n']
         cactor_n = load_data['trainer/cactor_n']
-        policy_n = load_data['trainer/trained_policy_n']
-        target_policy_n = load_data['trainer/target_policy_n']
-        from rlkit.torch.policies.make_deterministic import MakeDeterministic
-        eval_policy_n = [MakeDeterministic(policy) for policy in policy_n]
-        expl_policy_n = policy_n
-        log_alpha_n, log_calpha_n = [], []
+        policy_n = load_data['trainer/policy_n']
+        log_alpha_n = load_data['trainer/log_alpha_n']
+        
+        qf1_optimizer_n = load_data['trainer/qf1_optimizer_n']
+        qf2_optimizer_n = load_data['trainer/qf2_optimizer_n']
+        policy_optimizer_n = load_data['trainer/policy_optimizer_n']
+        cactor_optimizer_n = load_data['trainer/cactor_optimizer_n']
+        alpha_optimizer_n = load_data['trainer/alpha_optimizer_n']
+        if args.ce:
+            log_calpha_n = load_data['trainer/log_calpha_n']
+            calpha_optimizer_n = load_data['trainer/calpha_optimizer_n']
+
+        replay_buffer = load_data['replay_buffer']
     else:
         qf1_n, qf2_n, cactor_n, policy_n = [], [], [], []
-        target_qf1_n, target_qf2_n, target_policy_n = [], [], []
-        expl_policy_n, eval_policy_n = [], []
-        log_alpha_n, log_calpha_n = [], []
+        target_qf1_n, target_qf2_n = [], []
+        log_alpha_n, log_calpha_n = None, None
+        qf1_optimizer_n, qf2_optimizer_n, policy_optimizer_n, cactor_optimizer_n, alpha_optimizer_n, calpha_optimizer_n  = \
+            None, None, None, None, None, None
         for i in range(num_agent):
             from rlkit.torch.networks import FlattenMlp
             qf1 = FlattenMlp(
@@ -69,10 +78,6 @@ def experiment(variant):
                                     nn.Linear(variant['policy_kwargs']['hidden_dim'],action_dim)])
                 )
             policy = TanhGaussianPolicy(module=policy)
-            target_policy = copy.deepcopy(policy)
-            from rlkit.torch.policies.make_deterministic import MakeDeterministic
-            eval_policy = MakeDeterministic(policy)
-            expl_policy = policy
             
             qf1_n.append(qf1)
             qf2_n.append(qf2)
@@ -80,16 +85,17 @@ def experiment(variant):
             policy_n.append(policy)
             target_qf1_n.append(target_qf1)
             target_qf2_n.append(target_qf2)
-            target_policy_n.append(target_policy)
-            expl_policy_n.append(expl_policy)
-            eval_policy_n.append(eval_policy)
+
+            from rlkit.data_management.ma_env_replay_buffer import MAEnvReplayBuffer
+            replay_buffer = MAEnvReplayBuffer(variant['replay_buffer_size'], expl_env, num_agent=num_agent)
+
+    from rlkit.torch.policies.make_deterministic import MakeDeterministic
+    eval_policy_n = [MakeDeterministic(policy) for policy in policy_n]
+    expl_policy_n = policy_n
         
     from rlkit.samplers.data_collector.ma_path_collector import MAMdpPathCollector
     eval_path_collector = MAMdpPathCollector(eval_env, eval_policy_n)
     expl_path_collector = MAMdpPathCollector(expl_env, expl_policy_n)
-
-    from rlkit.data_management.ma_env_replay_buffer import MAEnvReplayBuffer
-    replay_buffer = MAEnvReplayBuffer(variant['replay_buffer_size'], expl_env, num_agent=num_agent)
 
     from rlkit.torch.prg.prg3 import PRGTrainer
     trainer = PRGTrainer(
@@ -99,10 +105,15 @@ def experiment(variant):
         qf2_n = qf2_n,
         target_qf2_n = target_qf2_n,
         policy_n=policy_n,
-        target_policy_n=target_policy_n,
         cactor_n=cactor_n,
         log_alpha_n=log_alpha_n,
         log_calpha_n=log_calpha_n,
+        qf1_optimizer_n=qf1_optimizer_n,
+        qf2_optimizer_n=qf2_optimizer_n,
+        policy_optimizer_n=policy_optimizer_n,
+        cactor_optimizer_n=cactor_optimizer_n,
+        alpha_optimizer_n=alpha_optimizer_n,
+        calpha_optimizer_n=calpha_optimizer_n,
         **variant['trainer_kwargs']
     )
 
@@ -148,7 +159,8 @@ if __name__ == "__main__":
     parser.add_argument('--epoch', type=int, default=None)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--load', action='store_true', default=False)
-    parser.add_argument('--snapshot_mode', type=str, default="gap_and_last")
+    parser.add_argument('--load_epoch', type=int, default=None)
+    parser.add_argument('--snapshot_mode', type=str, default="gap")
     parser.add_argument('--snapshot_gap', type=int, default=500)
     args = parser.parse_args()
     import os.path as osp
@@ -179,11 +191,11 @@ if __name__ == "__main__":
             num_landmarks=args.num_l,
         ),
         algorithm_kwargs=dict(
-            num_epochs=(args.epoch if args.epoch else 1000),
+            num_epochs=(args.epoch+1 if args.epoch else 1001),
             num_eval_steps_per_epoch=1000,
             num_trains_per_train_loop=1000,
             num_expl_steps_per_train_loop=1000,
-            min_num_steps_before_training=1000,
+            min_num_steps_before_training=(0 if args.load else 1000),
             max_path_length=args.mpl,
             batch_size=(args.bs if args.bs else 256),
         ),
@@ -222,7 +234,8 @@ if __name__ == "__main__":
         replay_buffer_size=int(1E6),
         load_kwargs=dict(
             load=args.load,
-            load_dir=log_dir,
+            load_epoch=args.load_epoch,
+            load_dir=None,
         ),
     )
     import os
@@ -232,10 +245,7 @@ if __name__ == "__main__":
             log_dir = log_dir + '_load'
         print('log: ',log_dir)
         print('load: ',load_dir)
-        variant['load_kwargs']=dict(
-                                    load=args.load,
-                                    load_dir=load_dir,
-                                    )
+        variant['load_kwargs']['load_dir'] = load_dir
     if not os.path.isdir(log_dir):
         os.makedirs(log_dir)
     with open(osp.join(log_dir,'variant.json'),'w') as out_json:

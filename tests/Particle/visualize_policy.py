@@ -16,7 +16,7 @@ parser.add_argument('--num_l', type=int, default=None)
 parser.add_argument('--mpl', type=int, default=25) # max path length
 parser.add_argument('--log_dir', type=str, default='MASAC')
 parser.add_argument('--epoch', type=int, default=None)
-parser.add_argument('--seed', type=int, default=0)
+parser.add_argument('--seed', type=str, default=0)
 args = parser.parse_args()
 
 pre_dir = './Data/'+args.exp_name\

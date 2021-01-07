@@ -40,6 +40,10 @@ class MADDPGTrainer(TorchTrainer):
 
             min_q_value=-np.inf,
             max_q_value=np.inf,
+
+            qf_optimizer_n=None,
+            qf2_optimizer_n=None,
+            policy_optimizer_n=None,
     ):
         super().__init__()
         if qf_criterion is None:
@@ -67,23 +71,31 @@ class MADDPGTrainer(TorchTrainer):
         self.min_q_value = min_q_value
         self.max_q_value = max_q_value
 
-        self.qf_optimizer_n = [ 
-            optimizer_class(
-                self.qf_n[i].parameters(),
-                lr=self.qf_learning_rate,
-            ) for i in range(len(self.qf_n))]
-        if self.double_q:
-            self.qf2_optimizer_n = [ 
+        if qf_optimizer_n:
+            self.qf_optimizer_n = qf_optimizer_n
+        else:
+            self.qf_optimizer_n = [ 
                 optimizer_class(
-                    self.qf2_n[i].parameters(),
+                    self.qf_n[i].parameters(),
                     lr=self.qf_learning_rate,
-                ) for i in range(len(self.qf2_n))]
-
-        self.policy_optimizer_n = [
-            optimizer_class(
-                self.policy_n[i].parameters(),
-                lr=self.policy_learning_rate,
-            ) for i in range(len(self.policy_n))]
+                ) for i in range(len(self.qf_n))]
+        if self.double_q:
+            if qf2_optimizer_n:
+                self.qf2_optimizer_n = qf2_optimizer_n
+            else:
+                self.qf2_optimizer_n = [ 
+                    optimizer_class(
+                        self.qf2_n[i].parameters(),
+                        lr=self.qf_learning_rate,
+                    ) for i in range(len(self.qf2_n))]
+        if policy_optimizer_n:
+            self.policy_optimizer_n = policy_optimizer_n
+        else:
+            self.policy_optimizer_n = [
+                optimizer_class(
+                    self.policy_n[i].parameters(),
+                    lr=self.policy_learning_rate,
+                ) for i in range(len(self.policy_n))]
 
         self.eval_statistics = OrderedDict()
         self._n_train_steps_total = 0
@@ -285,10 +297,14 @@ class MADDPGTrainer(TorchTrainer):
         res = dict(
             qf_n=self.qf_n,
             target_qf_n=self.target_qf_n,
-            trained_policy_n=self.policy_n,
+            policy_n=self.policy_n,
             target_policy_n=self.target_policy_n,
+            # optimizers
+            qf_optimizer_n=self.qf_optimizer_n,
+            policy_optimizer_n=self.policy_optimizer_n,
         )
         if self.double_q:
             res['qf2_n'] = self.qf2_n
             res['target_qf2_n'] = self.target_qf2_n
+            res['qf2_optimizer_n'] = self.qf2_optimizer_n
         return res

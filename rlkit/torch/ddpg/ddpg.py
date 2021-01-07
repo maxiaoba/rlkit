@@ -36,6 +36,9 @@ class DDPGTrainer(TorchTrainer):
 
             min_q_value=-np.inf,
             max_q_value=np.inf,
+
+            qf_optimizer=None,
+            policy_optimizer=None,
     ):
         super().__init__()
         if qf_criterion is None:
@@ -59,14 +62,20 @@ class DDPGTrainer(TorchTrainer):
         self.min_q_value = min_q_value
         self.max_q_value = max_q_value
 
-        self.qf_optimizer = optimizer_class(
-            self.qf.parameters(),
-            lr=self.qf_learning_rate,
-        )
-        self.policy_optimizer = optimizer_class(
-            self.policy.parameters(),
-            lr=self.policy_learning_rate,
-        )
+        if qf_optimizer:
+            self.qf_optimizer = qf_optimizer
+        else:
+            self.qf_optimizer = optimizer_class(
+                self.qf.parameters(),
+                lr=self.qf_learning_rate,
+            )
+        if policy_optimizer:
+            self.policy_optimizer = policy_optimizer
+        else:
+            self.policy_optimizer = optimizer_class(
+                self.policy.parameters(),
+                lr=self.policy_learning_rate,
+            )
 
         self.eval_statistics = OrderedDict()
         self._n_train_steps_total = 0
@@ -203,6 +212,8 @@ class DDPGTrainer(TorchTrainer):
         return dict(
             qf=self.qf,
             target_qf=self.target_qf,
-            trained_policy=self.policy,
+            policy=self.policy,
             target_policy=self.target_policy,
+            qf_optimizer=self.qf_optimizer,
+            policy_optimizer=self.policy_optimizer,
         )

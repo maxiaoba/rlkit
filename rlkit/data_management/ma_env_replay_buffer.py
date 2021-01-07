@@ -17,7 +17,7 @@ class MAEnvReplayBuffer(MASimpleReplayBuffer):
         :param max_replay_buffer_size:
         :param env:
         """
-        self.env = env
+        # self.env = env
         self._ob_space = env.observation_space
         self._action_space = env.action_space
 
