@@ -260,9 +260,11 @@ def setup_logger(
         logger.log_variant(variant_log_path, variant)
 
     tabular_log_path = osp.join(log_dir, tabular_log_file)
-    text_log_path = osp.join(log_dir, text_log_file)
 
-    logger.add_text_output(text_log_path)
+    if text_log_file:
+        text_log_path = osp.join(log_dir, text_log_file)
+        logger.add_text_output(text_log_path)
+        
     if first_time:
         logger.add_tabular_output(tabular_log_path)
     else:

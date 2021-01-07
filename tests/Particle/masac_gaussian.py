@@ -217,7 +217,7 @@ if __name__ == "__main__":
         f.write(cmd_input)
     setup_logger(args.exp_name+'/'+main_dir, variant=variant,
                 snapshot_mode=args.snapshot_mode, snapshot_gap=args.snapshot_gap,
-                log_dir=log_dir)
+                log_dir=log_dir,text_log_file=None)
     import numpy as np
     import torch
     np.random.seed(args.seed)
