@@ -26,7 +26,7 @@ pre_dir = './Data/'+args.exp_name\
             +'_mpl'+str(args.mpl)
 data_path = '{}/{}/seed{}/params.pkl'.format(pre_dir,args.log_dir,args.seed)
 data = torch.load(data_path,map_location='cpu')
-policy_n = data['trainer/trained_policy_n']
+policy_n = data['trainer/policy_n']
 if isinstance(policy_n[0],TanhGaussianPolicy):
 	policy_n = [MakeDeterministic(policy) for policy in policy_n]
 elif  isinstance(policy_n[0],GumbelSoftmaxMlpPolicy):

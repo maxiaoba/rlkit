@@ -136,6 +136,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default='simple')
+    parser.add_argument('--boundary', action='store_true', default=False)
     parser.add_argument('--num_ag', type=int, default=None)
     parser.add_argument('--num_adv', type=int, default=None)
     parser.add_argument('--num_l', type=int, default=None)
@@ -164,6 +165,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     import os.path as osp
     pre_dir = './Data/'+args.exp_name\
+                +('bd' if args.boundary else '')\
                 +(('ag'+str(args.num_ag)) if args.num_ag else '')\
                 +(('adv'+str(args.num_adv)) if args.num_adv else '')\
                 +(('l'+str(args.num_l)) if args.num_l else '')\
@@ -188,6 +190,7 @@ if __name__ == "__main__":
             num_agents=args.num_ag,
             num_adversaries=args.num_adv,
             num_landmarks=args.num_l,
+            boundary=([[-1.,-1.],[1.,1.]] if args.boundary else None)
         ),
         algorithm_kwargs=dict(
             num_epochs=(args.epoch+1 if args.epoch else 1001),

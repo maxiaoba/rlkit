@@ -10,6 +10,7 @@ from rlkit.policies.argmax import ArgmaxDiscretePolicy
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='simple_spread')
+parser.add_argument('--boundary', action='store_true', default=False)
 parser.add_argument('--num_ag', type=int, default=None)
 parser.add_argument('--num_adv', type=int, default=None)
 parser.add_argument('--num_l', type=int, default=None)
@@ -24,6 +25,7 @@ world_args=dict(
     num_agents=args.num_ag,
     num_adversaries=args.num_adv,
     num_landmarks=args.num_l,
+    boundary=([[-1.,-1.],[1.,1.]] if args.boundary else None)
 )
 env = ParticleEnv(make_env(args.exp_name,discrete_action_space=False,world_args=world_args))
 o_n = env.reset()
@@ -34,6 +36,7 @@ max_path_length = args.mpl
 path_length = 0
 done = np.array([False]*num_agent)
 c_r = np.zeros(num_agent)
+max_o = 0.
 while True:
 	path_length += 1
 	a_n = []
@@ -48,15 +51,19 @@ while True:
 	env.render()
 	print("step: ",path_length)
 	print("a: ",a_n)
-	print("o: ",o_n)
+	print("o: ",np.max(np.abs(o_n)))
+	if np.max(np.abs(o_n)) > max_o:
+		max_o = np.max(np.abs(o_n))
 	print('r: ',r_n)
 	print(done)
 	# pbd.set_trace()
 	time.sleep(0.1)
 	if path_length > max_path_length or done.all():
 		print('c_r: ',c_r)
+		print('max_o: ',max_o)
 		path_length = 0
 		done = np.array([False]*num_agent)
 		c_r = np.zeros(num_agent)
+		max_o = 0.
 		o_n = env.reset()
 		pdb.set_trace()
