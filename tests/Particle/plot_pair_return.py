@@ -5,7 +5,12 @@ import matplotlib.pyplot as plt
 
 import argparse
 parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='simple_push')
+parser.add_argument('--boundary', action='store_true', default=False)
+parser.add_argument('--num_ag', type=int, default=None)
+parser.add_argument('--num_adv', type=int, default=None)
+parser.add_argument('--num_l', type=int, default=None)
 parser.add_argument('--mpl', type=int, default=25) # max path length
 parser.add_argument('--ci', type=int, default=4) # center_index
 parser.add_argument('--only', type=str, default=None) # 'agent' or 'adversary'
@@ -18,26 +23,17 @@ P_paths = [
             'MADDPGlayer2hidden64oa',
             'MASACGaussianlayer2hidden64er',
             'MASACGaussianlayer2hidden64oaer',
-            # 'MASACGaussianlayer2hidden64oadna',
-            'PRGGaussiank1hidden64oaonaceerdcigpna',
-            # 'PRGGaussiank1hidden64oaonacedcigdnapna',
-            # 'PRG3Gaussianhidden64k0m0cedcigdnapna',
-            # 'PRG3Gaussianhidden64k0m1cedcigdnapna',
-            # 'PRG3Gaussianhidden64k0m0ceerdcigpna',
-            # 'PRG3Gaussianhidden64k0m1ceerdcigpna',
-            ]
+            # 'PRGGaussianhidden64k1oaceerdcigpna',
+            'PRG3Gaussianhidden64ceerdcigpna',
+        ]
+
 policy_names = [
                 'MADDPG',
                 'MADDPG-OA',
                 'MASAC',
                 'MASAC-OA',
-                # 'MASACdna',
-                'R2G',
-                # 'PRGdna',
-                # 'PRG3k0m0dna',
-                # 'PRG3k0m1dna',
-                # 'PRG3k0m0er',
-                # 'PRG3k0m1er',
+                # 'R2G',
+                'R2G3',
             ]
 colors = ['C0', 'C1', 'C2', 'C4', 'C3']
 center_index = args.ci
@@ -56,8 +52,13 @@ extra_plot_name += '_'
 
 extra_name = args.extra_name
 
-pre_path = './Data/'+args.exp_name+'_mpl'+str(args.mpl)
-log_dir = pre_path+'/tests/'+extra_name+'_ss'+str(args.sample_num)
+pre_dir = './Data/'+args.exp_name\
+            +('bd' if args.boundary else '')\
+            +(('ag'+str(args.num_ag)) if args.num_ag else '')\
+            +(('adv'+str(args.num_adv)) if args.num_adv else '')\
+            +(('l'+str(args.num_l)) if args.num_l else '')\
+            +'_mpl'+str(args.mpl)
+log_dir = pre_dir+'/tests/'+extra_name+'_ss'+str(args.sample_num)
 log_file = log_dir+'/results.pkl'
 
 def plot_pair_return(mat1,mat2,policy_names, center_index):

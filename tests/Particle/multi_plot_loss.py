@@ -26,11 +26,11 @@ fields = [
             # "trainer/Q1 Predictions 4 Mean",
             # "trainer/Alpha 0 Mean","trainer/Alpha 1 Mean","trainer/Alpha 2 Mean","trainer/Alpha 3 Mean","trainer/Alpha 4 Mean",
             # "trainer/Entropy Loss 0","trainer/Entropy Loss 1","trainer/Entropy Loss 2","trainer/Entropy Loss 3","trainer/Entropy Loss 4",
-            # 'evaluation/Average Returns 0',
-            # 'evaluation/Average Returns 1',
-            # 'evaluation/Average Returns 2',
-            # 'evaluation/Average Returns 3',
-            # 'evaluation/Average Returns 4',
+            'evaluation/Average Returns 0',
+            'evaluation/Average Returns 1',
+            'evaluation/Average Returns 2',
+            'evaluation/Average Returns 3',
+            'evaluation/Average Returns 4',
             # 'time/epoch (s)',
             ]
 field_names = [
@@ -42,18 +42,18 @@ field_names = [
             "Q1 0","Q1 1","Q1 2","Q1 3","Q1 4",
             # 'Alpha 0','Alpha 1','Alpha 2','Alpha 3','Alpha 5', 
             # 'Entropy Loss 0','Entropy Loss 1','Entropy Loss 2','Entropy Loss 3','Entropy Loss 5', 
-            # 'Average Return 0',
-            # 'Average Return 1',
-            # 'Average Return 2',
-            # 'Average Return 3',
-            # 'Average Return 4',
+            'Average Return 0',
+            'Average Return 1',
+            'Average Return 2',
+            'Average Return 3',
+            'Average Return 4',
             # 'time epoch (s)',
             ]
 
 itr_name = 'epoch'
 min_loss = [-np.inf]*20
 max_loss = [np.inf]*20
-exp_name = "simple_spreadag5l5_mpl25"
+exp_name = "simple_adversarybd_mpl25"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name

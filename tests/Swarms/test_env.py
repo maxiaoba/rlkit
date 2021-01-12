@@ -15,24 +15,7 @@ parser.add_argument('--num_ag', type=int, default=None)
 parser.add_argument('--num_adv', type=int, default=None)
 parser.add_argument('--num_l', type=int, default=None)
 parser.add_argument('--mpl', type=int, default=25) # max path length
-parser.add_argument('--log_dir', type=str, default='MASAC')
-parser.add_argument('--epoch', type=int, default=None)
-parser.add_argument('--seed', type=str, default=0)
 args = parser.parse_args()
-
-pre_dir = './Data/'+args.exp_name\
-            +('bd' if args.boundary else '')\
-            +(('ag'+str(args.num_ag)) if args.num_ag else '')\
-            +(('adv'+str(args.num_adv)) if args.num_adv else '')\
-            +(('l'+str(args.num_l)) if args.num_l else '')\
-            +'_mpl'+str(args.mpl)
-data_path = '{}/{}/seed{}/params.pkl'.format(pre_dir,args.log_dir,args.seed)
-data = torch.load(data_path,map_location='cpu')
-policy_n = data['trainer/policy_n']
-if isinstance(policy_n[0],TanhGaussianPolicy):
-	policy_n = [MakeDeterministic(policy) for policy in policy_n]
-elif  isinstance(policy_n[0],GumbelSoftmaxMlpPolicy):
-	policy_n = [ArgmaxDiscretePolicy(policy,use_preactivation=True) for policy in policy_n]
 
 import sys
 sys.path.append("./multiagent-particle-envs")
@@ -53,25 +36,34 @@ max_path_length = args.mpl
 path_length = 0
 done = np.array([False]*num_agent)
 c_r = np.zeros(num_agent)
+max_o = 0.
 while True:
 	path_length += 1
 	a_n = []
-	for (policy,o) in zip(policy_n,o_n):
-		a, _ = policy.get_action(o)
+	for i in range(num_agent):
+		# a = input("Action for agent {}:\n".format(i))
+		# a = np.array(list(map(float,a.split(' '))))
+		# a_n.append(a)
+		a = env.action_space.sample()
 		a_n.append(a)
 	o_n, r_n, done, _ = env.step(a_n)
 	c_r += r_n
 	env.render()
 	print("step: ",path_length)
 	print("a: ",a_n)
-	print("o: ",o_n)
+	print("o: ",np.max(np.abs(o_n)))
+	if np.max(np.abs(o_n)) > max_o:
+		max_o = np.max(np.abs(o_n))
 	print('r: ',r_n)
 	print(done)
+	# pbd.set_trace()
 	time.sleep(0.1)
 	if path_length > max_path_length or done.all():
 		print('c_r: ',c_r)
+		print('max_o: ',max_o)
 		path_length = 0
 		done = np.array([False]*num_agent)
 		c_r = np.zeros(num_agent)
+		max_o = 0.
 		o_n = env.reset()
 		pdb.set_trace()

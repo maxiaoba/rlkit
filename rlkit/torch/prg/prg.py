@@ -32,9 +32,8 @@ class PRGTrainer(TorchTrainer):
             use_cactor_entropy_loss=False,
             use_automatic_entropy_tuning=True,
             state_dependent_alpha=False,
-            log_alpha_n = None,
-            log_calpha_n = None,
             target_entropy=None,
+            dec_cactor=False, # each cactor only gets its own observation
 
             logit_level=1,
 
@@ -62,6 +61,8 @@ class PRGTrainer(TorchTrainer):
             cactor_optimizer_n=None,
             alpha_optimizer_n=None,
             calpha_optimizer_n=None,
+            log_alpha_n = None,
+            log_calpha_n = None,
     ):
         super().__init__()
         self.env = env
@@ -79,6 +80,7 @@ class PRGTrainer(TorchTrainer):
         self.deterministic_cactor_in_graph = deterministic_cactor_in_graph
         self.deterministic_next_action = deterministic_next_action
         self.prg_next_action = prg_next_action
+        self.dec_cactor = dec_cactor
 
         self.discount = discount
         self.reward_scale = reward_scale
@@ -259,8 +261,12 @@ class PRGTrainer(TorchTrainer):
                     if agent_j != agent:
                         other_action_index = np.array([i for i in range(num_agent) if i!=agent_j])
                         other_actions = current_actions[:,other_action_index,:].view(batch_size,-1)
-                        cactor_actions = self.cactor_n[agent_j](torch.cat((whole_obs,other_actions),dim=-1),
-                                                                deterministic=self.deterministic_cactor_in_graph)
+                        if self.dec_cactor:
+                            cactor_actions = self.cactor_n[agent_j](torch.cat((obs_n[:,agent_j,:],other_actions),dim=-1),
+                                                                    deterministic=self.deterministic_cactor_in_graph)
+                        else:
+                            cactor_actions = self.cactor_n[agent_j](torch.cat((whole_obs,other_actions),dim=-1),
+                                                        deterministic=self.deterministic_cactor_in_graph)
                         next_actions[:,agent_j,:] = cactor_actions
                     else:
                         next_actions[:,agent_j,:] = policy_actions
@@ -297,8 +303,12 @@ class PRGTrainer(TorchTrainer):
                             if agent_j != agent:
                                 other_action_index = np.array([i for i in range(num_agent) if i!=agent_j])
                                 other_actions = current_actions[:,other_action_index,:].view(batch_size,-1)
-                                cactor_actions = self.cactor_n[agent_j](torch.cat((whole_next_obs,other_actions),dim=-1),
-                                                                        deterministic=self.deterministic_cactor_in_graph)
+                                if self.dec_cactor:
+                                    cactor_actions = self.cactor_n[agent_j](torch.cat((next_obs_n[:,agent_j,:],other_actions),dim=-1),
+                                                                            deterministic=self.deterministic_cactor_in_graph)
+                                else:
+                                    cactor_actions = self.cactor_n[agent_j](torch.cat((whole_next_obs,other_actions),dim=-1),
+                                                                            deterministic=self.deterministic_cactor_in_graph)
                                 next_actions[:,agent_j,:] = cactor_actions
                             else:
                                 next_actions[:,agent_j,:] = new_actions
@@ -365,9 +375,14 @@ class PRGTrainer(TorchTrainer):
             """
             other_action_index = np.array([i for i in range(num_agent) if i!=agent])
             other_actions = actions_n[:,other_action_index,:].view(batch_size,-1)
-            cactor_actions, cactor_info = self.cactor_n[agent](
-                torch.cat((whole_obs,other_actions),dim=-1), return_info=True,
-            )
+            if self.dec_cactor:
+                cactor_actions, cactor_info = self.cactor_n[agent](
+                    torch.cat((obs_n[:,agent,:],other_actions),dim=-1), return_info=True,
+                )
+            else:
+                cactor_actions, cactor_info = self.cactor_n[agent](
+                    torch.cat((whole_obs,other_actions),dim=-1), return_info=True,
+                )
             cactor_pre_value = cactor_info['preactivation']
             if self.pre_activation_weight > 0:
                 pre_activation_cactor_loss = (

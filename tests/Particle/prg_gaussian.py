@@ -58,8 +58,12 @@ def experiment(variant):
             )
             target_qf2 = copy.deepcopy(qf2)
             from rlkit.torch.layers import SplitLayer
+            if variant['trainer_kwargs']['dec_cactor']:
+                input_size = obs_dim+action_dim*(num_agent-1)
+            else:
+                input_size = obs_dim*num_agent+action_dim*(num_agent-1)
             cactor = nn.Sequential(
-                FlattenMlp(input_size=obs_dim*num_agent+action_dim*(num_agent-1),
+                FlattenMlp(input_size=input_size,
                             output_size=variant['cactor_kwargs']['hidden_dim'],
                             hidden_sizes=[variant['cactor_kwargs']['hidden_dim']]*(variant['cactor_kwargs']['num_layer']-1),
                             ),
@@ -154,6 +158,7 @@ if __name__ == "__main__":
     parser.add_argument('--dcig', action='store_true', default=False) # deterministic cactor in graph
     parser.add_argument('--dna', action='store_true', default=False) # deterministic next action
     parser.add_argument('--pna', action='store_true', default=False) # prg next action
+    parser.add_argument('--dca', action='store_true', default=False) # cactor only gets own obs
     parser.add_argument('--lr', type=float, default=None)
     parser.add_argument('--bs', type=int, default=None)
     parser.add_argument('--epoch', type=int, default=None)
@@ -181,6 +186,7 @@ if __name__ == "__main__":
                 +('dcig' if args.dcig else '')\
                 +('dna' if args.dna else '')\
                 +('pna' if args.pna else '')\
+                +('dca' if args.dca else '')\
                 +(('lr'+str(args.lr)) if args.lr else '')\
                 +(('bs'+str(args.bs)) if args.bs else '')
     log_dir = osp.join(pre_dir,main_dir,'seed'+str(args.seed))
@@ -219,6 +225,7 @@ if __name__ == "__main__":
             deterministic_cactor_in_graph=args.dcig,
             deterministic_next_action=args.dna,
             prg_next_action=args.pna,
+            dec_cactor=args.dca,
         ),
         qf_kwargs=dict(
             num_layer=args.layer,
