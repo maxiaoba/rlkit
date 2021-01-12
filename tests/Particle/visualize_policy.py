@@ -10,6 +10,7 @@ from rlkit.policies.argmax import ArgmaxDiscretePolicy
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='simple_spread')
+parser.add_argument('--boundary', action='store_true', default=False)
 parser.add_argument('--num_ag', type=int, default=None)
 parser.add_argument('--num_adv', type=int, default=None)
 parser.add_argument('--num_l', type=int, default=None)
@@ -40,6 +41,7 @@ world_args=dict(
     num_agents=args.num_ag,
     num_adversaries=args.num_adv,
     num_landmarks=args.num_l,
+    boundary=([[-1.,-1.],[1.,1.]] if args.boundary else None)
 )
 env = ParticleEnv(make_env(args.exp_name,discrete_action_space=False,world_args=world_args))
 o_n = env.reset()
