@@ -53,7 +53,7 @@ field_names = [
 itr_name = 'epoch'
 min_loss = [-np.inf]*20
 max_loss = [np.inf]*20
-exp_name = "simple_adversarybd_mpl25"
+exp_name = "simple_pushbdag2adv2_mpl25"
 
 prepath = "./Data/"+exp_name
 plot_path = "./Data/"+exp_name
@@ -64,8 +64,9 @@ policies = [
             'MASACGaussianlayer2hidden64er',
             'MASACGaussianlayer2hidden64oaer',
             'PRGGaussianhidden64k1oaceerdcigpna',
+            # 'PRGGaussianhidden64k1oaceerdcigpnadca',
             'PRG3Gaussianhidden64ceerdcigpna',
-            # 'testhidden64ceerdcigpna',
+            'PRG3Gaussianhidden64ceerdcigpnadca',
         ]
 # policy_names = policies
 policy_names = [
@@ -74,8 +75,9 @@ policy_names = [
                 'MASAC',
                 'MASAC-OA',
                 'R2G',
+                # 'R2Gdca',
                 'R2G3',
-                # 'test',
+                'R2G3dca',
             ]
 extra_name = ''
 seeds = [0,1,2]

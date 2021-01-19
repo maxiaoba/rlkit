@@ -11,6 +11,7 @@ parser.add_argument('--num_ag', type=int, default=None)
 parser.add_argument('--num_adv', type=int, default=None)
 parser.add_argument('--num_l', type=int, default=None)
 parser.add_argument('--mpl', type=int, default=25) # max path length
+parser.add_argument('--epoch', type=int, default=None)
 parser.add_argument('--sample_num', type=int, default=1000)
 parser.add_argument('--extra_name', type=str, default='')
 args = parser.parse_args()
@@ -21,7 +22,9 @@ P_paths = [
             'MASACGaussianlayer2hidden64er',
             'MASACGaussianlayer2hidden64oaer',
             'PRGGaussianhidden64k1oaceerdcigpna',
+            # 'PRGGaussianhidden64k1oaceerdcigpnadca',
             'PRG3Gaussianhidden64ceerdcigpna',
+            'PRG3Gaussianhidden64ceerdcigpnadca',
         ]
 
 policy_names = [
@@ -30,7 +33,9 @@ policy_names = [
                 'MASAC',
                 'MASAC-OA',
                 'R2G',
+                # 'R2Gdca',
                 'R2G3',
+                'R2G3dca',
             ]
 extra_plot_name = '-'.join(policy_names)+'_'
 
@@ -42,7 +47,9 @@ pre_dir = './Data/'+args.exp_name\
             +(('adv'+str(args.num_adv)) if args.num_adv else '')\
             +(('l'+str(args.num_l)) if args.num_l else '')\
             +'_mpl'+str(args.mpl)
-log_dir = pre_dir+'/tests/'+extra_name+'_ss'+str(args.sample_num)
+log_dir = pre_dir+'/tests/'+extra_name\
+            +('_ep{}'.format(args.epoch) if args.epoch else '')\
+            +'_ss'+str(args.sample_num)
 log_file = log_dir+'/results.pkl'
 
 def plot_matrix(mat,policy_names):

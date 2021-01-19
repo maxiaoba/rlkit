@@ -26,7 +26,10 @@ pre_dir = './Data/'+args.exp_name\
             +(('adv'+str(args.num_adv)) if args.num_adv else '')\
             +(('l'+str(args.num_l)) if args.num_l else '')\
             +'_mpl'+str(args.mpl)
-data_path = '{}/{}/seed{}/params.pkl'.format(pre_dir,args.log_dir,args.seed)
+if args.epoch:
+	data_path = '{}/{}/seed{}/itr_{}.pkl'.format(pre_dir,args.log_dir,args.seed,args.epoch)
+else:
+	data_path = '{}/{}/seed{}/params.pkl'.format(pre_dir,args.log_dir,args.seed)
 data = torch.load(data_path,map_location='cpu')
 policy_n = data['trainer/policy_n']
 if isinstance(policy_n[0],TanhGaussianPolicy):

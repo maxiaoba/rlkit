@@ -19,17 +19,21 @@ parser.add_argument('--num_ag', type=int, default=None)
 parser.add_argument('--num_adv', type=int, default=None)
 parser.add_argument('--num_l', type=int, default=None)
 parser.add_argument('--mpl', type=int, default=25) # max path length
+parser.add_argument('--epoch', type=int, default=None)
 parser.add_argument('--new', action='store_true', default=False)
 parser.add_argument('--sample_num', type=int, default=1000)
 parser.add_argument('--extra_name', type=str, default='')
 args = parser.parse_args()
 
-if args.exp_name == 'simple_adversary':
-    groups = [[0],[1,2]]
-elif args.exp_name == 'simple_tag':
-    groups = [[0,1,2],[3]]
-elif args.exp_name == 'simple_push':
-    groups = [[0],[1]]
+if args.num_ag:
+    groups = [[i for i in range(args.num_adv)],[args.num_adv+i for i in range(args.num_ag)]]
+else:
+    if args.exp_name == 'simple_adversary':
+        groups = [[0],[1,2]]
+    elif args.exp_name == 'simple_tag':
+        groups = [[0,1,2],[3]]
+    elif args.exp_name == 'simple_push':
+        groups = [[0],[1]]
 print('groups: ',groups)
 
 seeds = [0,1,2]
@@ -39,7 +43,9 @@ P_paths = [
             'MASACGaussianlayer2hidden64er',
             'MASACGaussianlayer2hidden64oaer',
             'PRGGaussianhidden64k1oaceerdcigpna',
+            'PRGGaussianhidden64k1oaceerdcigpnadca',
             'PRG3Gaussianhidden64ceerdcigpna',
+            'PRG3Gaussianhidden64ceerdcigpnadca',
             ]
 
 extra_name = args.extra_name
@@ -50,7 +56,9 @@ pre_dir = './Data/'+args.exp_name\
             +(('adv'+str(args.num_adv)) if args.num_adv else '')\
             +(('l'+str(args.num_l)) if args.num_l else '')\
             +'_mpl'+str(args.mpl)
-log_dir = pre_dir+'/tests/'+extra_name+'_ss'+str(args.sample_num)
+log_dir = pre_dir+'/tests/'+extra_name\
+            +('_ep{}'.format(args.epoch) if args.epoch else '')\
+            +'_ss'+str(args.sample_num)
 log_file = log_dir+'/results.pkl'
 
 sample_num = args.sample_num
@@ -59,7 +67,7 @@ max_path_length = args.mpl
 import os
 if (not os.path.isdir(log_dir)):
     os.makedirs(log_dir)
-if (not os.path.isfile(log_file)) or args.new:
+if (not os.path.isfile(log_file)):
     results = {}
 else:
     import joblib
@@ -92,8 +100,11 @@ for seed in seeds:
     with torch.no_grad():
         players = []
         for pid in range(len(P_paths)):
-            d_path = pre_dir+'/'+P_paths[pid]+'/seed'+str(seed)\
-                    +'/params.pkl'
+            d_path = pre_dir+'/'+P_paths[pid]+'/seed'+str(seed)
+            if args.epoch:
+                d_path += '/itr_{}.pkl'.format(args.epoch)
+            else:
+                d_path += '/params.pkl'
             data = torch.load(d_path,map_location='cpu')
             policy_n = data['trainer/policy_n']
             if isinstance(policy_n[0],TanhGaussianPolicy):
@@ -106,7 +117,7 @@ for seed in seeds:
             for p2id in range(len(P_paths)):
                 pair_name = '{}-{}'.format(P_paths[p1id],P_paths[p2id])
                 # print(pair_name)
-                if pair_name in results[seed].keys():
+                if (pair_name in results[seed].keys()) and (not args.new):
                     print('pass')
                     Cr1 = results[seed][pair_name]['r1']
                     Cr2 = results[seed][pair_name]['r2']

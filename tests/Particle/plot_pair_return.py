@@ -13,7 +13,8 @@ parser.add_argument('--num_adv', type=int, default=None)
 parser.add_argument('--num_l', type=int, default=None)
 parser.add_argument('--mpl', type=int, default=25) # max path length
 parser.add_argument('--ci', type=int, default=4) # center_index
-parser.add_argument('--only', type=str, default=None) # 'agent' or 'adversary'
+parser.add_argument('--only', type=str, default='agent') # 'agent' or 'adversary'
+parser.add_argument('--epoch', type=int, default=None)
 parser.add_argument('--sample_num', type=int, default=1000)
 parser.add_argument('--extra_name', type=str, default='')
 args = parser.parse_args()
@@ -24,7 +25,10 @@ P_paths = [
             'MASACGaussianlayer2hidden64er',
             'MASACGaussianlayer2hidden64oaer',
             # 'PRGGaussianhidden64k1oaceerdcigpna',
-            'PRG3Gaussianhidden64ceerdcigpna',
+            # 'PRGGaussianhidden64k1oaceerdcigpnadca',
+            # 'PRG3Gaussianhidden64ceerdcigpna',
+            'PRG3Gaussianhidden64ceerdcigpnadca',
+            # 'PRGGaussiank1hidden64oaonaceerdcigpna',
         ]
 
 policy_names = [
@@ -33,7 +37,10 @@ policy_names = [
                 'MASAC',
                 'MASAC-OA',
                 # 'R2G',
-                'R2G3',
+                # 'R2Gdca',
+                # 'R2G3',
+                # 'R2G3dca',
+                'R2G'
             ]
 colors = ['C0', 'C1', 'C2', 'C4', 'C3']
 center_index = args.ci
@@ -46,8 +53,7 @@ for pid,policy_name in enumerate(policy_names):
         extra_plot_name += '[{}]'.format(policy_name)
     else:
         extra_plot_name += policy_name
-if args.only:
-    extra_plot_name += '_'+args.only
+extra_plot_name += '_'+args.only
 extra_plot_name += '_'
 
 extra_name = args.extra_name
@@ -58,22 +64,27 @@ pre_dir = './Data/'+args.exp_name\
             +(('adv'+str(args.num_adv)) if args.num_adv else '')\
             +(('l'+str(args.num_l)) if args.num_l else '')\
             +'_mpl'+str(args.mpl)
-log_dir = pre_dir+'/tests/'+extra_name+'_ss'+str(args.sample_num)
+log_dir = pre_dir+'/tests/'+extra_name\
+            +('_ep{}'.format(args.epoch) if args.epoch else '')\
+            +'_ss'+str(args.sample_num)
 log_file = log_dir+'/results.pkl'
 
 def plot_pair_return(mat1,mat2,policy_names, center_index):
-    if args.only:
-        fig = plt.figure(figsize=(len(policy_names),6))
-    else:
-        fig = plt.figure(figsize=(2.*len(policy_names),6))
+    fig = plt.figure(figsize=(1.7*(len(policy_names)-1),1.7))
     # fig = plt.figure()
     fid = 0
-    mat1 = (mat1-np.min(mat1))/(np.max(mat1)-np.min(mat1))
-    mat2 = (mat2-np.min(mat2))/(np.max(mat2)-np.min(mat2))
-    # mat1_mean = np.mean(mat1,2)
-    # mat1_std = np.std(mat1,2)
-    # mat2_mean = np.mean(mat2,2)
-    # mat2_std = np.std(mat2,2)
+    mat1_useful = [mat1[i,i] for i in range(mat1.shape[0]) if i != center_index]
+    mat1_useful += [mat1[center_index,i] for i in range(mat1.shape[0]) if i != center_index]
+    mat1_max, mat1_min = np.max(mat1_useful), np.min(mat1_useful)
+    # mat1 = (mat1-np.min(mat1))/(np.max(mat1)-np.min(mat1))
+    mat1 = (mat1-mat1_min)/(mat1_max-mat1_min)
+
+    mat2_useful = [mat2[i,i] for i in range(mat2.shape[0]) if i != center_index]
+    mat2_useful += [mat2[i,center_index] for i in range(mat2.shape[0]) if i != center_index]
+    mat2_max, mat2_min = np.max(mat2_useful), np.min(mat2_useful)
+    # mat2 = (mat2-np.min(mat2))/(np.max(mat2)-np.min(mat2))
+    mat2 = (mat2-mat2_min)/(mat2_max-mat2_min)
+
     mat1_mean = np.mean(mat1,0)
     mat1_std = np.std(mat1,0)/np.sqrt(mat1.shape[0])
     mat2_mean = np.mean(mat2,0)
@@ -83,13 +94,8 @@ def plot_pair_return(mat1,mat2,policy_names, center_index):
             pass
         else:
             fid += 1
-            if args.only == 'agent':
-                pass
-            else:
-                if args.only == 'adversary':
-                    plt.subplot(2,(len(policy_names)-1)/2,fid)
-                else:
-                    plt.subplot(2,len(policy_names)-1,fid)
+            if args.only == 'adversary':
+                plt.subplot(1,len(policy_names)-1,fid)
                 p1ip2i_1 = mat1_mean[i,i]
                 p1ip2i_std_1 = mat1_std[i,i]
                 p1cp2i_1 = mat1_mean[center_index,i]
@@ -102,21 +108,16 @@ def plot_pair_return(mat1,mat2,policy_names, center_index):
                         capsize=10.0,
                         color=[colors[i],colors[center_index]],
                         )
-                plt.title('Agent: {}'.format(policy_names[i]))
+                plt.title('Agent:\n {}'.format(policy_names[i]))
                 plt.ylim(0,1)
-                if fid%2 == 1:
+                if fid == 1:
                     plt.ylabel('Normalized Adversary Return')
                 else:
                     plt.gca().axes.get_yaxis().set_visible(False)
                 plt.gca().set_aspect(2.0, 'box')
 
-            if args.only == 'adversary':
-                pass
-            else:
-                if args.only == 'agent':
-                    plt.subplot(2,(len(policy_names)-1)/2,fid)
-                else:
-                    plt.subplot(2,len(policy_names)-1,fid+len(policy_names)-1)
+            elif args.only == 'agent':
+                plt.subplot(1,len(policy_names)-1,fid)
                 p1ip2i_2 = mat2_mean[i,i]
                 p1ip2i_std_2 = mat2_std[i,i]
                 p1ip2c_2 = mat2_mean[i,center_index]
@@ -129,9 +130,9 @@ def plot_pair_return(mat1,mat2,policy_names, center_index):
                         capsize=10.0,
                         color=[colors[i],colors[center_index]],
                         )
-                plt.title('Adversary: {}'.format(policy_names[i]))
+                plt.title('Adversary:\n {}'.format(policy_names[i]))
                 plt.ylim(0,1)
-                if fid%2 == 1:
+                if fid == 1:
                     plt.ylabel('Normalized Agent Return')
                 else:
                     plt.gca().axes.get_yaxis().set_visible(False)
