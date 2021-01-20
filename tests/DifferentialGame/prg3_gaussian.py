@@ -12,8 +12,8 @@ def experiment(variant):
     obs_dim = eval_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
-    qf1_n, qf2_n, cactor_n, policy_n, target_qf1_n, target_qf2_n, target_policy_n, expl_policy_n, eval_policy_n = \
-        [], [], [], [], [], [], [], [], []
+    qf1_n, qf2_n, cactor_n, policy_n, target_qf1_n, target_qf2_n, expl_policy_n, eval_policy_n = \
+        [], [], [], [], [], [], [], []
     for i in range(num_agent):
         from rlkit.torch.networks import FlattenMlp
         qf1 = FlattenMlp(
@@ -49,7 +49,6 @@ def experiment(variant):
                                 nn.Linear(variant['policy_kwargs']['hidden_dim'],action_dim)])
             )
         policy = TanhGaussianPolicy(module=policy)
-        target_policy = copy.deepcopy(policy)
         from rlkit.torch.policies.make_deterministic import MakeDeterministic
         eval_policy = MakeDeterministic(policy)
         from rlkit.exploration_strategies.base import PolicyWrappedWithExplorationStrategy
@@ -68,7 +67,6 @@ def experiment(variant):
         policy_n.append(policy)
         target_qf1_n.append(target_qf1)
         target_qf2_n.append(target_qf2)
-        target_policy_n.append(target_policy)
         expl_policy_n.append(expl_policy)
         eval_policy_n.append(eval_policy)
         
@@ -87,7 +85,6 @@ def experiment(variant):
         qf2_n = qf2_n,
         target_qf2_n = target_qf2_n,
         policy_n=policy_n,
-        target_policy_n=target_policy_n,
         cactor_n=cactor_n,
         **variant['trainer_kwargs']
     )
